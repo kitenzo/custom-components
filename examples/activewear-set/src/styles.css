@@ -1,0 +1,1234 @@
+/*
+ * The widget's styles. Three layers, in this order:
+ *
+ *   1. Tokens. Restyling for a brand is mostly this block. Fonts are the theme's own (the Liquid
+ *      section loads them and sets --aws-font-*); the colours the merchant can change in the theme
+ *      editor arrive as --aws-accent and --aws-accent-contrast on the mount element.
+ *   2. A reset scoped to the widget root. Themes style bare elements (one ships
+ *      `button { padding: 1em 25px }`, another paints every element's colour), and namespaced
+ *      classes do not protect against that. Every reset selector is `.aws-root :where(…)`: one
+ *      class of specificity, enough to beat a theme's bare element rules, and no more than the
+ *      single-class component rules after it, which therefore win.
+ *   3. Components. Every class is prefixed `aws-`, because themes have their own `.card`,
+ *      `.drawer`, `.modal` and `.hidden`, and they will collide.
+ *
+ * Nothing here uses `position: fixed`: a theme ancestor with `transform` traps it. The dialog is a
+ * native <dialog> in the top layer; the mobile bar is `position: sticky`.
+ *
+ * The look: sharp corners, one ink colour, uppercase labels with air between the letters, and
+ * the photographs doing the talking.
+ */
+
+/* 1. Tokens ------------------------------------------------------------------------------- */
+
+/* What the Liquid section sets, it sets on the mount element (#kitenzo-<section id>). The
+   defaults sit on the mount too, at zero specificity, so the section's values win. Declared on
+   .aws-root instead, the root's own declaration would beat the value it inherits from the mount,
+   and the merchant's colour and font settings would never show. */
+:where([data-activewear-set-bundle]) {
+    --aws-font-body: inherit;
+    --aws-font-heading: inherit;
+    --aws-accent: #121212;
+    --aws-accent-contrast: #ffffff;
+}
+
+.aws-root {
+    --aws-ink: #121212;
+    --aws-ink-soft: #57575c;
+    --aws-ink-faint: #8c8c91;
+    --aws-surface: #ffffff;
+    --aws-surface-sunk: #f2f1ee;
+    --aws-line: #e2e1dd;
+    --aws-line-strong: #c9c8c3;
+    --aws-danger: #b42318;
+    --aws-success: #1f6f43;
+    --aws-radius: 0;
+    --aws-gap: 20px;
+    --aws-tracking: 0.12em;
+    --aws-focus: 0 0 0 2px var(--aws-surface), 0 0 0 4px var(--aws-ink);
+}
+
+/* 2. Reset, scoped to the root ------------------------------------------------------------ */
+.aws-root,
+.aws-root *,
+.aws-root *::before,
+.aws-root *::after {
+    box-sizing: border-box;
+}
+
+/* A theme that paints every element its body colour (`*:not(a, h1, …) { color: … }`) lands on
+   anything with no colour of its own. Restore inheritance once, under the root. `:where()` keeps
+   this at one class of specificity, so every component rule below (also one class, and later)
+   still sets its own colour. */
+.aws-root :where(*:not(svg, svg *)) {
+    color: inherit;
+}
+
+.aws-root :where(button, input, select) {
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    min-height: 0;
+    width: auto;
+    height: auto;
+    font: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+    line-height: inherit;
+    border-radius: 0;
+    box-shadow: none;
+    background: none;
+    border: 0;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.aws-root :where(button) {
+    cursor: pointer;
+}
+
+.aws-root :where(img) {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+}
+
+.aws-root :where(h2, h3, h4, p, ul, dl, dd) {
+    margin: 0;
+    padding: 0;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.aws-root :where(ul) {
+    list-style: none;
+}
+
+/* A class that sets `display` beats the `hidden` attribute. Make the attribute win. */
+.aws-root [hidden] {
+    display: none !important;
+}
+
+.aws-root :focus-visible {
+    outline: none;
+    box-shadow: var(--aws-focus);
+}
+
+/* 3. Components --------------------------------------------------------------------------- */
+.aws-root {
+    font-family: var(--aws-font-body);
+    color: var(--aws-ink);
+    background: var(--aws-surface);
+    font-size: 15px;
+    line-height: 1.5;
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: 40px 20px 0;
+}
+
+.aws-root--state {
+    padding-bottom: 32px;
+}
+
+.aws-header__title,
+.aws-step__title,
+.aws-summary__heading,
+.aws-dialog__title,
+.aws-piece__title {
+    font-family: var(--aws-font-heading);
+}
+
+/* Small uppercase labels: the brand's voice. */
+:is(
+        .aws-header__price-label,
+        .aws-match__label,
+        .aws-step__title,
+        .aws-step__optional,
+        .aws-option__label,
+        .aws-summary__heading,
+        .aws-line__step,
+        .aws-price__label,
+        .aws-dialog__step,
+        .aws-piece__details,
+        .aws-badge
+    ) {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: var(--aws-tracking);
+    text-transform: uppercase;
+}
+
+.aws-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px 40px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--aws-ink);
+}
+
+.aws-header__titles {
+    min-width: 0;
+    max-width: 640px;
+}
+
+.aws-header__title {
+    font-size: clamp(30px, 4.4vw, 56px);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+}
+
+.aws-header__intro {
+    margin-top: 14px;
+    color: var(--aws-ink-soft);
+    max-width: 52ch;
+}
+
+.aws-header__price {
+    display: grid;
+    justify-items: end;
+    gap: 2px;
+    text-align: right;
+}
+
+.aws-header__price-label {
+    color: var(--aws-ink-soft);
+}
+
+.aws-header__price-amount {
+    font-size: clamp(28px, 3vw, 40px);
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+
+.aws-notice {
+    margin-top: 20px;
+    padding: 12px 16px;
+    background: var(--aws-surface-sunk);
+    color: var(--aws-ink-soft);
+    font-size: 14px;
+}
+
+/* Match colours ------------------------------------------------------------------------------ */
+.aws-match {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 10px 24px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--aws-line);
+}
+
+.aws-match__label {
+    color: var(--aws-ink);
+}
+
+.aws-match__swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+}
+
+.aws-match__button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 4px 2px;
+    font-size: 13px;
+    color: var(--aws-ink-soft);
+    border-bottom: 1px solid transparent;
+    transition: color 150ms ease, border-color 150ms ease;
+}
+
+.aws-match__button:hover,
+.aws-match__button[aria-pressed='true'] {
+    color: var(--aws-ink);
+    border-bottom-color: var(--aws-ink);
+}
+
+.aws-match__button .aws-swatch__chip {
+    width: 22px;
+    height: 22px;
+}
+
+.aws-match__result {
+    grid-column: 1 / -1;
+    font-size: 13px;
+    color: var(--aws-ink-soft);
+}
+
+.aws-match__result:empty {
+    display: none;
+}
+
+.aws-match__blocked {
+    display: grid;
+    gap: 2px;
+    margin-top: 4px;
+}
+
+.aws-match__blocked strong {
+    color: var(--aws-ink);
+    font-weight: 600;
+    margin-right: 4px;
+}
+
+/* Layout ------------------------------------------------------------------------------------- */
+.aws-layout {
+    display: grid;
+    gap: 40px;
+    align-items: start;
+    margin-top: 32px;
+}
+
+@media (min-width: 1100px) {
+    .aws-layout {
+        grid-template-columns: minmax(0, 1fr) 340px;
+        gap: 48px;
+    }
+}
+
+.aws-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    gap: 48px var(--aws-gap);
+    min-width: 0;
+}
+
+.aws-step {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    scroll-margin-top: 96px;
+}
+
+.aws-step__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--aws-line);
+}
+
+.aws-step__index {
+    flex: none;
+    display: grid;
+    place-items: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 4px;
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--aws-ink-soft);
+    border: 1px solid var(--aws-line-strong);
+}
+
+.aws-step[data-step-done] .aws-step__index {
+    background: var(--aws-accent);
+    border-color: var(--aws-accent);
+    color: var(--aws-accent-contrast);
+}
+
+.aws-step__title {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    letter-spacing: var(--aws-tracking);
+    text-transform: uppercase;
+}
+
+.aws-step__optional {
+    color: var(--aws-ink-faint);
+}
+
+.aws-step__description {
+    margin: -6px 0 14px;
+    color: var(--aws-ink-soft);
+    font-size: 13px;
+}
+
+.aws-step__pieces {
+    display: grid;
+    gap: 32px;
+}
+
+/* A piece ----------------------------------------------------------------------------------- */
+.aws-piece {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.aws-piece__media {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: var(--aws-surface-sunk);
+}
+
+.aws-piece__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    animation: aws-fade 260ms ease;
+    transition: transform 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.aws-piece__media:hover img {
+    transform: scale(1.025);
+}
+
+@keyframes aws-fade {
+    from {
+        opacity: 0.35;
+    }
+}
+
+.aws-piece--sold-out .aws-piece__media img {
+    opacity: 0.45;
+    filter: grayscale(0.7);
+}
+
+.aws-piece__placeholder {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    font-family: var(--aws-font-heading);
+    font-size: 48px;
+    color: var(--aws-ink-faint);
+}
+
+.aws-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    font-size: 10px;
+    background: var(--aws-surface);
+    color: var(--aws-ink);
+}
+
+.aws-badge--chosen {
+    background: var(--aws-accent);
+    color: var(--aws-accent-contrast);
+}
+
+.aws-badge svg {
+    width: 12px;
+    height: 12px;
+}
+
+.aws-piece__details {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    padding: 6px 10px;
+    font-size: 10px;
+    background: rgb(255 255 255 / 88%);
+    color: var(--aws-ink);
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.aws-piece__media:hover .aws-piece__details,
+.aws-piece__media:focus-visible .aws-piece__details {
+    opacity: 1;
+    transform: none;
+}
+
+@media (hover: none) {
+    .aws-piece__details {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.aws-piece__body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+    padding-top: 16px;
+}
+
+.aws-piece__heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.aws-piece__title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.aws-piece__price {
+    flex: none;
+    font-size: 14px;
+    color: var(--aws-ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.aws-piece__surcharge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--aws-ink);
+}
+
+.aws-piece__surcharge::before {
+    content: '';
+    flex: none;
+    width: 6px;
+    height: 6px;
+    background: var(--aws-ink);
+}
+
+.aws-piece__message {
+    min-height: 1.45em;
+    margin-top: -6px;
+    font-size: 12px;
+    color: var(--aws-ink-soft);
+}
+
+/* Options ------------------------------------------------------------------------------------ */
+.aws-options {
+    display: grid;
+    gap: 16px;
+}
+
+.aws-option {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.aws-option__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 2px 12px;
+}
+
+.aws-option__label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    color: var(--aws-ink-soft);
+}
+
+.aws-option__value {
+    color: var(--aws-ink);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    font-size: 13px;
+    line-height: 1.2;
+}
+
+.aws-option__head > * {
+    line-height: 18px;
+}
+
+.aws-option__note {
+    font-size: 12px;
+    color: var(--aws-ink-faint);
+    text-align: right;
+}
+
+.aws-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.aws-swatch {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    align-content: start;
+    gap: 4px;
+    min-width: 36px;
+}
+
+.aws-swatch__chip {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    background-color: var(--aws-swatch, var(--aws-surface-sunk));
+    background-size: cover;
+    background-position: center;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--aws-ink-soft);
+    transition: box-shadow 150ms ease;
+}
+
+.aws-swatch[aria-pressed='true'] .aws-swatch__chip,
+.aws-match__button[aria-pressed='true'] .aws-swatch__chip {
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%), 0 0 0 2px var(--aws-surface), 0 0 0 3px var(--aws-ink);
+}
+
+.aws-swatch:hover .aws-swatch__chip {
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%), 0 0 0 2px var(--aws-surface), 0 0 0 3px var(--aws-line-strong);
+}
+
+/* Out of reach: still there, struck through. */
+.aws-swatch[aria-disabled='true'] {
+    cursor: not-allowed;
+}
+
+.aws-swatch[aria-disabled='true'] .aws-swatch__chip {
+    opacity: 0.4;
+}
+
+.aws-swatch[aria-disabled='true'] .aws-swatch__chip::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top right, transparent calc(50% - 0.75px), var(--aws-ink) calc(50% - 0.75px), var(--aws-ink) calc(50% + 0.75px), transparent calc(50% + 0.75px));
+}
+
+.aws-swatch__extra {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--aws-ink-soft);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.aws-values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.aws-values--nudged {
+    animation: aws-nudge 400ms ease;
+}
+
+.aws-value {
+    display: grid;
+    place-items: center;
+    min-width: 44px;
+    height: 40px;
+    padding: 0 10px;
+    border: 1px solid var(--aws-line-strong);
+    font-size: 13px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+
+.aws-value:hover {
+    border-color: var(--aws-ink);
+}
+
+.aws-value[aria-pressed='true'] {
+    background: var(--aws-ink);
+    border-color: var(--aws-ink);
+    color: var(--aws-surface);
+}
+
+.aws-value[aria-disabled='true'] {
+    border-color: var(--aws-line);
+    color: var(--aws-ink-faint);
+    text-decoration: line-through;
+    cursor: not-allowed;
+    background: repeating-linear-gradient(-45deg, transparent 0 5px, var(--aws-surface-sunk) 5px 6px);
+}
+
+.aws-select {
+    width: 100%;
+    height: 44px;
+    padding: 0 32px 0 12px;
+    border: 1px solid var(--aws-line-strong);
+    background: var(--aws-surface)
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23121212' stroke-width='1.5'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E")
+        no-repeat right 12px center;
+    color: var(--aws-ink);
+    font-size: 14px;
+}
+
+/* Buttons ------------------------------------------------------------------------------------ */
+.aws-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 12px 20px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: var(--aws-tracking);
+    text-transform: uppercase;
+    transition: background 150ms ease, color 150ms ease, opacity 150ms ease;
+}
+
+.aws-button--primary {
+    width: 100%;
+    min-height: 56px;
+    background: var(--aws-accent);
+    color: var(--aws-accent-contrast);
+}
+
+.aws-button--secondary {
+    width: 100%;
+    border: 1px solid var(--aws-ink);
+    color: var(--aws-ink);
+}
+
+.aws-button--secondary:hover:not([aria-disabled='true'], :disabled) {
+    background: var(--aws-ink);
+    color: var(--aws-surface);
+}
+
+.aws-button--chosen {
+    flex: 1;
+    background: var(--aws-surface-sunk);
+    color: var(--aws-ink);
+    cursor: default;
+}
+
+.aws-button--chosen svg {
+    color: var(--aws-success);
+}
+
+.aws-button[aria-disabled='true']:not(.aws-button--chosen),
+.aws-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.aws-button:disabled {
+    border-color: var(--aws-line-strong);
+}
+
+.aws-in-set {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.aws-link {
+    flex: none;
+    min-height: 44px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: var(--aws-tracking);
+    text-transform: uppercase;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    color: var(--aws-ink-soft);
+}
+
+.aws-link:hover {
+    color: var(--aws-ink);
+}
+
+/* Your set ----------------------------------------------------------------------------------- */
+.aws-summary {
+    display: grid;
+    gap: 20px;
+    padding: 24px;
+    background: var(--aws-surface-sunk);
+}
+
+@media (min-width: 1100px) {
+    .aws-summary {
+        position: sticky;
+        top: 24px;
+    }
+}
+
+.aws-summary__heading {
+    font-size: 12px;
+    letter-spacing: var(--aws-tracking);
+    text-transform: uppercase;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--aws-ink);
+}
+
+.aws-summary__lines {
+    display: grid;
+    gap: 14px;
+}
+
+.aws-line {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    font-size: 14px;
+}
+
+.aws-line__thumb {
+    width: 48px;
+    height: 60px;
+    object-fit: cover;
+    background: var(--aws-surface);
+}
+
+.aws-line--empty .aws-line__thumb {
+    border: 1px dashed var(--aws-line-strong);
+    background: transparent;
+}
+
+.aws-line__text {
+    display: grid;
+    min-width: 0;
+}
+
+.aws-line__step {
+    font-size: 10px;
+    color: var(--aws-ink-faint);
+}
+
+.aws-line__title {
+    font-weight: 500;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.aws-line__title--muted {
+    font-weight: 400;
+    color: var(--aws-ink-faint);
+}
+
+.aws-line__variant {
+    color: var(--aws-ink-soft);
+    font-size: 13px;
+}
+
+.aws-line__tag {
+    font-size: 12px;
+    color: var(--aws-ink-soft);
+}
+
+.aws-icon-button {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    color: var(--aws-ink-soft);
+}
+
+.aws-icon-button:hover {
+    color: var(--aws-ink);
+    background: var(--aws-surface);
+}
+
+.aws-breakdown {
+    display: grid;
+    gap: 6px;
+    padding-top: 16px;
+    border-top: 1px solid var(--aws-line-strong);
+    font-size: 14px;
+}
+
+.aws-breakdown__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.aws-breakdown__row dt {
+    color: var(--aws-ink-soft);
+}
+
+.aws-breakdown__row dd {
+    font-variant-numeric: tabular-nums;
+}
+
+.aws-price {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: 4px 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--aws-ink);
+}
+
+.aws-breakdown + .aws-price {
+    border-top-color: var(--aws-line-strong);
+}
+
+.aws-price--compact {
+    padding-top: 0;
+    border: 0;
+}
+
+.aws-price__amounts {
+    display: inline-flex;
+    gap: 10px;
+    align-items: baseline;
+}
+
+.aws-price__compare {
+    color: var(--aws-ink-faint);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+}
+
+.aws-price__total {
+    font-size: 24px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+
+.aws-price__saving {
+    grid-column: 1 / -1;
+    justify-self: end;
+    color: var(--aws-success);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.aws-status {
+    min-height: 1.4em;
+    font-size: 13px;
+    color: var(--aws-ink-soft);
+    text-align: center;
+}
+
+.aws-status--error {
+    color: var(--aws-danger);
+}
+
+.aws-status:empty {
+    display: none;
+}
+
+.aws-status-wrap {
+    min-height: 1.4em;
+}
+
+.aws-summary__heading:focus {
+    outline: none;
+}
+
+.aws-root--nudged .aws-status {
+    animation: aws-nudge 400ms ease;
+}
+
+@keyframes aws-nudge {
+    25% {
+        transform: translateX(-4px);
+    }
+    75% {
+        transform: translateX(4px);
+    }
+}
+
+/* The mobile bar ----------------------------------------------------------------------------- */
+.aws-mobile-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 12px;
+    margin: 32px -20px 0;
+    padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+    background: var(--aws-surface);
+    border-top: 1px solid var(--aws-ink);
+}
+
+.aws-mobile-bar .aws-buy {
+    width: auto;
+    min-height: 48px;
+}
+
+.aws-mobile-bar .aws-status-wrap {
+    grid-column: 1 / -1;
+    min-height: 0;
+}
+
+.aws-mobile-bar .aws-status {
+    text-align: left;
+}
+
+.aws-mobile-bar__info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.aws-mobile-bar__count {
+    display: grid;
+    place-items: center;
+    min-width: 36px;
+    height: 28px;
+    padding: 0 6px;
+    border: 1px solid var(--aws-ink);
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.aws-mobile-bar .aws-price__label,
+.aws-mobile-bar .aws-price__compare {
+    display: none;
+}
+
+@media (max-width: 400px) {
+    .aws-mobile-bar .aws-buy {
+        padding: 12px 16px;
+    }
+}
+
+.aws-mobile-bar .aws-price__total {
+    font-size: 19px;
+}
+
+/* One buy button on screen at a time: the rail's on wide screens, the bar's on narrow ones. */
+@media (min-width: 1100px) {
+    .aws-mobile-bar {
+        display: none;
+    }
+}
+
+@media (max-width: 1099.98px) {
+    .aws-summary .aws-buy,
+    .aws-summary .aws-status-wrap {
+        display: none;
+    }
+}
+
+/* The details dialog ------------------------------------------------------------------------- */
+.aws-dialog {
+    width: min(980px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: var(--aws-surface);
+    color: var(--aws-ink);
+    font-family: var(--aws-font-body);
+    box-shadow: 0 24px 80px rgb(0 0 0 / 30%);
+}
+
+.aws-dialog::backdrop {
+    background: rgb(18 18 18 / 55%);
+}
+
+.aws-dialog__inner {
+    position: relative;
+    display: grid;
+    gap: 28px;
+    padding: 28px;
+}
+
+@media (min-width: 760px) {
+    .aws-dialog__inner {
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+        gap: 36px;
+    }
+}
+
+.aws-dialog__close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    background: var(--aws-surface);
+}
+
+.aws-dialog__gallery > img {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    background: var(--aws-surface-sunk);
+}
+
+.aws-dialog__thumbs {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    overflow-x: auto;
+}
+
+.aws-dialog__thumb {
+    flex: none;
+    width: 52px;
+    height: 65px;
+    overflow: hidden;
+    opacity: 0.6;
+    border-bottom: 2px solid transparent;
+}
+
+.aws-dialog__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.aws-dialog__thumb[aria-current='true'] {
+    opacity: 1;
+    border-bottom-color: var(--aws-ink);
+}
+
+.aws-dialog__details {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 8px;
+}
+
+.aws-dialog__step {
+    color: var(--aws-ink-faint);
+}
+
+.aws-dialog__title {
+    margin-top: -10px;
+    padding-right: 44px;
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+}
+
+.aws-dialog__description {
+    color: var(--aws-ink-soft);
+    font-size: 14px;
+    white-space: pre-line;
+}
+
+/* States ------------------------------------------------------------------------------------- */
+.aws-loading {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    gap: 20px;
+    min-height: 640px;
+    align-content: start;
+}
+
+.aws-loading__bar {
+    display: block;
+    aspect-ratio: 4 / 5;
+    background: linear-gradient(90deg, var(--aws-surface-sunk), #f9f8f6, var(--aws-surface-sunk));
+    background-size: 200% 100%;
+    animation: aws-shimmer 1.4s linear infinite;
+}
+
+@keyframes aws-shimmer {
+    to {
+        background-position: -200% 0;
+    }
+}
+
+.aws-error {
+    margin-bottom: 20px;
+    padding: 16px;
+    background: var(--aws-surface-sunk);
+    color: var(--aws-ink);
+}
+
+.aws-editor-panel {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    margin: 16px 0;
+    padding: 14px 16px;
+    border-radius: 8px;
+    background: #fff4e5;
+    border: 1px solid #f1c27d;
+    color: #4a3410;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+}
+
+.aws-editor-panel svg {
+    margin-top: 3px;
+}
+
+.aws-editor-panel__title {
+    font-weight: 600;
+    margin-bottom: 4px !important;
+}
+
+.aws-editor-panel__list {
+    display: grid;
+    gap: 6px;
+    list-style: disc !important;
+    padding-left: 18px !important;
+}
+
+@media (max-width: 600px) {
+    .aws-root {
+        padding-top: 28px;
+    }
+
+    .aws-match {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .aws-header {
+        gap: 14px;
+        padding-bottom: 20px;
+    }
+
+    .aws-header__intro {
+        margin-top: 10px;
+        font-size: 14px;
+    }
+
+    .aws-header__price {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        text-align: left;
+    }
+
+    .aws-header__price-amount {
+        font-size: 24px;
+    }
+
+    .aws-match {
+        gap: 6px;
+        padding: 14px 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aws-root *,
+    .aws-dialog * {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}

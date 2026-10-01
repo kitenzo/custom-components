@@ -1,0 +1,123 @@
+/*
+ * The dev page's stand-in theme. Page geometry only (header, gutter, footer): never colours the
+ * widget could come to rely on, because anything the harness supplies is a difference that first
+ * shows up on a merchant's store.
+ *
+ * The font is the one thing set here on purpose: it stands in for an athleisure store's theme
+ * font, which the widget inherits exactly as it would the merchant's (the Liquid section passes
+ * the theme's own fonts down; with none set, the widget uses the page's).
+ */
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background: #fff;
+    color: #222;
+}
+
+.theme-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 24px;
+    background: #fff;
+    border-bottom: 1px solid #e8e4de;
+}
+
+.theme-header__logo {
+    font-weight: 800;
+    letter-spacing: 0.32em;
+}
+
+.theme-header__nav {
+    display: flex;
+    gap: 20px;
+}
+
+.theme-header__nav a {
+    color: inherit;
+}
+
+.theme-main {
+    min-height: 70vh;
+    padding-bottom: 64px;
+}
+
+.theme-section + .theme-section {
+    border-top: 8px solid #efebe5;
+}
+
+.theme-footer {
+    padding: 48px 24px;
+    background: #222;
+    color: #ddd;
+}
+
+/* --- The dev toolbar ---------------------------------------------------------------------- */
+.dev-toolbar {
+    position: fixed;
+    left: 12px;
+    bottom: 12px;
+    z-index: 2147483000;
+    width: 300px;
+    max-height: calc(100vh - 24px);
+    overflow: auto;
+    font: 13px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #111;
+    background: #fff;
+    border: 1px solid #d0d0d0;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 18%);
+}
+
+.dev-toolbar summary {
+    padding: 10px 12px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.dev-toolbar__body {
+    display: grid;
+    gap: 10px;
+    padding: 0 12px 12px;
+}
+
+.dev-toolbar fieldset {
+    margin: 0;
+    padding: 6px 8px 8px;
+    border: 1px solid #e3e3e3;
+    border-radius: 6px;
+}
+
+.dev-toolbar legend {
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.dev-toolbar label {
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+    padding: 2px 0;
+}
+
+.dev-toolbar button {
+    padding: 6px 10px;
+    border: 1px solid #c9c9c9;
+    border-radius: 6px;
+    background: #f6f6f6;
+    cursor: pointer;
+}
+
+.dev-toolbar__row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.dev-toolbar__hint {
+    color: #666;
+    font-size: 12px;
+}

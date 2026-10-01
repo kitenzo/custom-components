@@ -1,0 +1,1190 @@
+[
+ {
+  "id": 8308427653156,
+  "title": "Oversized Drop-Shoulder Tee",
+  "handle": "oversized-drop-tee",
+  "body_html": "<p>Heavyweight cotton tee with a relaxed drop-shoulder cut. The third piece in The Starter Pack — throw over the Form Sports Bra for warm-ups, rest days, and the walk home.</p><ul>\n<li>240 GSM heavyweight cotton</li>\n<li>Drop-shoulder, oversized fit</li>\n<li>Ribbed crew neck</li>\n<li>Tonal embroidered logo</li>\n</ul>",
+  "vendor": "STRATA",
+  "product_type": "T-Shirt",
+  "tags": [
+   "oversized",
+   "starter-pack",
+   "tee",
+   "top",
+   "womens"
+  ],
+  "options": [
+   {
+    "name": "Size",
+    "position": 1,
+    "values": [
+     "XS",
+     "S",
+     "M",
+     "L",
+     "XL"
+    ]
+   },
+   {
+    "name": "Colour",
+    "position": 2,
+    "values": [
+     "Onyx",
+     "Bone",
+     "Moss",
+     "Slate"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 44242662752292,
+    "title": "XS / Onyx",
+    "option1": "XS",
+    "option2": "Onyx",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-nj0jhw1qw5rmt0cyh2eb3qbwgm.webp?v=1780410625"
+    }
+   },
+   {
+    "id": 44242662785060,
+    "title": "XS / Bone",
+    "option1": "XS",
+    "option2": "Bone",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-4k3rkydcx1rmw0cyh2qtmchgbg.webp?v=1780410627"
+    }
+   },
+   {
+    "id": 44242662817828,
+    "title": "XS / Moss",
+    "option1": "XS",
+    "option2": "Moss",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-9mcbsvn3fsrmt0cyh2st05208g.webp?v=1780410629"
+    }
+   },
+   {
+    "id": 44242662850596,
+    "title": "XS / Slate",
+    "option1": "XS",
+    "option2": "Slate",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-8gw1rbebfnrmw0cyh2tsd52190.webp?v=1780410627"
+    }
+   },
+   {
+    "id": 44242662883364,
+    "title": "S / Onyx",
+    "option1": "S",
+    "option2": "Onyx",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-nj0jhw1qw5rmt0cyh2eb3qbwgm.webp?v=1780410625"
+    }
+   },
+   {
+    "id": 44242662916132,
+    "title": "S / Bone",
+    "option1": "S",
+    "option2": "Bone",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-4k3rkydcx1rmw0cyh2qtmchgbg.webp?v=1780410627"
+    }
+   },
+   {
+    "id": 44242662948900,
+    "title": "S / Moss",
+    "option1": "S",
+    "option2": "Moss",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-9mcbsvn3fsrmt0cyh2st05208g.webp?v=1780410629"
+    }
+   },
+   {
+    "id": 44242662981668,
+    "title": "S / Slate",
+    "option1": "S",
+    "option2": "Slate",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-8gw1rbebfnrmw0cyh2tsd52190.webp?v=1780410627"
+    }
+   },
+   {
+    "id": 44242663014436,
+    "title": "M / Onyx",
+    "option1": "M",
+    "option2": "Onyx",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-nj0jhw1qw5rmt0cyh2eb3qbwgm.webp?v=1780410625"
+    }
+   },
+   {
+    "id": 44242663047204,
+    "title": "M / Bone",
+    "option1": "M",
+    "option2": "Bone",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-4k3rkydcx1rmw0cyh2qtmchgbg.webp?v=1780410627"
+    }
+   },
+   {
+    "id": 44242663079972,
+    "title": "M / Moss",
+    "option1": "M",
+    "option2": "Moss",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-9mcbsvn3fsrmt0cyh2st05208g.webp?v=1780410629"
+    }
+   },
+   {
+    "id": 44242663112740,
+    "title": "M / Slate",
+    "option1": "M",
+    "option2": "Slate",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-8gw1rbebfnrmw0cyh2tsd52190.webp?v=1780410627"
+    }
+   },
+   {
+    "id": 44242663145508,
+    "title": "L / Onyx",
+    "option1": "L",
+    "option2": "Onyx",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-nj0jhw1qw5rmt0cyh2eb3qbwgm.webp?v=1780410625"
+    }
+   },
+   {
+    "id": 44242663178276,
+    "title": "L / Bone",
+    "option1": "L",
+    "option2": "Bone",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-4k3rkydcx1rmw0cyh2qtmchgbg.webp?v=1780410627"
+    }
+   },
+   {
+    "id": 44242663211044,
+    "title": "L / Moss",
+    "option1": "L",
+    "option2": "Moss",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-9mcbsvn3fsrmt0cyh2st05208g.webp?v=1780410629"
+    }
+   },
+   {
+    "id": 44242663243812,
+    "title": "L / Slate",
+    "option1": "L",
+    "option2": "Slate",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-8gw1rbebfnrmw0cyh2tsd52190.webp?v=1780410627"
+    }
+   },
+   {
+    "id": 44242663276580,
+    "title": "XL / Onyx",
+    "option1": "XL",
+    "option2": "Onyx",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-nj0jhw1qw5rmt0cyh2eb3qbwgm.webp?v=1780410625"
+    }
+   },
+   {
+    "id": 44242663309348,
+    "title": "XL / Bone",
+    "option1": "XL",
+    "option2": "Bone",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-4k3rkydcx1rmw0cyh2qtmchgbg.webp?v=1780410627"
+    }
+   },
+   {
+    "id": 44242663342116,
+    "title": "XL / Moss",
+    "option1": "XL",
+    "option2": "Moss",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-9mcbsvn3fsrmt0cyh2st05208g.webp?v=1780410629"
+    }
+   },
+   {
+    "id": 44242663374884,
+    "title": "XL / Slate",
+    "option1": "XL",
+    "option2": "Slate",
+    "option3": null,
+    "sku": null,
+    "available": true,
+    "price": "42.00",
+    "compare_at_price": "54.00",
+    "grams": 220,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-8gw1rbebfnrmw0cyh2tsd52190.webp?v=1780410627"
+    }
+   }
+  ],
+  "images": [
+   {
+    "id": 38284020940836,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-nj0jhw1qw5rmt0cyh2eb3qbwgm.webp?v=1780410625",
+    "alt": null,
+    "variant_ids": [
+     44242662752292,
+     44242662883364,
+     44242663014436,
+     44242663145508,
+     44242663276580
+    ]
+   },
+   {
+    "id": 38284153552932,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-5aq5e6c83nrmy0cyh3486fe8wg.webp?v=1780411388",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 38284020973604,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-4k3rkydcx1rmw0cyh2qtmchgbg.webp?v=1780410627",
+    "alt": null,
+    "variant_ids": [
+     44242662785060,
+     44242662916132,
+     44242663047204,
+     44242663178276,
+     44242663309348
+    ]
+   },
+   {
+    "id": 38284021530660,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-9mcbsvn3fsrmt0cyh2st05208g.webp?v=1780410629",
+    "alt": null,
+    "variant_ids": [
+     44242662817828,
+     44242662948900,
+     44242663079972,
+     44242663211044,
+     44242663342116
+    ]
+   },
+   {
+    "id": 38284021497892,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-8gw1rbebfnrmw0cyh2tsd52190.webp?v=1780410627",
+    "alt": null,
+    "variant_ids": [
+     44242662850596,
+     44242662981668,
+     44242663112740,
+     44242663243812,
+     44242663374884
+    ]
+   }
+  ]
+ },
+ {
+  "id": 8308427620388,
+  "title": "Form Sports Bra",
+  "handle": "form-sports-bra",
+  "body_html": "<p>Medium-impact sports bra with removable pads and a racerback cut. Designed to layer cleanly under the Oversized Drop Tee for the full Starter Pack look.</p><ul>\n<li>Medium-impact support</li>\n<li>Removable cups</li>\n<li>Racerback</li>\n<li>Sweat-wicking jersey</li>\n</ul>",
+  "vendor": "STRATA",
+  "product_type": "Sports Bra",
+  "tags": [
+   "sports-bra",
+   "starter-pack",
+   "top",
+   "training",
+   "womens"
+  ],
+  "options": [
+   {
+    "name": "Size",
+    "position": 1,
+    "values": [
+     "XS",
+     "S",
+     "M",
+     "L",
+     "XL"
+    ]
+   },
+   {
+    "name": "Colour",
+    "position": 2,
+    "values": [
+     "Onyx",
+     "Bone",
+     "Moss",
+     "Slate"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 44219277377572,
+    "title": "XS / Onyx",
+    "option1": "XS",
+    "option2": "Onyx",
+    "option3": null,
+    "sku": "STR-FSB-ONY-XS",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-zjny9fczx5rmr0cyh1tanvm3mg.jpg?v=1780410203"
+    }
+   },
+   {
+    "id": 44219277410340,
+    "title": "S / Onyx",
+    "option1": "S",
+    "option2": "Onyx",
+    "option3": null,
+    "sku": "STR-FSB-ONY-S",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-zjny9fczx5rmr0cyh1tanvm3mg.jpg?v=1780410203"
+    }
+   },
+   {
+    "id": 44219277443108,
+    "title": "M / Onyx",
+    "option1": "M",
+    "option2": "Onyx",
+    "option3": null,
+    "sku": "STR-FSB-ONY-M",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-zjny9fczx5rmr0cyh1tanvm3mg.jpg?v=1780410203"
+    }
+   },
+   {
+    "id": 44219277475876,
+    "title": "L / Onyx",
+    "option1": "L",
+    "option2": "Onyx",
+    "option3": null,
+    "sku": "STR-FSB-ONY-L",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-zjny9fczx5rmr0cyh1tanvm3mg.jpg?v=1780410203"
+    }
+   },
+   {
+    "id": 44219277508644,
+    "title": "XL / Onyx",
+    "option1": "XL",
+    "option2": "Onyx",
+    "option3": null,
+    "sku": "STR-FSB-ONY-XL",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-zjny9fczx5rmr0cyh1tanvm3mg.jpg?v=1780410203"
+    }
+   },
+   {
+    "id": 44219277541412,
+    "title": "XS / Bone",
+    "option1": "XS",
+    "option2": "Bone",
+    "option3": null,
+    "sku": "STR-FSB-BON-XS",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-89q05mkvgxrmt0cyh208acw23c.jpg?v=1780410202"
+    }
+   },
+   {
+    "id": 44219277574180,
+    "title": "S / Bone",
+    "option1": "S",
+    "option2": "Bone",
+    "option3": null,
+    "sku": "STR-FSB-BON-S",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-89q05mkvgxrmt0cyh208acw23c.jpg?v=1780410202"
+    }
+   },
+   {
+    "id": 44219277606948,
+    "title": "M / Bone",
+    "option1": "M",
+    "option2": "Bone",
+    "option3": null,
+    "sku": "STR-FSB-BON-M",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-89q05mkvgxrmt0cyh208acw23c.jpg?v=1780410202"
+    }
+   },
+   {
+    "id": 44219277639716,
+    "title": "L / Bone",
+    "option1": "L",
+    "option2": "Bone",
+    "option3": null,
+    "sku": "STR-FSB-BON-L",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-89q05mkvgxrmt0cyh208acw23c.jpg?v=1780410202"
+    }
+   },
+   {
+    "id": 44219277672484,
+    "title": "XL / Bone",
+    "option1": "XL",
+    "option2": "Bone",
+    "option3": null,
+    "sku": "STR-FSB-BON-XL",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-89q05mkvgxrmt0cyh208acw23c.jpg?v=1780410202"
+    }
+   },
+   {
+    "id": 44219277705252,
+    "title": "XS / Moss",
+    "option1": "XS",
+    "option2": "Moss",
+    "option3": null,
+    "sku": "STR-FSB-MOS-XS",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-67t76hcrkhrmy0cyh29tah0mcm.webp?v=1780410214"
+    }
+   },
+   {
+    "id": 44219277738020,
+    "title": "S / Moss",
+    "option1": "S",
+    "option2": "Moss",
+    "option3": null,
+    "sku": "STR-FSB-MOS-S",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-67t76hcrkhrmy0cyh29tah0mcm.webp?v=1780410214"
+    }
+   },
+   {
+    "id": 44219277770788,
+    "title": "M / Moss",
+    "option1": "M",
+    "option2": "Moss",
+    "option3": null,
+    "sku": "STR-FSB-MOS-M",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-67t76hcrkhrmy0cyh29tah0mcm.webp?v=1780410214"
+    }
+   },
+   {
+    "id": 44219277803556,
+    "title": "L / Moss",
+    "option1": "L",
+    "option2": "Moss",
+    "option3": null,
+    "sku": "STR-FSB-MOS-L",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-67t76hcrkhrmy0cyh29tah0mcm.webp?v=1780410214"
+    }
+   },
+   {
+    "id": 44219277836324,
+    "title": "XL / Moss",
+    "option1": "XL",
+    "option2": "Moss",
+    "option3": null,
+    "sku": "STR-FSB-MOS-XL",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-67t76hcrkhrmy0cyh29tah0mcm.webp?v=1780410214"
+    }
+   },
+   {
+    "id": 44219277869092,
+    "title": "XS / Slate",
+    "option1": "XS",
+    "option2": "Slate",
+    "option3": null,
+    "sku": "STR-FSB-SLA-XS",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-4j4fqb3ahdrmw0cyh2c9pdre28.webp?v=1780410203"
+    }
+   },
+   {
+    "id": 44219277901860,
+    "title": "S / Slate",
+    "option1": "S",
+    "option2": "Slate",
+    "option3": null,
+    "sku": "STR-FSB-SLA-S",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-4j4fqb3ahdrmw0cyh2c9pdre28.webp?v=1780410203"
+    }
+   },
+   {
+    "id": 44219277934628,
+    "title": "M / Slate",
+    "option1": "M",
+    "option2": "Slate",
+    "option3": null,
+    "sku": "STR-FSB-SLA-M",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-4j4fqb3ahdrmw0cyh2c9pdre28.webp?v=1780410203"
+    }
+   },
+   {
+    "id": 44219277967396,
+    "title": "L / Slate",
+    "option1": "L",
+    "option2": "Slate",
+    "option3": null,
+    "sku": "STR-FSB-SLA-L",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-4j4fqb3ahdrmw0cyh2c9pdre28.webp?v=1780410203"
+    }
+   },
+   {
+    "id": 44219278000164,
+    "title": "XL / Slate",
+    "option1": "XL",
+    "option2": "Slate",
+    "option3": null,
+    "sku": "STR-FSB-SLA-XL",
+    "available": true,
+    "price": "38.00",
+    "compare_at_price": "48.00",
+    "grams": 120,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-4j4fqb3ahdrmw0cyh2c9pdre28.webp?v=1780410203"
+    }
+   }
+  ],
+  "images": [
+   {
+    "id": 38283984470052,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-zjny9fczx5rmr0cyh1tanvm3mg.jpg?v=1780410203",
+    "alt": null,
+    "variant_ids": [
+     44219277377572,
+     44219277410340,
+     44219277443108,
+     44219277475876,
+     44219277508644
+    ]
+   },
+   {
+    "id": 38284016058404,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-akyhb4dyx9rmy0cyh2x8nakszw.webp?v=1780410596",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 38283984797732,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-89q05mkvgxrmt0cyh208acw23c.jpg?v=1780410202",
+    "alt": null,
+    "variant_ids": [
+     44219277541412,
+     44219277574180,
+     44219277606948,
+     44219277639716,
+     44219277672484
+    ]
+   },
+   {
+    "id": 38283986141220,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-67t76hcrkhrmy0cyh29tah0mcm.webp?v=1780410214",
+    "alt": null,
+    "variant_ids": [
+     44219277705252,
+     44219277738020,
+     44219277770788,
+     44219277803556,
+     44219277836324
+    ]
+   },
+   {
+    "id": 38283984863268,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-4j4fqb3ahdrmw0cyh2c9pdre28.webp?v=1780410203",
+    "alt": null,
+    "variant_ids": [
+     44219277869092,
+     44219277901860,
+     44219277934628,
+     44219277967396,
+     44219278000164
+    ]
+   }
+  ]
+ },
+ {
+  "id": 8308427587620,
+  "title": "Power Leggings",
+  "handle": "power-leggings",
+  "body_html": "<p>High-rise compressive leggings in our signature four-way stretch knit. Squat-proof, sweat-wicking, built for heavy training days. Pairs with the Form Sports Bra and Oversized Drop Tee to complete The Starter Pack.</p><ul>\n<li>78% recycled polyamide, 22% elastane</li>\n<li>High-rise, full length</li>\n<li>Side pocket for phone</li>\n<li>Flatlock seams</li>\n</ul>",
+  "vendor": "STRATA",
+  "product_type": "Leggings",
+  "tags": [
+   "bottoms",
+   "leggings",
+   "starter-pack",
+   "training",
+   "womens"
+  ],
+  "options": [
+   {
+    "name": "Size",
+    "position": 1,
+    "values": [
+     "XS",
+     "S",
+     "M",
+     "L",
+     "XL"
+    ]
+   },
+   {
+    "name": "Colour",
+    "position": 2,
+    "values": [
+     "Onyx",
+     "Bone",
+     "Moss",
+     "Slate"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 44219276722212,
+    "title": "XS / Onyx",
+    "option1": "XS",
+    "option2": "Onyx",
+    "option3": null,
+    "sku": "STR-PWL-ONY-XS",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/fv1af8wvh9rmr0cygecsa4pxsm.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219276754980,
+    "title": "S / Onyx",
+    "option1": "S",
+    "option2": "Onyx",
+    "option3": null,
+    "sku": "STR-PWL-ONY-S",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/fv1af8wvh9rmr0cygecsa4pxsm.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219276787748,
+    "title": "M / Onyx",
+    "option1": "M",
+    "option2": "Onyx",
+    "option3": null,
+    "sku": "STR-PWL-ONY-M",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/fv1af8wvh9rmr0cygecsa4pxsm.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219276820516,
+    "title": "L / Onyx",
+    "option1": "L",
+    "option2": "Onyx",
+    "option3": null,
+    "sku": "STR-PWL-ONY-L",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/fv1af8wvh9rmr0cygecsa4pxsm.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219276853284,
+    "title": "XL / Onyx",
+    "option1": "XL",
+    "option2": "Onyx",
+    "option3": null,
+    "sku": "STR-PWL-ONY-XL",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/fv1af8wvh9rmr0cygecsa4pxsm.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219276886052,
+    "title": "XS / Bone",
+    "option1": "XS",
+    "option2": "Bone",
+    "option3": null,
+    "sku": "STR-PWL-BON-XS",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-mmzck1j49nrmw0cygf59vvb7gw.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219276918820,
+    "title": "S / Bone",
+    "option1": "S",
+    "option2": "Bone",
+    "option3": null,
+    "sku": "STR-PWL-BON-S",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-mmzck1j49nrmw0cygf59vvb7gw.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219276951588,
+    "title": "M / Bone",
+    "option1": "M",
+    "option2": "Bone",
+    "option3": null,
+    "sku": "STR-PWL-BON-M",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-mmzck1j49nrmw0cygf59vvb7gw.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219276984356,
+    "title": "L / Bone",
+    "option1": "L",
+    "option2": "Bone",
+    "option3": null,
+    "sku": "STR-PWL-BON-L",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-mmzck1j49nrmw0cygf59vvb7gw.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219277017124,
+    "title": "XL / Bone",
+    "option1": "XL",
+    "option2": "Bone",
+    "option3": null,
+    "sku": "STR-PWL-BON-XL",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-mmzck1j49nrmw0cygf59vvb7gw.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219277049892,
+    "title": "XS / Moss",
+    "option1": "XS",
+    "option2": "Moss",
+    "option3": null,
+    "sku": "STR-PWL-MOS-XS",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-f4y5pr4y9xrmt0cygf5tx9psag.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219277082660,
+    "title": "S / Moss",
+    "option1": "S",
+    "option2": "Moss",
+    "option3": null,
+    "sku": "STR-PWL-MOS-S",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-f4y5pr4y9xrmt0cygf5tx9psag.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219277115428,
+    "title": "M / Moss",
+    "option1": "M",
+    "option2": "Moss",
+    "option3": null,
+    "sku": "STR-PWL-MOS-M",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-f4y5pr4y9xrmt0cygf5tx9psag.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219277148196,
+    "title": "L / Moss",
+    "option1": "L",
+    "option2": "Moss",
+    "option3": null,
+    "sku": "STR-PWL-MOS-L",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-f4y5pr4y9xrmt0cygf5tx9psag.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219277180964,
+    "title": "XL / Moss",
+    "option1": "XL",
+    "option2": "Moss",
+    "option3": null,
+    "sku": "STR-PWL-MOS-XL",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-f4y5pr4y9xrmt0cygf5tx9psag.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219277213732,
+    "title": "XS / Slate",
+    "option1": "XS",
+    "option2": "Slate",
+    "option3": null,
+    "sku": "STR-PWL-SLA-XS",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-qmgn7nfzt9rmt0cygfavt1y1vr.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219277246500,
+    "title": "S / Slate",
+    "option1": "S",
+    "option2": "Slate",
+    "option3": null,
+    "sku": "STR-PWL-SLA-S",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-qmgn7nfzt9rmt0cygfavt1y1vr.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219277279268,
+    "title": "M / Slate",
+    "option1": "M",
+    "option2": "Slate",
+    "option3": null,
+    "sku": "STR-PWL-SLA-M",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-qmgn7nfzt9rmt0cygfavt1y1vr.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219277312036,
+    "title": "L / Slate",
+    "option1": "L",
+    "option2": "Slate",
+    "option3": null,
+    "sku": "STR-PWL-SLA-L",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-qmgn7nfzt9rmt0cygfavt1y1vr.jpg?v=1780329706"
+    }
+   },
+   {
+    "id": 44219277344804,
+    "title": "XL / Slate",
+    "option1": "XL",
+    "option2": "Slate",
+    "option3": null,
+    "sku": "STR-PWL-SLA-XL",
+    "available": true,
+    "price": "58.00",
+    "compare_at_price": "72.00",
+    "grams": 280,
+    "featured_image": {
+     "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-qmgn7nfzt9rmt0cygfavt1y1vr.jpg?v=1780329706"
+    }
+   }
+  ],
+  "images": [
+   {
+    "id": 38270165614628,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/fv1af8wvh9rmr0cygecsa4pxsm.jpg?v=1780329706",
+    "alt": null,
+    "variant_ids": [
+     44219276722212,
+     44219276754980,
+     44219276787748,
+     44219276820516,
+     44219276853284
+    ]
+   },
+   {
+    "id": 38270165647396,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-qptv604ex9rmw0cygfk9st235c.jpg?v=1780329706",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 38270165581860,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-mmzck1j49nrmw0cygf59vvb7gw.jpg?v=1780329706",
+    "alt": null,
+    "variant_ids": [
+     44219276886052,
+     44219276918820,
+     44219276951588,
+     44219276984356,
+     44219277017124
+    ]
+   },
+   {
+    "id": 38270165516324,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-f4y5pr4y9xrmt0cygf5tx9psag.jpg?v=1780329706",
+    "alt": null,
+    "variant_ids": [
+     44219277049892,
+     44219277082660,
+     44219277115428,
+     44219277148196,
+     44219277180964
+    ]
+   },
+   {
+    "id": 38270165549092,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/replicate-prediction-qmgn7nfzt9rmt0cygfavt1y1vr.jpg?v=1780329706",
+    "alt": null,
+    "variant_ids": [
+     44219277213732,
+     44219277246500,
+     44219277279268,
+     44219277312036,
+     44219277344804
+    ]
+   }
+  ]
+ }
+]

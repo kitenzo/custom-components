@@ -1,0 +1,1271 @@
+/*
+ * The widget's styles. Four layers, in this order:
+ *
+ *   1. Tokens. Restyling for a brand is mostly this block. Fonts are the theme's own (the Liquid
+ *      section loads them and sets --vol-font-*); the colours the merchant can change in the theme
+ *      editor arrive as --vol-accent, --vol-accent-contrast, --vol-highlight and
+ *      --vol-highlight-contrast on the mount element.
+ *   2. A reset scoped to the widget root. Themes style bare elements (one ships
+ *      `button { padding: 1em 25px }`, another paints every element's colour), and namespaced
+ *      classes do not protect against that. The reset comes before every component rule, so each
+ *      component rule still wins over it.
+ *   3. Components. Every class is prefixed `vol-`, because themes have their own `.card`,
+ *      `.drawer`, `.modal` and `.hidden`, and they will collide.
+ *   4. The section around the widget (the product photos beside the ladder), which the Liquid
+ *      renders outside the React root.
+ *
+ * Layout answers to the CONTAINER, not the viewport. The root is a named container (`vol`) and
+ * every layout change is an `@container vol (…)` query, because this widget lives in a product
+ * page's info column: 1440px of viewport can mean 400px of widget. The only viewport queries left
+ * are about the viewport itself: whether the buy panel sticks to the bottom of a phone's screen,
+ * and how wide the dialog (which lives in the top layer, outside any container) may be.
+ *
+ * Nothing here uses `position: fixed`: a theme ancestor with `transform` traps it. The dialog is a
+ * native <dialog> in the top layer; the buy panel is `position: sticky`.
+ */
+
+/* 1. Tokens ------------------------------------------------------------------------------- */
+/* Declared on the mount element (and the section frame around it), never on .vol-root: the Liquid
+   sets the merchant's colours and the theme's fonts on the mount (`#kitenzo-<section id>`), and a
+   custom property declared on .vol-root, a child, would override what it inherits from there and
+   quietly ignore every one of those settings. `:where()` keeps these defaults at zero specificity,
+   so the Liquid's rule on that same element always wins. */
+:where(.vol-section, [data-volume-ladder-bundle]) {
+    --vol-font-body: inherit;
+    --vol-font-heading: inherit;
+    --vol-ink: #101213;
+    --vol-ink-soft: #53595c;
+    --vol-ink-faint: #899094;
+    --vol-surface: #ffffff;
+    --vol-surface-sunk: #f2f3f1;
+    --vol-line: #e2e4e1;
+    --vol-accent: #101213;
+    --vol-accent-contrast: #ffffff;
+    --vol-highlight: #c9f24b;
+    --vol-highlight-contrast: #101213;
+    --vol-save: #17734a;
+    --vol-danger: #a3261b;
+    --vol-radius: 14px;
+    --vol-radius-small: 10px;
+    --vol-shadow: 0 1px 2px rgb(16 18 19 / 6%), 0 8px 24px rgb(16 18 19 / 6%);
+    --vol-focus: 0 0 0 3px color-mix(in srgb, var(--vol-accent) 30%, transparent);
+}
+
+/* 2. Reset, scoped to the root ------------------------------------------------------------ */
+.vol-root,
+.vol-root *,
+.vol-root *::before,
+.vol-root *::after {
+    box-sizing: border-box;
+}
+
+/* A theme that paints every element its body colour (`*:not(a, h1, …) { color: … }`) lands on
+   anything with no colour of its own. Restore inheritance once, under the root. `:where()` keeps
+   this at one class of specificity, so every component rule below (also one class, and later)
+   still sets its own colour. */
+.vol-root :where(*:not(svg, svg *)) {
+    color: inherit;
+}
+
+.vol-root :where(button, input, select) {
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    min-height: 0;
+    width: auto;
+    height: auto;
+    font: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+    line-height: inherit;
+    border-radius: 0;
+    box-shadow: none;
+    background: none;
+    border: 0;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.vol-root :where(button) {
+    cursor: pointer;
+}
+
+.vol-root :where(img) {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+}
+
+.vol-root :where(h2, h3, h4, p, ol, ul) {
+    margin: 0;
+    padding: 0;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.vol-root :where(ol, ul) {
+    list-style: none;
+}
+
+/* A class that sets `display` beats the `hidden` attribute. Make the attribute win. */
+.vol-root [hidden] {
+    display: none !important;
+}
+
+.vol-root :focus-visible {
+    outline: none;
+    box-shadow: var(--vol-focus);
+}
+
+/* 3. Components --------------------------------------------------------------------------- */
+
+/* The root is the container every layout rule below measures. It sets no width of its own: it
+   is exactly as wide as whatever the theme put it in. */
+.vol-root {
+    container: vol / inline-size;
+    font-family: var(--vol-font-body);
+    color: var(--vol-ink);
+    font-size: 16px;
+    line-height: 1.5;
+    min-width: 0;
+}
+
+.vol-root--state {
+    padding: 8px 0 24px;
+}
+
+.vol-shell {
+    display: grid;
+    gap: 22px;
+    min-width: 0;
+}
+
+.vol-root--grid .vol-shell {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Header ------------------------------------------------------------------------------------ */
+.vol-header__title,
+.vol-ladder__heading,
+.vol-products__heading,
+.vol-dialog__title {
+    font-family: var(--vol-font-heading);
+    font-weight: 700;
+    line-height: 1.15;
+}
+
+.vol-header__title {
+    font-size: 28px;
+    letter-spacing: -0.015em;
+    overflow-wrap: anywhere;
+}
+
+.vol-header__intro {
+    margin-top: 8px;
+    color: var(--vol-ink-soft);
+    max-width: 60ch;
+    overflow-wrap: anywhere;
+}
+
+@container vol (min-width: 720px) {
+    .vol-root--grid .vol-header__title {
+        font-size: 36px;
+    }
+}
+
+.vol-notice {
+    display: grid;
+    gap: 4px;
+    padding: 12px 14px;
+    border-radius: var(--vol-radius-small);
+    background: var(--vol-surface-sunk);
+    color: var(--vol-ink-soft);
+    font-size: 14px;
+}
+
+/* The ladder -------------------------------------------------------------------------------- */
+.vol-ladder {
+    display: grid;
+    gap: 4px;
+    padding: 6px;
+    border: 1px solid var(--vol-line);
+    border-radius: var(--vol-radius);
+    background: var(--vol-surface);
+}
+
+.vol-ladder__heading {
+    padding: 10px 10px 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--vol-ink-soft);
+}
+
+.vol-ladder__rungs {
+    display: grid;
+    gap: 2px;
+}
+
+.vol-rung {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    grid-template-areas:
+        'marker count save'
+        'marker each save';
+    align-items: center;
+    column-gap: 12px;
+    padding: 10px 10px;
+    border-radius: var(--vol-radius-small);
+    box-shadow: inset 0 0 0 1.5px transparent;
+    transition: background-color 200ms ease, box-shadow 200ms ease;
+}
+
+.vol-rung__marker {
+    grid-area: marker;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1.5px var(--vol-line);
+    color: var(--vol-surface);
+}
+
+.vol-rung__marker svg {
+    width: 12px;
+    height: 12px;
+    stroke-width: 2.5;
+}
+
+.vol-rung__count {
+    grid-area: count;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    font-weight: 650;
+    font-size: 15px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.vol-rung__badge {
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--vol-ink);
+    color: var(--vol-surface);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.5;
+}
+
+.vol-rung__each {
+    grid-area: each;
+    font-size: 13px;
+    color: var(--vol-ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.vol-rung__save {
+    grid-area: save;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: var(--vol-surface-sunk);
+    color: var(--vol-ink);
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.vol-rung[data-state='reached'] .vol-rung__marker {
+    background: var(--vol-ink-faint);
+    box-shadow: none;
+}
+
+.vol-rung[data-state='reached'] .vol-rung__count,
+.vol-rung[data-state='reached'] .vol-rung__save {
+    color: var(--vol-ink-soft);
+}
+
+.vol-rung[data-state='current'] {
+    background: color-mix(in srgb, var(--vol-highlight) 22%, var(--vol-surface));
+    box-shadow: inset 0 0 0 1.5px var(--vol-ink);
+}
+
+.vol-rung[data-state='current'] .vol-rung__marker {
+    background: var(--vol-ink);
+    box-shadow: none;
+}
+
+.vol-rung[data-state='current'] .vol-rung__save {
+    background: var(--vol-highlight);
+    color: var(--vol-highlight-contrast);
+}
+
+.vol-progress {
+    display: grid;
+    gap: 8px;
+    padding: 10px 10px 8px;
+}
+
+.vol-progress__track {
+    position: relative;
+    display: block;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--vol-surface-sunk);
+}
+
+.vol-progress__fill {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--vol-ink);
+    transform-origin: left center;
+    transition: transform 300ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.vol-progress__tick {
+    position: absolute;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    margin: -5px 0 0 -5px;
+    border-radius: 50%;
+    background: var(--vol-surface);
+    box-shadow: inset 0 0 0 2px var(--vol-line);
+}
+
+.vol-progress__tick:last-child {
+    margin-left: -10px;
+}
+
+.vol-progress__tick[data-reached] {
+    background: var(--vol-highlight);
+    box-shadow: inset 0 0 0 2px var(--vol-ink);
+}
+
+.vol-progress__text {
+    min-height: 1.45em;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+/* A wide grid section lays the rungs side by side, as tiles. */
+@container vol (min-width: 720px) {
+    .vol-ladder--grid {
+        padding: 8px;
+    }
+
+    .vol-ladder--grid .vol-ladder__rungs {
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(0, 1fr);
+        gap: 8px;
+    }
+
+    .vol-ladder--grid .vol-rung {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            'count marker'
+            'each each'
+            'save save';
+        row-gap: 4px;
+        align-items: start;
+        padding: 14px;
+        box-shadow: inset 0 0 0 1px var(--vol-line);
+    }
+
+    .vol-ladder--grid .vol-rung[data-state='current'] {
+        box-shadow: inset 0 0 0 1.5px var(--vol-ink);
+    }
+
+    .vol-ladder--grid .vol-rung__count {
+        font-size: 17px;
+    }
+
+    .vol-ladder--grid .vol-rung__save {
+        justify-self: start;
+        margin-top: 6px;
+    }
+}
+
+/* Products ---------------------------------------------------------------------------------- */
+.vol-products {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+}
+
+.vol-products__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.vol-products__heading {
+    font-size: 17px;
+    overflow-wrap: anywhere;
+}
+
+.vol-products__count {
+    flex: none;
+    font-size: 13px;
+    color: var(--vol-ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.vol-products__count[data-filled] {
+    color: var(--vol-ink);
+    font-weight: 600;
+}
+
+.vol-products__step {
+    margin: 8px 0 4px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vol-ink-soft);
+}
+
+.vol-included {
+    display: grid;
+    gap: 6px;
+}
+
+.vol-included__item {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+}
+
+.vol-root .vol-included__item img {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--vol-surface-sunk);
+}
+
+.vol-included__tag {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--vol-save);
+}
+
+/* Rows (ladder layout) */
+.vol-rows {
+    display: grid;
+    border-top: 1px solid var(--vol-line);
+}
+
+.vol-row {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--vol-line);
+}
+
+.vol-root .vol-row__media {
+    position: relative;
+    display: block;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--vol-radius-small);
+    overflow: hidden;
+    background: var(--vol-surface-sunk);
+}
+
+.vol-root .vol-row__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.18);
+}
+
+/* Drawn inside the thumbnail, on a layer above the zoomed photo (an outline would sit under it,
+   because the transformed image paints later), so nothing pokes out past the column's edge or out
+   from under the sticky buy panel. */
+.vol-row--chosen .vol-row__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 2px var(--vol-ink);
+    pointer-events: none;
+}
+
+.vol-row--sold-out .vol-row__media img,
+.vol-card--sold-out .vol-card__media img {
+    opacity: 0.45;
+    filter: grayscale(0.7);
+}
+
+.vol-row__text {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+}
+
+.vol-row__title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.vol-row__meta {
+    font-size: 14px;
+    color: var(--vol-ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.vol-row__sold-out {
+    font-weight: 600;
+}
+
+.vol-row .vol-options {
+    margin-top: 6px;
+}
+
+.vol-message {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--vol-ink-soft);
+}
+
+.vol-message:not(:empty) {
+    margin-top: 3px;
+}
+
+/* Cards (grid layout) */
+.vol-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+@container vol (min-width: 560px) {
+    .vol-cards {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+    }
+}
+
+.vol-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.vol-root .vol-card__media {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: var(--vol-radius);
+    overflow: hidden;
+    background: var(--vol-surface-sunk);
+    transition: box-shadow 200ms ease;
+}
+
+.vol-root .vol-card__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 400ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (hover: hover) {
+    .vol-root .vol-card__media:hover img {
+        transform: scale(1.04);
+    }
+}
+
+.vol-card--chosen .vol-card__media {
+    box-shadow: inset 0 0 0 2px var(--vol-ink);
+}
+
+.vol-card__qty {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: grid;
+    place-items: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--vol-ink);
+    color: var(--vol-surface);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.vol-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--vol-surface);
+    color: var(--vol-ink-soft);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.vol-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    padding-top: 12px;
+}
+
+.vol-card__title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.vol-card__price {
+    font-size: 14px;
+    color: var(--vol-ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.vol-card__actions {
+    margin-top: auto;
+    padding-top: 8px;
+}
+
+.vol-root .vol-card__actions .vol-add,
+.vol-root .vol-card__actions .vol-stepper {
+    width: 100%;
+}
+
+.vol-placeholder {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    font-family: var(--vol-font-heading);
+    font-size: 22px;
+    color: var(--vol-ink-faint);
+}
+
+/* Options */
+.vol-options {
+    display: grid;
+    gap: 6px;
+}
+
+.vol-option {
+    display: grid;
+    gap: 2px;
+    font-size: 12px;
+    color: var(--vol-ink-soft);
+}
+
+.vol-root .vol-select {
+    width: 100%;
+    padding: 6px 28px 6px 10px;
+    border: 1px solid var(--vol-line);
+    border-radius: var(--vol-radius-small);
+    background: var(--vol-surface)
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%2353595c' stroke-width='1.5'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E")
+        no-repeat right 10px center;
+    color: var(--vol-ink);
+    font-size: 14px;
+}
+
+/* Buttons and the stepper ---------------------------------------------------------------- */
+.vol-root .vol-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background-color 150ms ease, opacity 150ms ease, transform 150ms ease;
+}
+
+.vol-root .vol-button--primary {
+    width: 100%;
+    min-height: 54px;
+    border-radius: 12px;
+    background: var(--vol-accent);
+    color: var(--vol-accent-contrast);
+    font-size: 16px;
+    letter-spacing: 0.01em;
+}
+
+.vol-root .vol-button--primary:active:not([aria-disabled='true']) {
+    transform: translateY(1px);
+}
+
+.vol-root .vol-button--secondary {
+    box-shadow: inset 0 0 0 1.5px var(--vol-ink);
+    color: var(--vol-ink);
+}
+
+/* Hover only where there is a pointer: on a phone, :hover sticks after a tap and the button
+   would stay painted as though it were still pressed. */
+@media (hover: hover) {
+    .vol-root .vol-button--secondary:hover:not(:disabled, [aria-disabled='true']) {
+        background: var(--vol-ink);
+        color: var(--vol-surface);
+    }
+
+    .vol-root .vol-stepper__button:hover:not([aria-disabled='true']) {
+        background: rgb(255 255 255 / 12%);
+    }
+}
+
+.vol-root .vol-button[aria-disabled='true'],
+.vol-root .vol-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.vol-root .vol-button:disabled {
+    box-shadow: inset 0 0 0 1.5px var(--vol-line);
+}
+
+/* The add pill and the stepper share one width, so a row never jumps when the first goes in. */
+.vol-root .vol-add,
+.vol-stepper {
+    width: 108px;
+}
+
+.vol-stepper {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
+    align-items: center;
+    height: 40px;
+    border-radius: 999px;
+    background: var(--vol-ink);
+    color: var(--vol-surface);
+    overflow: hidden;
+}
+
+.vol-root .vol-stepper__button {
+    display: grid;
+    place-items: center;
+    height: 40px;
+    color: var(--vol-surface);
+}
+
+.vol-root .vol-stepper__button[aria-disabled='true'] {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.vol-stepper__count {
+    text-align: center;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The buy panel ----------------------------------------------------------------------------- */
+.vol-buy {
+    display: grid;
+    gap: 12px;
+    padding-top: 2px;
+    background: var(--vol-surface);
+}
+
+.vol-price {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 2px 12px;
+}
+
+.vol-price__label {
+    font-weight: 600;
+}
+
+.vol-price__amounts {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 2px 10px;
+    align-items: baseline;
+    font-variant-numeric: tabular-nums;
+}
+
+.vol-price__compare {
+    color: var(--vol-ink-faint);
+    font-size: 15px;
+}
+
+.vol-price__total {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.vol-price__saving {
+    grid-column: 1 / -1;
+    justify-self: end;
+    color: var(--vol-save);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.vol-status {
+    min-height: 1.4em;
+    font-size: 13px;
+    color: var(--vol-ink-soft);
+    text-align: center;
+}
+
+.vol-status--error {
+    color: var(--vol-danger);
+}
+
+/* Two live regions, always present; only the one with words takes space. */
+.vol-status:empty {
+    display: none;
+}
+
+.vol-status-wrap {
+    min-height: 1.4em;
+}
+
+.vol-root--nudged .vol-status {
+    animation: vol-nudge 400ms ease;
+}
+
+@keyframes vol-nudge {
+    25% {
+        transform: translateX(-4px);
+    }
+    75% {
+        transform: translateX(4px);
+    }
+}
+
+/* A wide grid section: the total and the button side by side under the products. */
+@container vol (min-width: 720px) {
+    .vol-root--grid .vol-buy {
+        grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+        align-items: center;
+        column-gap: 32px;
+        padding: 20px 24px;
+        border: 1px solid var(--vol-line);
+        border-radius: var(--vol-radius);
+    }
+
+    .vol-root--grid .vol-price {
+        grid-template-columns: auto auto;
+        justify-content: start;
+    }
+
+    .vol-root--grid .vol-price__saving {
+        justify-self: start;
+    }
+
+    .vol-root--grid .vol-status-wrap {
+        grid-column: 2;
+        min-height: 0;
+        margin-top: -4px;
+    }
+}
+
+/* A ladder given a wide container: the ladder and the button on the left, the products on
+   the right, so the widget does not become one long column on a 900px section. */
+@container vol (min-width: 760px) {
+    .vol-root--ladder .vol-shell {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        column-gap: 40px;
+        align-items: start;
+    }
+
+    .vol-root--ladder .vol-shell > :not(.vol-ladder, .vol-buy, .vol-products) {
+        grid-column: 1 / -1;
+    }
+
+    .vol-root--ladder .vol-products {
+        grid-column: 2;
+        grid-row: span 2;
+    }
+
+    .vol-root--ladder .vol-ladder,
+    .vol-root--ladder .vol-buy {
+        grid-column: 1;
+    }
+}
+
+/* A phone: the buy panel sticks to the bottom of the screen while the widget is on it, with the
+   total and the button side by side so it takes one short band, not a third of the screen. This
+   is about the viewport's height in the hand, so it is a media query; the container queries above
+   still decide the layout. */
+@media (max-width: 749.98px) {
+    .vol-buy {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 4px 14px;
+        padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--vol-line);
+        box-shadow: 0 -10px 18px -12px rgb(16 18 19 / 18%);
+    }
+
+    .vol-root .vol-buy .vol-buy__button {
+        width: auto;
+        min-width: 150px;
+        min-height: 50px;
+        padding: 8px 22px;
+    }
+
+    .vol-buy .vol-price {
+        grid-template-columns: auto;
+        gap: 0;
+    }
+
+    .vol-buy .vol-price__label {
+        display: none;
+    }
+
+    .vol-buy .vol-price__amounts {
+        justify-content: flex-start;
+    }
+
+    .vol-buy .vol-price__total {
+        font-size: 21px;
+    }
+
+    .vol-buy .vol-price__saving {
+        justify-self: start;
+        font-size: 13px;
+    }
+
+    .vol-buy .vol-status-wrap {
+        grid-column: 1 / -1;
+        min-height: 0;
+    }
+
+    .vol-buy .vol-status {
+        text-align: left;
+    }
+
+    .vol-root--grid .vol-buy {
+        border-radius: 0;
+        border-width: 1px 0 0;
+        padding-inline: 0;
+    }
+}
+
+/* The dialog ------------------------------------------------------------------------------- */
+/* In the top layer, outside every container, so its own width is a viewport question. */
+.vol-dialog {
+    width: min(820px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    padding: 0;
+    border: 0;
+    border-radius: 18px;
+    background: var(--vol-surface);
+    color: var(--vol-ink);
+    font-family: var(--vol-font-body);
+    box-shadow: 0 24px 64px rgb(0 0 0 / 25%);
+}
+
+.vol-dialog::backdrop {
+    background: rgb(16 18 19 / 50%);
+}
+
+.vol-dialog__inner {
+    position: relative;
+    display: grid;
+    gap: 24px;
+    padding: 20px;
+}
+
+@media (min-width: 720px) {
+    .vol-dialog__inner {
+        grid-template-columns: 1fr 1fr;
+        padding: 28px;
+        gap: 32px;
+    }
+}
+
+.vol-root .vol-dialog__close,
+.vol-dialog .vol-dialog__close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--vol-surface);
+    box-shadow: var(--vol-shadow);
+}
+
+.vol-root .vol-dialog__gallery img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: var(--vol-radius);
+    background: var(--vol-surface-sunk);
+}
+
+.vol-dialog__thumbs {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    overflow-x: auto;
+}
+
+.vol-root .vol-dialog__thumb {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--vol-radius-small);
+    overflow: hidden;
+    box-shadow: inset 0 0 0 2px transparent;
+}
+
+.vol-root .vol-dialog__thumb[aria-current='true'] {
+    box-shadow: 0 0 0 2px var(--vol-ink);
+}
+
+.vol-dialog__details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-self: center;
+}
+
+.vol-dialog__title {
+    font-size: 24px;
+    padding-right: 40px;
+}
+
+.vol-dialog__price {
+    font-size: 17px;
+    color: var(--vol-ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.vol-dialog__description {
+    color: var(--vol-ink-soft);
+    font-size: 14px;
+    white-space: pre-line;
+}
+
+.vol-dialog__actions {
+    padding-top: 6px;
+}
+
+.vol-root .vol-dialog__actions .vol-add,
+.vol-root .vol-dialog__actions .vol-stepper {
+    width: 160px;
+}
+
+/* States ----------------------------------------------------------------------------------- */
+.vol-loading {
+    display: grid;
+    gap: 12px;
+    min-height: 420px;
+    align-content: start;
+}
+
+.vol-loading__bar {
+    display: block;
+    height: 220px;
+    border-radius: var(--vol-radius);
+    background: linear-gradient(90deg, var(--vol-surface-sunk), #fafaf9, var(--vol-surface-sunk));
+    background-size: 200% 100%;
+    animation: vol-shimmer 1.4s linear infinite;
+}
+
+.vol-loading__bar:first-child {
+    height: 36px;
+    width: 60%;
+}
+
+.vol-loading__bar:last-child {
+    height: 120px;
+}
+
+@keyframes vol-shimmer {
+    to {
+        background-position: -200% 0;
+    }
+}
+
+.vol-error {
+    padding: 16px;
+    border-radius: var(--vol-radius-small);
+    background: var(--vol-surface-sunk);
+    color: var(--vol-ink);
+}
+
+.vol-editor-panel {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    margin: 0 0 4px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    background: #fff4e5;
+    border: 1px solid #f1c27d;
+    color: #4a3410;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+}
+
+.vol-root--state .vol-editor-panel {
+    margin-top: 16px;
+}
+
+.vol-editor-panel svg {
+    margin-top: 3px;
+}
+
+.vol-editor-panel__title {
+    font-weight: 600;
+    margin-bottom: 4px !important;
+}
+
+.vol-editor-panel__list {
+    display: grid;
+    gap: 6px;
+    list-style: disc !important;
+    padding-left: 18px !important;
+}
+
+/* 4. The section around the widget ------------------------------------------------------- */
+/* The Liquid section, not React, renders these: the product's photos beside the ladder, or a
+   page-width frame for the grid. They are outside .vol-root, so they reset what they use. */
+.vol-section {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+}
+
+.vol-section *,
+.vol-section *::before,
+.vol-section *::after {
+    box-sizing: border-box;
+}
+
+.vol-section--narrow {
+    max-width: 512px;
+}
+
+.vol-pdp {
+    display: grid;
+    gap: 28px;
+}
+
+.vol-pdp__media {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.vol-pdp__photo {
+    margin: 0;
+    overflow: hidden;
+    border-radius: 16px;
+    background: var(--vol-surface-sunk);
+}
+
+/* An odd number of photos: the first one spans the row, so the grid never ends on an orphan. */
+.vol-pdp__photo:first-child:nth-last-child(odd) {
+    grid-column: 1 / -1;
+}
+
+.vol-section .vol-pdp__photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border: 0;
+    border-radius: 0;
+    max-width: none;
+}
+
+.vol-pdp__info {
+    min-width: 0;
+}
+
+/* A phone: the photos become one swipeable strip above the widget, so the ladder is one
+   thumb-flick away instead of five photographs down. */
+@media (max-width: 749.98px) {
+    .vol-pdp__media {
+        display: flex;
+        gap: 8px;
+        margin: 0 -16px;
+        padding: 0 16px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+    }
+
+    .vol-pdp__photo {
+        flex: 0 0 82%;
+        scroll-snap-align: center;
+    }
+}
+
+/* Two columns once there is room for photos and a ladder at its comfortable width. The ladder
+   column is capped at 460px: the widget is designed for 320 to 480px, and a product photo
+   deserves the rest. */
+@media (min-width: 900px) {
+    .vol-section {
+        padding: 40px 32px 72px;
+    }
+
+    .vol-pdp {
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
+        gap: 56px;
+        align-items: start;
+    }
+}
+
+@media (min-width: 1200px) {
+    .vol-pdp {
+        grid-template-columns: minmax(0, 1fr) 460px;
+        gap: 72px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vol-root *,
+    .vol-dialog * {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}

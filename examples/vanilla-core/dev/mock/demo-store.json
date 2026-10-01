@@ -1,0 +1,426 @@
+[
+ {
+  "id": 1556049231908,
+  "title": "Riesling Blend",
+  "handle": "californian-reisling-blend",
+  "body_html": "<b>A ripe and fruitful blend. </b><br><br>Working with a small vineyard in Riesling we've combined to make a fresh and long citrus blend that dazzles.",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Wine",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12088245977124,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "10.99",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11898370457636,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine8.png?v=1566382304",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11898368688164,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine_front-blend.png?v=1566382304",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11898372554788,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/zoom_d7e0aa1c-a34c-4438-9011-0983acd70fff.png?v=1566382309",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1556037894180,
+  "title": "Riesling",
+  "handle": "californian-reisling",
+  "body_html": "<b>A jasmine and citrus symphony  </b><br><br>This delicious wine has come from the Napa region of California, famed for their white wines. Our take on the Riesling wine if the <meta charset=\"utf-8\"><span>Rhine region with a long citrus length and strong acidity.</span>",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Wine",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12088159272996,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "12.99",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11898294108196,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine5.png?v=1566381899",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11898291650596,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine_front-reis.png?v=1566381899",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11898292666404,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/zoom_9aafacb6-d82a-49dc-9db8-1acb9ecd39a6.png?v=1566381899",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1556033437732,
+  "title": "Semillion",
+  "handle": "californian-semillion",
+  "body_html": "<b>Intense lime and lemongrass. </b><br><br>With long length and toasty notes that develop with age this wine has a refreshing acidity we know you'll love.",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Wine",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12088120573988,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "14.99",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11898254983204,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine4.png?v=1566381725",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11898252460068,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine_front-semil.png?v=1566381725",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11898257571876,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/zoom_160ecaee-6a95-4802-8b7a-4bc1edbf65a5.png?v=1566381729",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1556022427684,
+  "title": "Verdelho",
+  "handle": "californian-verdelho",
+  "body_html": "<b>Creamy with citrus notes </b><br><br>This delicious wine has come from the Napa region of California, famed for their white wines. Crisp and dry this wine is known for its citrus kick and creamy texture.",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Wine",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12088029970468,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "13.50",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11898218872868,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine6.png?v=1566381558",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11898217988132,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine_front-verd.png?v=1566381558",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11898218086436,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/zoom_e3b688d6-59af-4030-9f69-334c8ca0e6cd.png?v=1566381558",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1555984449572,
+  "title": "Sauvignon Blanc",
+  "handle": "californian-sauvignon-blanc",
+  "body_html": "<b>Dazzlingly elegant. </b><br><br>This delicious wine has notes of passion fruit as well as emitting hints of lime and herbs for a delicate flavour.",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Wine",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12087746822180,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "10.99",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11898018529316,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine2.png?v=1566379816",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11898019741732,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine_front-blanc.png?v=1566379823",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11898059194404,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/zoom_cfb32a18-2d63-4613-81fe-1e2f0caa38f6.png?v=1566380227",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1555980976164,
+  "title": "Chardonnay",
+  "handle": "californian-chardonnay",
+  "body_html": "<b>Crisp and fruity.</b><br><br> With hints of peach and tropical notes this oaky wine is a firm favourite and one of our best sellers.",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Wine",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12087723851812,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "10.99",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11897999228964,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine3.png?v=1566379633",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11897999360036,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine_front-chard.png?v=1566379636",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11897999425572,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/zoom_3551eb1c-4533-4ebe-b90b-77de23f0a65c.png?v=1566379638",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1555976552484,
+  "title": "Pinot Grigio",
+  "handle": "californian-pinot-grigio",
+  "body_html": "<p><b>Nutty and fuller texture. </b></p>\n<p>This delicious wine has been fermented with its own yeast to create a more aromatic flavour than traditional.</p>",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Wine",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12087691411492,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "12.50",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11897973309476,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine9.png?v=1566379402",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11897974161444,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine_front-grigio.png?v=1566379414",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11897975046180,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/zoom_159361a6-912d-4cfb-8e52-b9e7fc5b73b7.png?v=1566379416",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1555973472292,
+  "title": "Pinot Gris",
+  "handle": "pinot-gris",
+  "body_html": "<p><strong>Notes of green apple and a fruity finish. </strong></p>\n<p> There dry wine has a hint of honeyed fruit and goes beautifully with fish or chicken and is always a crowd pleaser.</p>",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Wine",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12087671291940,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "11.50",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11897951322148,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine.png?v=1566379232",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11897951551524,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/wine_front-pinotgris.png?v=1566379234",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11897951617060,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/zoom.png?v=1566379236",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ }
+]

@@ -1,0 +1,71 @@
+name: CI
+
+# Every project (the starter and each example) is a standalone Bun project, checked on its own:
+# typecheck, unit tests, then the conformance suite on its built theme asset at desktop (Chromium)
+# and mobile (WebKit). A separate job checks that every project's copy of the shared mock backend
+# is identical to the starter's, so a fix to one reaches all of them.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  projects:
+    runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.list.outputs.projects }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: echo "projects=$(ls -d starter examples/*/ | sed 's#/$##' | jq -R . | jq -cs .)" >> "$GITHUB_OUTPUT"
+
+  shared:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node scripts/check-shared.mjs
+
+  theme-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g @shopify/cli
+      - run: bash scripts/theme-check.sh
+
+  verify:
+    needs: projects
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJson(needs.projects.outputs.projects) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun x playwright install --with-deps chromium webkit
+      - run: bun run test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-${{ strategy.job-index }}
+          path: ${{ matrix.project }}/test-results
+          retention-days: 7

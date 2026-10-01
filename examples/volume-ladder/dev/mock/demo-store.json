@@ -1,0 +1,166 @@
+[
+ {
+  "id": 7741191159844,
+  "title": "Unflavoured Whey protein",
+  "handle": "unflavoured-whey-protein",
+  "body_html": "<p></p>",
+  "vendor": "Product Builder Demo",
+  "product_type": "",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 41937179213860,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "9.99",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 33689513951268,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/unflavoured.png?v=1731317766",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 7741191127076,
+  "title": "Chocolate Whey Protein",
+  "handle": "chocolate-whey-protein",
+  "body_html": "<p></p>",
+  "vendor": "Product Builder Demo",
+  "product_type": "",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 41937179181092,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "9.99",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 33689513787428,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/chocolate.png?v=1731317763",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 7741191061540,
+  "title": "Vanilla Whey Protein",
+  "handle": "vanilla-whey-protein",
+  "body_html": "<p></p>",
+  "vendor": "Product Builder Demo",
+  "product_type": "",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 41937179115556,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "9.99",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 33689513623588,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/vanilla.png?v=1731317760",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 7741191028772,
+  "title": "Peanut butter Whey Protein",
+  "handle": "peanut-butter-whey-protein",
+  "body_html": "<p></p>",
+  "vendor": "Product Builder Demo",
+  "product_type": "",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 41937179082788,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "9.99",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 33689513459748,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/files/peanutbutter.png?v=1731317756",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ }
+]

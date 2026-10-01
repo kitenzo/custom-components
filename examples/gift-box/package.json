@@ -1,0 +1,33 @@
+{
+  "name": "kitenzo-gift-box",
+  "private": true,
+  "type": "module",
+  "description": "A Kitenzo custom component: a bundle builder on the published @kitenzo/react SDK, shipped to a Shopify theme as two assets and a Liquid section.",
+  "scripts": {
+    "dev": "vite",
+    "build:embed": "vite build --config vite.config.embed.ts",
+    "package:embed": "bun run build:embed && bash scripts/package-embed.sh",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "bun run build:embed && playwright test",
+    "verify": "bun run typecheck && bun run test && bun run test:e2e",
+    "snapshot": "bun scripts/snapshot-demo-store.ts",
+    "rename": "node scripts/rename.mjs"
+  },
+  "dependencies": {
+    "@kitenzo/core": "^0.9.0",
+    "@kitenzo/react": "^0.9.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.9.2",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4"
+  }
+}

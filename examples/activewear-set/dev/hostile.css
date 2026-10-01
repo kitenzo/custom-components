@@ -1,0 +1,37 @@
+/*
+ * A deliberately hostile theme. Load any dev page with `?theme=hostile`; the e2e suite runs every
+ * test under it too. Each rule is one a real merchant theme has shipped, and each one has broken a
+ * custom component that was not built for it.
+ */
+
+/* 1. An ancestor that traps `position: fixed` (transform and container-type both do). A widget
+      that positions an overlay with `fixed` lands in the wrong place inside it. */
+.theme-main {
+    transform: translateZ(0);
+    container-type: inline-size;
+}
+
+/* 2. Generic class names themes really use, styled the way themes really style them. A widget
+      that calls its own element `.drawer` or `.card` inherits all of this. */
+.drawer { transform: translateX(-576px) !important; position: fixed !important; visibility: hidden !important; }
+.modal { display: none !important; }
+.overlay { opacity: 0 !important; pointer-events: none !important; }
+.card { border: 6px dashed #cf0e0e !important; padding: 40px !important; }
+.btn, button.primary { background: #cf0e0e !important; color: #fff !important; border-radius: 0 !important; }
+.hidden { display: none !important; }
+.grid { display: block !important; }
+.active { outline: 6px solid #cf0e0e !important; }
+.open { max-height: 0 !important; overflow: hidden !important; }
+.price { font-size: 9px !important; color: #cf0e0e !important; }
+.title { font-size: 40px !important; text-transform: uppercase !important; }
+
+/* 3. Bare element rules. `1em` padding resizes any control that declares none of its own: on one
+      store it pushed a stepper's + out of its box, where overflow: hidden clipped it away. */
+button, input[type='button'], input[type='submit'] { padding: 1em 25px; text-transform: uppercase; letter-spacing: 0.2em; min-width: 140px; }
+select { min-height: 60px; }
+img { border: 4px solid #cf0e0e; }
+h2, h3, h4 { text-transform: uppercase; letter-spacing: 0.3em; }
+
+/* 4. A theme that paints every element its body colour instead of letting colour inherit. It
+      lands on anything with no colour of its own: invisible text on a dark surface. */
+*:not(a, a *, h1, h2, h3, h4, h5, h6, svg, svg *) { color: #111; }

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Kitenzo custom component: dev</title>
+        <link rel="stylesheet" href="/dev/theme.css" />
+    </head>
+    <body>
+        <!--
+            A stand-in for a merchant's theme page. dev/main.tsx renders the mount element(s) here
+            exactly as theme/kitenzo-starter.liquid does on a real store, installs the mock backend,
+            then loads src/embed.tsx: the same entry the theme asset is built from.
+        -->
+        <header class="theme-header">
+            <span class="theme-header__logo">Demo store</span>
+            <nav class="theme-header__nav"><a href="/">Shop</a><a href="/cart">Cart <span id="dev-cart-count">0</span></a></nav>
+        </header>
+        <main class="theme-main" id="theme-main"></main>
+        <footer class="theme-footer">Theme footer</footer>
+        <script type="module" src="/dev/main.tsx"></script>
+    </body>
+</html>

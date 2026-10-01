@@ -1,0 +1,1681 @@
+/*
+ * The widget's styles. Three layers, in this order:
+ *
+ *   1. Tokens. Restyling for a brand is mostly this block. Fonts are the theme's own (the Liquid
+ *      section loads them and sets --ckc-font-*); the colours the merchant can change in the theme
+ *      editor arrive as --ckc-accent, --ckc-accent-contrast, --ckc-case and --ckc-case-ink on the
+ *      mount element.
+ *   2. A reset scoped to the widget root. Themes style bare elements (one ships
+ *      `button { padding: 1em 25px }`, another paints every element's colour), and namespaced
+ *      classes do not protect against that. The reset comes before every component rule, so each
+ *      component rule still wins over it.
+ *   3. Components. Every class is prefixed `ckc-`, because themes have their own `.card`,
+ *      `.drawer`, `.modal` and `.hidden`, and they will collide.
+ *
+ * Nothing here uses `position: fixed`: a theme ancestor with `transform` traps it. The dialog is a
+ * native <dialog> in the top layer; the mobile bar is `position: sticky`.
+ *
+ * The look: a drinks brand's shelf. Big confident type from the theme's heading font, the
+ * photographs doing the colour, white cards, and the case itself as a dark crate the cans drop
+ * into, lit in the accent (lime by default) wherever a saving is.
+ */
+
+/* 1. Tokens ------------------------------------------------------------------------------- */
+/* Declared on the mount element, at zero specificity, so the values the Liquid section sets on
+   that same element (`#kitenzo-<section id>`, an id selector) always win, and the widget root
+   inherits whichever applies. Declaring them on `.ckc-root` instead would quietly override the
+   merchant's colours and the theme's fonts with these defaults. The derived case colours
+   (`--ckc-case-soft`, …) resolve here too, so they follow the merchant's case colours. */
+:where([data-cocktail-case-bundle]) {
+    --ckc-font-body: inherit;
+    --ckc-font-heading: inherit;
+    --ckc-ink: #17120e;
+    --ckc-ink-soft: #5c534b;
+    --ckc-ink-faint: #8f857b;
+    --ckc-surface: #ffffff;
+    --ckc-surface-sunk: #f5eee4;
+    --ckc-line: #e7ded2;
+    --ckc-accent: #d6f65a;
+    --ckc-accent-contrast: #17120e;
+    /* The case rail: a dark crate by default. */
+    --ckc-case: #17120e;
+    --ckc-case-ink: #fff8ee;
+    --ckc-case-soft: color-mix(in srgb, var(--ckc-case-ink) 68%, transparent);
+    --ckc-case-faint: color-mix(in srgb, var(--ckc-case-ink) 42%, transparent);
+    --ckc-case-line: color-mix(in srgb, var(--ckc-case-ink) 18%, transparent);
+    --ckc-case-raised: color-mix(in srgb, var(--ckc-case-ink) 7%, transparent);
+    --ckc-pop: #ff6a45;
+    --ckc-danger: #b3261e;
+    --ckc-success: #2f6b3a;
+    --ckc-radius: 22px;
+    --ckc-radius-small: 12px;
+    --ckc-gap: 18px;
+    --ckc-shadow: 0 1px 2px rgb(23 18 14 / 6%), 0 10px 30px rgb(23 18 14 / 7%);
+    /* How far below the top of the window sticky parts stop: clear of a theme's sticky header. */
+    --ckc-sticky-top: 88px;
+    --ckc-focus: 0 0 0 3px color-mix(in srgb, var(--ckc-ink) 30%, transparent), 0 0 0 5px var(--ckc-accent);
+}
+
+/* 2. Reset, scoped to the root ------------------------------------------------------------ */
+.ckc-root,
+.ckc-root *,
+.ckc-root *::before,
+.ckc-root *::after {
+    box-sizing: border-box;
+}
+
+/* A theme that paints every element its body colour (`*:not(a, h1, …) { color: … }`) lands on
+   anything with no colour of its own. Restore inheritance once, under the root. `:where()` keeps
+   this at one class of specificity, so every component rule below (also one class, and later)
+   still sets its own colour. */
+.ckc-root :where(*:not(svg, svg *)) {
+    color: inherit;
+}
+
+.ckc-root :where(button, input, select) {
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    min-height: 0;
+    width: auto;
+    height: auto;
+    font: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+    line-height: inherit;
+    border-radius: 0;
+    box-shadow: none;
+    background: none;
+    border: 0;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.ckc-root :where(button) {
+    cursor: pointer;
+}
+
+.ckc-root :where(img) {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+}
+
+/* `:where()` keeps these at the root's one class: enough to beat a theme's bare `h2 { … }` or
+   `label { … }`, and low enough that a component's own padding or margin (also one class, and
+   later) still applies. */
+.ckc-root :where(h2, h3, h4, p, ul, ol, li, label, legend, fieldset) {
+    margin: 0;
+    padding: 0;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.ckc-root :where(ul, ol) {
+    list-style: none;
+}
+
+.ckc-root :where(fieldset) {
+    min-width: 0;
+    border: 0;
+}
+
+/* A class that sets `display` beats the `hidden` attribute. Make the attribute win. */
+.ckc-root [hidden] {
+    display: none !important;
+}
+
+.ckc-root :focus-visible {
+    outline: none;
+    box-shadow: var(--ckc-focus);
+}
+
+.ckc-root .ckc-visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+/* 3. Components --------------------------------------------------------------------------- */
+.ckc-root {
+    font-family: var(--ckc-font-body);
+    color: var(--ckc-ink);
+    font-size: 16px;
+    line-height: 1.5;
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 32px 16px 0;
+}
+
+.ckc-root--state {
+    padding-bottom: 24px;
+}
+
+.ckc-header {
+    display: grid;
+    justify-items: start;
+    gap: 14px;
+    margin-bottom: 8px;
+}
+
+.ckc-header__eyebrow {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--ckc-accent);
+    color: var(--ckc-accent-contrast);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.ckc-root .ckc-header__eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+}
+
+.ckc-header__title,
+.ckc-step__title,
+.ckc-summary__heading,
+.ckc-dialog__title,
+.ckc-card__title,
+.ckc-price__total {
+    font-family: var(--ckc-font-heading);
+    line-height: 1.1;
+}
+
+.ckc-header__title {
+    max-width: 14ch;
+    font-size: clamp(44px, 7vw, 96px);
+    font-weight: 800;
+    line-height: 0.92;
+}
+
+.ckc-root .ckc-header__title {
+    letter-spacing: -0.035em;
+}
+
+.ckc-header__intro {
+    max-width: 48ch;
+    color: var(--ckc-ink-soft);
+    font-size: clamp(16px, 1.6vw, 19px);
+}
+
+.ckc-notice {
+    padding: 14px 18px;
+    border-radius: var(--ckc-radius-small);
+    background: var(--ckc-surface-sunk);
+    color: var(--ckc-ink-soft);
+    font-size: 14px;
+}
+
+.ckc-notice--club {
+    background: color-mix(in srgb, var(--ckc-accent) 45%, var(--ckc-surface));
+    color: var(--ckc-ink);
+    font-weight: 600;
+}
+
+.ckc-layout {
+    display: grid;
+    gap: 32px;
+    align-items: start;
+}
+
+@media (min-width: 1000px) {
+    .ckc-layout {
+        grid-template-columns: minmax(0, 1fr) 380px;
+        gap: 40px;
+    }
+}
+
+.ckc-shop {
+    display: grid;
+    gap: 24px;
+    min-width: 0;
+}
+
+.ckc-steps {
+    display: grid;
+    gap: 40px;
+    min-width: 0;
+}
+
+.ckc-step {
+    scroll-margin-top: calc(var(--ckc-sticky-top) + 8px);
+}
+
+.ckc-step__header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.ckc-step__index {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--ckc-ink);
+    color: var(--ckc-surface);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.ckc-step[data-step-done] .ckc-step__index {
+    background: var(--ckc-accent);
+    color: var(--ckc-accent-contrast);
+}
+
+.ckc-step__titles {
+    flex: 1;
+    min-width: 0;
+}
+
+.ckc-step__title {
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.ckc-step__description {
+    margin-top: 2px;
+    color: var(--ckc-ink-soft);
+    font-size: 14px;
+}
+
+.ckc-step__counter {
+    flex: none;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--ckc-surface-sunk);
+    color: var(--ckc-ink-soft);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.ckc-step__counter--done {
+    background: var(--ckc-accent);
+    color: var(--ckc-accent-contrast);
+}
+
+/* Filters ---------------------------------------------------------------------------------- */
+.ckc-facets {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 28px;
+}
+
+.ckc-facets__group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.ckc-facets__label {
+    flex: none;
+    color: var(--ckc-ink-faint);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.ckc-root .ckc-facets__label {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.ckc-facets__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ckc-root .ckc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 6px 8px 6px 16px;
+    border: 1.5px solid var(--ckc-line);
+    border-radius: 999px;
+    background: var(--ckc-surface);
+    color: var(--ckc-ink);
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+/* Hover only where there is a pointer that hovers: on a phone a tap leaves it stuck on. */
+@media (hover: hover) {
+    .ckc-root .ckc-chip:hover {
+        border-color: var(--ckc-ink);
+    }
+}
+
+.ckc-root .ckc-chip:active {
+    transform: scale(0.97);
+}
+
+.ckc-chip__count {
+    display: grid;
+    place-items: center;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--ckc-surface-sunk);
+    color: var(--ckc-ink-soft);
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.ckc-root .ckc-chip--active {
+    border-color: var(--ckc-ink);
+    background: var(--ckc-ink);
+    color: var(--ckc-surface);
+}
+
+.ckc-chip--active .ckc-chip__count {
+    background: var(--ckc-accent);
+    color: var(--ckc-accent-contrast);
+}
+
+.ckc-root .ckc-facets__clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 4px;
+    color: var(--ckc-ink);
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.ckc-empty {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    margin-bottom: 18px;
+    padding: 18px 20px;
+    border: 2px dashed var(--ckc-line);
+    border-radius: var(--ckc-radius);
+    color: var(--ckc-ink-soft);
+}
+
+.ckc-root .ckc-link {
+    color: var(--ckc-ink);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+/* On a phone each facet is a labelled row that scrolls sideways, so six chips cost one line. */
+@media (max-width: 599.98px) {
+    .ckc-facets {
+        display: grid;
+        gap: 12px;
+    }
+
+    .ckc-facets__group {
+        display: grid;
+        gap: 6px;
+    }
+
+    .ckc-facets__chips {
+        flex-wrap: nowrap;
+        margin: 0 -16px;
+        padding: 2px 16px 4px;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .ckc-facets__chips::-webkit-scrollbar {
+        display: none;
+    }
+
+    .ckc-root .ckc-chip {
+        flex: none;
+        min-height: 38px;
+        font-size: 14px;
+    }
+
+    .ckc-root .ckc-facets__clear {
+        justify-self: start;
+        min-height: 32px;
+    }
+}
+
+/* Cards ------------------------------------------------------------------------------------ */
+.ckc-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+@media (min-width: 600px) {
+    .ckc-grid {
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
+        gap: var(--ckc-gap);
+    }
+}
+
+.ckc-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-radius: var(--ckc-radius);
+    background: var(--ckc-surface);
+    box-shadow: var(--ckc-shadow);
+    overflow: hidden;
+    transition: box-shadow 180ms ease, transform 180ms ease, opacity 180ms ease;
+}
+
+.ckc-card--chosen {
+    box-shadow: 0 0 0 3px var(--ckc-ink), var(--ckc-shadow);
+}
+
+/* In the case but outside the active filters: present, quieter. */
+.ckc-card--outside {
+    opacity: 0.72;
+}
+
+.ckc-card--outside:hover,
+.ckc-card--outside:focus-within {
+    opacity: 1;
+}
+
+.ckc-root .ckc-card__media {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--ckc-surface-sunk);
+    overflow: hidden;
+}
+
+.ckc-card__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 400ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Hover only where there is a pointer that hovers: on a phone a tap leaves it stuck on. */
+@media (hover: hover) {
+    .ckc-card:hover .ckc-card__media img {
+        transform: scale(1.04);
+    }
+}
+
+.ckc-card--sold-out .ckc-card__media img {
+    opacity: 0.5;
+    filter: grayscale(0.7);
+}
+
+.ckc-card__placeholder {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    font-family: var(--ckc-font-heading);
+    font-size: 48px;
+    color: var(--ckc-ink-faint);
+}
+
+.ckc-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    background: var(--ckc-ink);
+    color: var(--ckc-surface);
+}
+
+.ckc-badge--case {
+    padding-right: 5px;
+    background: var(--ckc-accent);
+    color: var(--ckc-accent-contrast);
+    box-shadow: 0 4px 14px rgb(23 18 14 / 18%);
+}
+
+.ckc-badge__count {
+    display: grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--ckc-accent-contrast);
+    color: var(--ckc-accent);
+    font-variant-numeric: tabular-nums;
+}
+
+.ckc-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    padding: 14px 14px 12px;
+}
+
+.ckc-card__title {
+    font-size: 18px;
+    font-weight: 750;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+
+.ckc-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.ckc-card__price {
+    margin-right: 4px;
+    font-size: 15px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.ckc-card__tag {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--ckc-surface-sunk);
+    color: var(--ckc-ink-soft);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.ckc-card__actions {
+    margin-top: auto;
+    padding-top: 4px;
+}
+
+/* Two to a row on a phone: the facet tags are the first thing to go (the chips above say it). */
+@media (max-width: 599.98px) {
+    .ckc-card__body {
+        padding: 12px 12px 10px;
+    }
+
+    .ckc-card__title {
+        font-size: 16px;
+    }
+
+    .ckc-card__tag {
+        display: none;
+    }
+
+    .ckc-badge {
+        top: 8px;
+        left: 8px;
+    }
+}
+
+.ckc-card__message {
+    min-height: 1.4em;
+    font-size: 12px;
+    color: var(--ckc-ink-soft);
+}
+
+.ckc-options {
+    display: grid;
+    gap: 6px;
+}
+
+.ckc-option {
+    display: grid;
+    gap: 2px;
+    font-size: 12px;
+    color: var(--ckc-ink-soft);
+}
+
+.ckc-root .ckc-select {
+    width: 100%;
+    padding: 8px 28px 8px 12px;
+    border: 1.5px solid var(--ckc-line);
+    border-radius: var(--ckc-radius-small);
+    background: var(--ckc-surface)
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%235c534b' stroke-width='1.5'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E")
+        no-repeat right 10px center;
+    color: var(--ckc-ink);
+    font-size: 14px;
+}
+
+.ckc-root .ckc-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 46px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 15px;
+    transition: background 150ms ease, color 150ms ease, opacity 150ms ease, transform 150ms ease;
+}
+
+.ckc-root .ckc-button:active {
+    transform: scale(0.98);
+}
+
+.ckc-root .ckc-button--primary {
+    background: var(--ckc-accent);
+    color: var(--ckc-accent-contrast);
+    width: 100%;
+}
+
+.ckc-root .ckc-button--secondary {
+    background: var(--ckc-ink);
+    color: var(--ckc-surface);
+    width: 100%;
+}
+
+/* Hover only where there is a pointer that hovers: on a phone a tap leaves it stuck on. */
+@media (hover: hover) {
+    .ckc-root .ckc-button--secondary:hover {
+        background: var(--ckc-accent);
+        color: var(--ckc-accent-contrast);
+    }
+}
+
+.ckc-root .ckc-button[aria-disabled='true'],
+.ckc-root .ckc-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.ckc-root .ckc-button--secondary:disabled {
+    background: var(--ckc-surface-sunk);
+    color: var(--ckc-ink-soft);
+    opacity: 1;
+}
+
+.ckc-root .ckc-button--secondary[aria-disabled='true']:hover {
+    background: var(--ckc-ink);
+    color: var(--ckc-surface);
+}
+
+.ckc-stepper {
+    display: grid;
+    grid-template-columns: 46px 1fr 46px;
+    align-items: center;
+    border-radius: 999px;
+    background: var(--ckc-accent);
+    color: var(--ckc-accent-contrast);
+    overflow: hidden;
+}
+
+.ckc-root .ckc-stepper__button {
+    display: grid;
+    place-items: center;
+    height: 46px;
+    color: var(--ckc-accent-contrast);
+}
+
+/* Hover only where there is a pointer that hovers: on a phone a tap leaves it stuck on. */
+@media (hover: hover) {
+    .ckc-root .ckc-stepper__button:hover {
+        background: color-mix(in srgb, var(--ckc-accent-contrast) 10%, transparent);
+    }
+}
+
+.ckc-root .ckc-stepper__button[aria-disabled='true'] {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.ckc-stepper__count {
+    text-align: center;
+    font-size: 17px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The case rail ---------------------------------------------------------------------------- */
+.ckc-summary {
+    display: grid;
+    gap: 18px;
+    padding: 24px;
+    border-radius: 28px;
+    background: var(--ckc-case);
+    color: var(--ckc-case-ink);
+    box-shadow: 0 24px 60px rgb(23 18 14 / 22%);
+}
+
+/* Sticky beside the cans, scrolling inside itself when it is taller than the window, with the
+   price and the button pinned to its foot so they are never scrolled away. `--ckc-sticky-top` (a
+   section setting) clears the theme's sticky header. */
+@media (min-width: 1000px) {
+    .ckc-summary {
+        position: sticky;
+        top: var(--ckc-sticky-top);
+        max-height: calc(100vh - var(--ckc-sticky-top) - 24px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        scrollbar-color: var(--ckc-case-line) transparent;
+    }
+
+    .ckc-summary__checkout {
+        position: sticky;
+        bottom: -24px;
+        z-index: 1;
+        margin: 0 -24px -24px;
+        padding: 0 24px 24px;
+        background: var(--ckc-case);
+    }
+}
+
+.ckc-summary__checkout {
+    display: grid;
+    gap: 14px;
+}
+
+.ckc-summary__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.ckc-summary__heading {
+    font-size: 26px;
+    font-weight: 800;
+}
+
+.ckc-summary__count {
+    color: var(--ckc-case-soft);
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.ckc-summary__empty {
+    margin-top: -8px;
+    color: var(--ckc-case-soft);
+    font-size: 14px;
+}
+
+.ckc-slots {
+    display: grid;
+    grid-template-columns: repeat(var(--ckc-slot-columns, 6), minmax(0, 1fr));
+    gap: 6px;
+}
+
+.ckc-slot {
+    position: relative;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    border: 1.5px dashed var(--ckc-case-line);
+    border-radius: 12px;
+    color: var(--ckc-case-faint);
+    overflow: hidden;
+}
+
+.ckc-slot--rung {
+    border-color: var(--ckc-accent);
+    color: var(--ckc-accent);
+}
+
+.ckc-slot--filled,
+.ckc-slot--included {
+    border: 0;
+    background: var(--ckc-case-raised);
+    animation: ckc-drop 320ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+.ckc-slot--filled.ckc-slot--rung {
+    box-shadow: 0 0 0 2px var(--ckc-accent);
+}
+
+.ckc-root .ckc-slot__button {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.ckc-slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ckc-root .ckc-slot__button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgb(23 18 14 / 55%)
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%23fff8ee' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M3 8h10'/%3E%3C/svg%3E")
+        no-repeat center;
+    opacity: 0;
+    transition: opacity 150ms ease;
+}
+
+.ckc-root .ckc-slot__button:hover::after,
+.ckc-root .ckc-slot__button:focus-visible::after {
+    opacity: 1;
+}
+
+@keyframes ckc-drop {
+    from {
+        transform: translateY(-10px) scale(0.85);
+        opacity: 0;
+    }
+}
+
+/* The discount ladder ---------------------------------------------------------------------- */
+.ckc-meter {
+    display: grid;
+    gap: 6px;
+}
+
+.ckc-meter__head:empty {
+    display: none;
+}
+
+.ckc-meter__now {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px 4px 8px;
+    border-radius: 999px;
+    background: var(--ckc-accent);
+    color: var(--ckc-accent-contrast);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.ckc-meter__rail {
+    position: relative;
+    margin: 0 4px;
+    padding: 30px 0 26px;
+}
+
+.ckc-meter__track {
+    position: relative;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--ckc-case-line);
+    overflow: hidden;
+}
+
+.ckc-meter__fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: inherit;
+    background: var(--ckc-accent);
+    transition: width 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ckc-meter__rungs {
+    position: absolute;
+    inset: 0;
+}
+
+.ckc-rung {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+}
+
+.ckc-rung__dot {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 18px;
+    height: 18px;
+    margin: -9px 0 0 -9px;
+    border: 3px solid var(--ckc-case);
+    border-radius: 50%;
+    background: var(--ckc-case-faint);
+    transition: background 200ms ease, transform 200ms ease;
+}
+
+.ckc-rung--reached .ckc-rung__dot {
+    background: var(--ckc-accent);
+    transform: scale(1.12);
+}
+
+.ckc-rung--next .ckc-rung__dot {
+    background: var(--ckc-case-ink);
+}
+
+.ckc-rung__discount,
+.ckc-rung__count {
+    position: absolute;
+    left: 0;
+    white-space: nowrap;
+    transform: translateX(-50%);
+}
+
+.ckc-rung[data-anchor='end'] .ckc-rung__discount,
+.ckc-rung[data-anchor='end'] .ckc-rung__count {
+    transform: translateX(calc(-100% + 9px));
+}
+
+.ckc-rung[data-anchor='start'] .ckc-rung__discount,
+.ckc-rung[data-anchor='start'] .ckc-rung__count {
+    transform: translateX(-9px);
+}
+
+.ckc-rung__discount {
+    top: 0;
+    color: var(--ckc-case-soft);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.ckc-rung--reached .ckc-rung__discount {
+    color: var(--ckc-accent);
+}
+
+.ckc-rung--next .ckc-rung__discount {
+    color: var(--ckc-case-ink);
+}
+
+.ckc-rung__count {
+    bottom: 0;
+    color: var(--ckc-case-faint);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.ckc-meter__message {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+/* Surprise me ------------------------------------------------------------------------------ */
+.ckc-surprise {
+    display: grid;
+    gap: 6px;
+}
+
+.ckc-root .ckc-surprise__button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 52px;
+    padding: 8px 10px 8px 18px;
+    border: 2px solid var(--ckc-accent);
+    border-radius: 999px;
+    color: var(--ckc-accent);
+    font-weight: 800;
+    transition: background 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+/* Hover only where there is a pointer that hovers: on a phone a tap leaves it stuck on. */
+@media (hover: hover) {
+    .ckc-root .ckc-surprise__button:hover {
+        background: var(--ckc-accent);
+        color: var(--ckc-accent-contrast);
+    }
+}
+
+.ckc-root .ckc-surprise__button:active {
+    transform: scale(0.98) rotate(-0.5deg);
+}
+
+.ckc-root .ckc-surprise__button[aria-disabled='true'] {
+    border-color: var(--ckc-case-line);
+    background: none;
+    color: var(--ckc-case-faint);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.ckc-surprise__label {
+    flex: 1;
+    text-align: left;
+    font-size: 16px;
+}
+
+.ckc-surprise__target {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ckc-accent) 16%, transparent);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.ckc-surprise__note {
+    min-height: 1.4em;
+    color: var(--ckc-case-soft);
+    font-size: 13px;
+}
+
+.ckc-surprise__note:empty {
+    display: none;
+}
+
+/* Subscribe and save ----------------------------------------------------------------------- */
+.ckc-plan {
+    display: grid;
+    gap: 12px;
+}
+
+.ckc-plan__heading {
+    margin-bottom: 10px;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.ckc-plan__options {
+    display: grid;
+    gap: 8px;
+}
+
+.ckc-plan__option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1.5px solid var(--ckc-case-line);
+    border-radius: 16px;
+    background: var(--ckc-case-raised);
+    cursor: pointer;
+    transition: border-color 150ms ease, background 150ms ease;
+}
+
+.ckc-plan__option--on {
+    border-color: var(--ckc-accent);
+    background: color-mix(in srgb, var(--ckc-accent) 10%, transparent);
+}
+
+.ckc-root .ckc-radio {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--ckc-case-faint);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.ckc-root .ckc-radio:checked {
+    border-color: var(--ckc-accent);
+    box-shadow: inset 0 0 0 3px var(--ckc-case), inset 0 0 0 10px var(--ckc-accent);
+}
+
+.ckc-root .ckc-radio:focus-visible {
+    box-shadow: var(--ckc-focus);
+}
+
+.ckc-plan__text {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+}
+
+.ckc-plan__name {
+    font-weight: 800;
+}
+
+.ckc-plan__note {
+    color: var(--ckc-case-soft);
+    font-size: 13px;
+}
+
+.ckc-plan__save {
+    color: var(--ckc-accent);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.ckc-plan__price {
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.ckc-plan__details {
+    display: grid;
+    gap: 14px;
+    padding: 4px 2px 0;
+}
+
+.ckc-plan__promise,
+.ckc-plan__reorder {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: var(--ckc-case-soft);
+    font-size: 13px;
+}
+
+.ckc-plan__promise svg,
+.ckc-plan__reorder svg {
+    flex: none;
+    margin-top: 2px;
+    color: var(--ckc-accent);
+}
+
+.ckc-plan__reorder {
+    align-items: center;
+    padding: 14px 16px;
+    border: 1.5px solid var(--ckc-accent);
+    border-radius: 16px;
+    color: var(--ckc-case-ink);
+    font-weight: 700;
+}
+
+.ckc-plan__reorder .ckc-plan__save {
+    margin-left: auto;
+}
+
+.ckc-plan__frequencies {
+    display: grid;
+    gap: 8px;
+}
+
+.ckc-plan__label {
+    color: var(--ckc-case-soft);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.ckc-root .ckc-plan__label {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.ckc-plan__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ckc-root .ckc-chip--radio {
+    position: relative;
+    min-height: 38px;
+    padding: 6px 14px;
+    border-color: var(--ckc-case-line);
+    background: none;
+    color: var(--ckc-case-ink);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* Hover only where there is a pointer that hovers: on a phone a tap leaves it stuck on. */
+@media (hover: hover) {
+    .ckc-root .ckc-chip--radio:hover {
+        border-color: var(--ckc-case-soft);
+    }
+}
+
+.ckc-root .ckc-chip--radio.ckc-chip--active {
+    border-color: var(--ckc-accent);
+    background: var(--ckc-accent);
+    color: var(--ckc-accent-contrast);
+}
+
+.ckc-chip--radio:has(input:focus-visible) {
+    box-shadow: var(--ckc-focus);
+}
+
+.ckc-field {
+    display: grid;
+    gap: 8px;
+}
+
+.ckc-root .ckc-input {
+    width: 100%;
+    min-height: 50px;
+    padding: 12px 16px;
+    border: 1.5px solid var(--ckc-case-line);
+    border-radius: 14px;
+    background: var(--ckc-case-raised);
+    color: var(--ckc-case-ink);
+    font-size: 16px;
+}
+
+.ckc-root .ckc-input::placeholder {
+    color: var(--ckc-case-faint);
+}
+
+.ckc-root .ckc-input:focus {
+    border-color: var(--ckc-accent);
+}
+
+.ckc-root .ckc-input[aria-invalid='true'] {
+    border-color: var(--ckc-pop);
+}
+
+.ckc-plan__problem {
+    margin-top: -6px;
+    color: var(--ckc-pop);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.ckc-plan__problem:empty {
+    display: none;
+}
+
+/* Price and buy ---------------------------------------------------------------------------- */
+.ckc-price {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: 2px 12px;
+    padding-top: 18px;
+    border-top: 1px solid var(--ckc-case-line);
+}
+
+.ckc-price--compact {
+    padding-top: 0;
+    border: 0;
+}
+
+.ckc-price__label {
+    color: var(--ckc-case-soft);
+    font-weight: 600;
+}
+
+.ckc-price__amounts {
+    display: inline-flex;
+    gap: 10px;
+    align-items: baseline;
+}
+
+.ckc-price__compare {
+    color: var(--ckc-case-faint);
+    font-size: 15px;
+}
+
+.ckc-price__total {
+    font-size: 30px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.ckc-price__saving {
+    grid-column: 1 / -1;
+    justify-self: end;
+    color: var(--ckc-accent);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.ckc-root .ckc-buy {
+    min-height: 58px;
+    font-family: var(--ckc-font-heading);
+    font-size: 18px;
+    font-weight: 800;
+}
+
+/* Hover only where there is a pointer that hovers: on a phone a tap leaves it stuck on. */
+@media (hover: hover) {
+    .ckc-root .ckc-buy:not([aria-disabled='true']):hover {
+        background: var(--ckc-case-ink);
+        color: var(--ckc-case);
+    }
+}
+
+.ckc-status {
+    font-size: 14px;
+    color: var(--ckc-case-soft);
+    text-align: center;
+}
+
+.ckc-status--error {
+    color: var(--ckc-pop);
+    font-weight: 700;
+}
+
+.ckc-status:empty {
+    display: none;
+}
+
+.ckc-status-wrap {
+    min-height: 1.4em;
+    margin-top: -4px;
+}
+
+.ckc-summary__heading:focus {
+    outline: none;
+}
+
+.ckc-root--nudged .ckc-status {
+    animation: ckc-nudge 400ms ease;
+}
+
+@keyframes ckc-nudge {
+    25% {
+        transform: translateX(-4px);
+    }
+    75% {
+        transform: translateX(4px);
+    }
+}
+
+/* The mobile bar --------------------------------------------------------------------------- */
+.ckc-mobile-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    display: grid;
+    gap: 10px;
+    margin: 24px -16px 0;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+    border-radius: 22px 22px 0 0;
+    background: var(--ckc-case);
+    color: var(--ckc-case-ink);
+    box-shadow: 0 -12px 32px rgb(23 18 14 / 18%);
+}
+
+.ckc-mobile-bar__row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
+}
+
+/* The merchant's button words can be long ("Join the club and add to cart"): the button takes
+   the room that is left and wraps, rather than pushing the total off the bar. */
+.ckc-root .ckc-mobile-bar .ckc-buy {
+    min-height: 50px;
+    padding: 8px 18px;
+    font-size: 16px;
+    line-height: 1.15;
+    text-align: center;
+}
+
+.ckc-mobile-bar .ckc-price__compare {
+    display: none;
+}
+
+.ckc-mobile-bar .ckc-status-wrap {
+    min-height: 0;
+    margin-top: -4px;
+}
+
+.ckc-mobile-bar .ckc-status {
+    text-align: left;
+}
+
+.ckc-mobile-bar__info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.ckc-mobile-bar__count {
+    display: grid;
+    place-items: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--ckc-accent);
+    color: var(--ckc-accent-contrast);
+    font-size: 14px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.ckc-mobile-bar .ckc-price__total {
+    font-size: 20px;
+}
+
+
+.ckc-meter--compact {
+    gap: 8px;
+}
+
+.ckc-meter--compact .ckc-meter__track {
+    height: 5px;
+}
+
+.ckc-meter--compact .ckc-meter__message {
+    font-size: 13px;
+    color: var(--ckc-case-soft);
+}
+
+/* One buy button on screen at a time: the rail's on wide screens, the bar's on narrow ones. */
+@media (min-width: 1000px) {
+    .ckc-mobile-bar {
+        display: none;
+    }
+}
+
+@media (max-width: 999.98px) {
+    .ckc-summary .ckc-buy,
+    .ckc-summary .ckc-status-wrap {
+        display: none;
+    }
+}
+
+/* The details dialog ----------------------------------------------------------------------- */
+.ckc-dialog {
+    width: min(900px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    padding: 0;
+    border: 0;
+    border-radius: 28px;
+    background: var(--ckc-surface);
+    color: var(--ckc-ink);
+    font-family: var(--ckc-font-body);
+    box-shadow: 0 30px 80px rgb(0 0 0 / 30%);
+}
+
+.ckc-dialog::backdrop {
+    background: rgb(23 18 14 / 60%);
+    backdrop-filter: blur(3px);
+}
+
+.ckc-dialog[open] {
+    animation: ckc-pop-in 260ms cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+
+@keyframes ckc-pop-in {
+    from {
+        transform: translateY(16px) scale(0.97);
+        opacity: 0;
+    }
+}
+
+.ckc-dialog__inner {
+    position: relative;
+    display: grid;
+    gap: 24px;
+    padding: 20px;
+}
+
+@media (min-width: 720px) {
+    .ckc-dialog__inner {
+        grid-template-columns: 1.05fr 1fr;
+        gap: 32px;
+        padding: 24px;
+    }
+}
+
+.ckc-root .ckc-dialog__close,
+.ckc-dialog .ckc-dialog__close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--ckc-surface);
+    box-shadow: var(--ckc-shadow);
+}
+
+.ckc-dialog__gallery img {
+    width: 100%;
+    max-height: 42dvh;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 20px;
+    background: var(--ckc-surface-sunk);
+}
+
+.ckc-dialog__thumbs {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    overflow-x: auto;
+}
+
+.ckc-root .ckc-dialog__thumb {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--ckc-radius-small);
+    overflow: hidden;
+    border: 2px solid transparent;
+}
+
+.ckc-root .ckc-dialog__thumb[aria-current='true'] {
+    border-color: var(--ckc-ink);
+}
+
+.ckc-dialog__details {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-top: 8px;
+}
+
+@media (min-width: 720px) {
+    .ckc-dialog__details {
+        padding-top: 32px;
+    }
+}
+
+.ckc-dialog__title {
+    padding-right: 48px;
+    font-size: clamp(28px, 3.4vw, 40px);
+    font-weight: 800;
+    line-height: 1;
+}
+
+.ckc-root .ckc-dialog__title {
+    letter-spacing: -0.02em;
+}
+
+.ckc-dialog__details .ckc-card__price {
+    font-size: 20px;
+}
+
+.ckc-dialog__description {
+    color: var(--ckc-ink-soft);
+    font-size: 15px;
+    white-space: pre-line;
+}
+
+.ckc-dialog__details .ckc-card__actions {
+    margin-top: 8px;
+}
+
+/* States ----------------------------------------------------------------------------------- */
+.ckc-loading {
+    display: grid;
+    gap: 14px;
+    min-height: 560px;
+    align-content: start;
+}
+
+.ckc-loading__bar {
+    display: block;
+    height: 140px;
+    border-radius: var(--ckc-radius);
+    background: linear-gradient(90deg, var(--ckc-surface-sunk), #fbf7f1, var(--ckc-surface-sunk));
+    background-size: 200% 100%;
+    animation: ckc-shimmer 1.4s linear infinite;
+}
+
+.ckc-loading__bar:first-child {
+    height: 72px;
+    width: 55%;
+}
+
+@keyframes ckc-shimmer {
+    to {
+        background-position: -200% 0;
+    }
+}
+
+.ckc-error {
+    padding: 18px;
+    border-radius: var(--ckc-radius-small);
+    background: var(--ckc-surface-sunk);
+    color: var(--ckc-ink);
+}
+
+.ckc-editor-panel {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    margin: 16px 0;
+    padding: 14px 16px;
+    border-radius: 8px;
+    background: #fff4e5;
+    border: 1px solid #f1c27d;
+    color: #4a3410;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+}
+
+.ckc-editor-panel svg {
+    margin-top: 3px;
+}
+
+.ckc-editor-panel__title {
+    font-weight: 600;
+    margin-bottom: 4px !important;
+}
+
+.ckc-editor-panel__list {
+    display: grid;
+    gap: 6px;
+    list-style: disc !important;
+    padding-left: 18px !important;
+}
+
+.ckc-editor-panel__list li {
+    display: list-item;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ckc-root *,
+    .ckc-dialog,
+    .ckc-dialog * {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}

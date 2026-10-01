@@ -1,0 +1,712 @@
+[
+ {
+  "id": 1544800469028,
+  "title": "Vanilla",
+  "handle": "vanilla-macaron",
+  "body_html": "<meta charset=\"utf-8\"><span><strong>Ingredients:</strong> </span><span>Icing Sugar: Sugar (97%), Maize Starch. Cream of Tartar: Raising Agent:</span><strong> </strong><span>Monopotassium Tartrate. </span><span>Ground <strong>Almonds</strong>. Caster Sugar. </span><span>Rose Water: Propylene Glycol, Alcohol, Rose Oil, Natural Flavouring. Yellow Food Colour: Sodium Chloride, Ponceau 4R (E176), Tartrazine (E112). </span><strong>Pistachio nut</strong><span>. </span>",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Macaron",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12020209385508,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "1.20",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11874410463268,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_4.png?v=1566223674",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886040809508,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_13_7cb66ac8-1277-45e1-a04b-b3ff1fe239e3.png?v=1566306048",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886040973348,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_14_f877a77d-ea3e-4333-add0-d2e05f52bdd3.png?v=1566306050",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886041137188,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_15_d5bab3bf-2c99-47bf-99bb-7961b1055150.png?v=1566306052",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886041202724,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_16_9af2b3e5-81d6-4555-8622-2412c4b55efc.png?v=1566306053",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886041333796,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_17_bd1ed7a7-9c34-4685-a6d7-75f3076c4de8.png?v=1566306056",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1544799485988,
+  "title": "Chocolate",
+  "handle": "chocolate-macaron",
+  "body_html": "<meta charset=\"utf-8\"><span><strong>Ingredients:</strong> </span><span>Icing Sugar: Sugar (97%), Maize Starch. Cream of Tartar: Raising Agent:</span><strong> </strong><span><span>Monopotassium Tartrate. </span></span><meta charset=\"utf-8\"><span><span>Ground <strong>Almonds</strong>. Caster Sugar. </span></span><meta charset=\"utf-8\"><span>Rose Water: Propylene Glycol, Alcohol, Rose Oil, Natural Flavouring. Ponceau 4R (E176), Tartrazine (E112). </span><strong>Pistachio nut</strong><span>. </span>",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Macaron",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12020206207012,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "1.20",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11874356789284,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_8.png?v=1566305627",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11885990084644,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_13.png?v=1566305627",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11885990215716,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_14.png?v=1566305627",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886003748900,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_15.png?v=1566305627",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886003814436,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_16.png?v=1566305627",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11885990674468,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_17.png?v=1566305627",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1544799092772,
+  "title": "Pistachio",
+  "handle": "pistachio-macaron",
+  "body_html": "<meta charset=\"utf-8\"><span><strong>Ingredients:</strong> </span><span>Icing Sugar: Sugar (97%), Maize Starch. Cream of Tartar: Raising Agent:</span><strong> </strong><span>Monopotassium Tartrate. </span><span>Ground <strong>Almonds</strong>. Caster Sugar. </span><span>Rose Water: Propylene Glycol, Alcohol, Rose Oil, Natural Flavouring. Red Food Colour: Sodium Chloride, Ponceau 4R (E176), Tartrazine (E112). </span><strong>Pistachio nut</strong><span>. </span>",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Macaron",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12020205748260,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "1.20",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11874380447780,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_7.png?v=1566223533",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886025932836,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_13_2934fdf7-a83c-4fca-ad96-a5c4fda5d353.png?v=1566305886",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886026096676,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_14_b61e17f8-ec1f-4530-918a-a352d869ddaf.png?v=1566305888",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886026260516,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_15_729fc466-a276-48ba-9b0b-a342da873654.png?v=1566305890",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886026391588,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_16_b9023603-8dab-4e68-9b9c-205a39e6d4a7.png?v=1566305891",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886026522660,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_17_6a0bdd02-7cf1-44f7-b645-1f56e1048528.png?v=1566305893",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1544798961700,
+  "title": "Mocha",
+  "handle": "strawberry-chocolate-macaron",
+  "body_html": "<meta charset=\"utf-8\"><span><strong>Ingredients:</strong> </span><span>Icing Sugar: Sugar (97%), Maize Starch. Cream of Tartar: Raising Agent:</span><strong> </strong><span>Monopotassium Tartrate. </span><span>Ground <strong>Almonds</strong>. Caster Sugar. </span><span>Rose Water: Propylene Glycol, Alcohol, Rose Oil, Natural Flavouring. Red Food Colour: Sodium Chloride, Ponceau 4R (E176), Tartrazine (E112). </span><strong>Pistachio nut</strong><span>. </span>",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Macaron",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12020205486116,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "1.20",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11874407940132,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_6.png?v=1566223659",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886038155300,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_13_bf897a13-1ddb-4b7f-af1d-6b848390070a.png?v=1566306026",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886038286372,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_14_d268d1f0-0e15-4d57-b328-2730c04b93a5.png?v=1566306027",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886038450212,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_15_980d2d44-2bdb-42a8-a6ed-d85aba3b61c8.png?v=1566306029",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886038548516,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_16_b386e338-4224-47ce-85e3-d283bef27645.png?v=1566306030",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886038581284,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_17_132b2fd5-5d99-4ce5-9c77-d574a44bc406.png?v=1566306032",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1544798404644,
+  "title": "Lemon",
+  "handle": "lemon-macaron",
+  "body_html": "<meta charset=\"utf-8\"><span><strong>Ingredients:</strong> </span><span>Icing Sugar: Sugar (97%), Maize Starch. Cream of Tartar: Raising Agent:</span><strong> </strong><span>Monopotassium Tartrate. </span><span>Ground <strong>Almonds</strong>. Caster Sugar. </span><span>Rose Water: Propylene Glycol, Alcohol, Rose Oil, Natural Flavouring. Red Food Colour: Sodium Chloride, Ponceau 4R (E176), Tartrazine (E112). </span><strong>Pistachio nut</strong><span>. </span>",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Macaron",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12020203651108,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "1.20",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11874450014244,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_9.png?v=1566223890",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886019739684,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_13_1fb2f744-d7bc-49f8-8013-f2ba7c119b64.png?v=1566305839",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886019870756,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_14_022df97f-0a16-4d97-bd02-60d87ed30c9b.png?v=1566305842",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886020100132,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_15_5c8671d2-556e-4a9a-88bc-4fef67fca22d.png?v=1566305844",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886020198436,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_16_edcc162e-5249-439c-a8c6-a7e00c37eb3d.png?v=1566305846",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886020329508,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_17_2d791002-7a9e-4119-b325-4b9fb0335976.png?v=1566305847",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1544795684900,
+  "title": "Rose",
+  "handle": "rose-macaron",
+  "body_html": "<meta charset=\"utf-8\"><span><strong>Ingredients:</strong> </span><span>Icing Sugar: Sugar (97%), Maize Starch. Cream of Tartar: Raising Agent:</span><strong> </strong><span>Monopotassium Tartrate. </span><span>Ground <strong>Almonds</strong>. Caster Sugar. </span><span>Rose Water: Propylene Glycol, Alcohol, Rose Oil, Natural Flavouring. Red Food Colour: Sodium Chloride, Ponceau 4R (E176), Tartrazine (E112). </span><strong>Pistachio nut</strong><span>. </span>",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Macaron",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12020192116772,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "1.20",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11874462007332,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_3.png?v=1566305934",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886031437860,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_13_27499752-0890-41aa-ad8b-20f741f022a4.png?v=1566305938",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886031536164,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_14_c61ab92b-a573-40df-9b2f-ef904e1c4247.png?v=1566305940",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886031601700,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_15_b178fa52-a241-4210-9b68-899751c8fe63.png?v=1566305942",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886031667236,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_16_c6423292-c7dd-4362-a3ee-f5214f27d0ac.png?v=1566305943",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886031732772,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_17_2d5225b9-d6f4-489f-9f0c-1118e8e3ca5a.png?v=1566305944",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1544792277028,
+  "title": "English Toffee",
+  "handle": "english-toffee",
+  "body_html": "<meta charset=\"utf-8\"><span><strong>Ingredients:</strong> </span><span>Icing Sugar: Sugar (97%), Maize Starch. Cream of Tartar: Raising Agent:</span><strong> </strong><span>Monopotassium Tartrate. </span><span>Ground <strong>Almonds</strong>. Caster Sugar. </span><span>Rose Water: Propylene Glycol, Alcohol, Rose Oil, Natural Flavouring. Red Food Colour: Sodium Chloride, Ponceau 4R (E176), Tartrazine (E112). </span><strong>Pistachio nut</strong><span>. </span>",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Macaron",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12020175405092,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "1.20",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11874445328420,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_5.png?v=1566223866",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886008598564,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_13_f3fdf55a-e46c-4ea2-a14c-953e4689b3e3.png?v=1566305692",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886008631332,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_14_e4bea41a-9f97-4d4a-9424-f1c03cf29762.png?v=1566305695",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886008959012,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_15_b38b9f83-af9e-42d5-b027-857f89ddef88.png?v=1566305697",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886009352228,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_16_a506fbb4-91cd-4a98-972a-64bfe28ee330.png?v=1566305698",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886009384996,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_17_264e254f-4b66-4608-bab4-26c95c7e9561.png?v=1566305701",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1544791359524,
+  "title": "Lavender",
+  "handle": "lavender-macaron",
+  "body_html": "<meta charset=\"utf-8\"><span><strong>Ingredients:</strong> </span><span>Icing Sugar: Sugar (97%), Maize Starch. Cream of Tartar: Raising Agent:</span><strong> </strong><span>Monopotassium Tartrate. </span><span>Ground <strong>Almonds</strong>. Caster Sugar. </span><span>Rose Water: Propylene Glycol, Alcohol, Rose Oil, Natural Flavouring. Red Food Colour: Sodium Chloride, Ponceau 4R (E176), Tartrazine (E112). </span><strong>Pistachio nut</strong><span>. </span>",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Macaron",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12020171571236,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "1.20",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11874457780260,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_2_57f5eff1-daed-4103-a31e-319d60aaed2e.png?v=1566306636",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886119157796,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_13_7a7fccc3-de29-455f-bbdd-ddd80fc80e29.png?v=1566306636",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886018232356,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_14_bc4715dd-a766-469a-bc90-0a442f8ce031.png?v=1566306636",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886018461732,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_15_0e2337dd-28f8-4fcf-a9fc-4c1f455cc9ae.png?v=1566306636",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886018494500,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_16_a7c1aaf2-38bc-4922-ae52-1fd189dd3dfc.png?v=1566306636",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886018822180,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_17_10e3aa65-126b-43c8-8365-7e905a9bd874.png?v=1566306636",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1544789426212,
+  "title": "Orange",
+  "handle": "mango-orange-macaron",
+  "body_html": "<meta charset=\"utf-8\"><span><strong>Ingredients:</strong> </span><span>Icing Sugar: Sugar (97%), Maize Starch. Cream of Tartar: Raising Agent:</span><strong> </strong><span>Monopotassium Tartrate. </span><span>Ground <strong>Almonds</strong>. Caster Sugar. </span><span>Rose Water: Propylene Glycol, Alcohol, Rose Oil, Natural Flavouring. Red Food Colour: Sodium Chloride, Ponceau 4R (E176), Tartrazine (E112). </span><strong>Pistachio nut</strong><span>. </span>",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Macaron",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12020156727332,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "1.20",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11874374320164,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_83ccc54a-e52a-41ee-bdf3-8393e0a7c02f.png?v=1566223508",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886023049252,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_13_575caf00-7d97-43a1-8e6d-8df320649fef.png?v=1566305862",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886023180324,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_14_d0f6a4d2-8bce-4ce1-ac6c-5b059746970a.png?v=1566305863",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886023508004,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_15_de9b0de8-e946-4e47-bb2a-2917bda53ac6.png?v=1566305866",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886023933988,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_16_8244be25-8fcd-4c3e-8b50-f6a8e8cd2208.png?v=1566305868",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886024261668,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_17_071798ea-4973-4af7-a15a-88f95635e15f.png?v=1566305872",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ },
+ {
+  "id": 1544785952804,
+  "title": "Raspberry",
+  "handle": "raspberry-macaron",
+  "body_html": "<meta charset=\"utf-8\"><span><strong>Ingredients:</strong> </span><span>Icing Sugar: Sugar (97%), Maize Starch. Cream of Tartar: Raising Agent:</span><strong> </strong><span>Monopotassium Tartrate. </span><span>Ground <strong>Almonds</strong>. Caster Sugar. </span><span>Rose Water: Propylene Glycol, Alcohol, Rose Oil, Natural Flavouring. Pink Food Colour: Sodium Chloride, Ponceau 4R (E176), Tartrazine (E112). </span><strong>Pistachio nut</strong><span>. </span>",
+  "vendor": "Bundle Builder Demo Store 1",
+  "product_type": "Macaron",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 12020137558052,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "",
+    "available": true,
+    "price": "1.20",
+    "compare_at_price": null,
+    "grams": 0,
+    "featured_image": null
+   }
+  ],
+  "images": [
+   {
+    "id": 11874387427364,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_0d43810c-1a26-47b0-92fa-16a21fef4f09.png?v=1566223558",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886029668388,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_13_96b0cc4c-6bb5-41df-b11f-c4a24023ffd8.png?v=1566305912",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886029799460,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_14_b022d907-2995-4fdd-a621-31214350ed55.png?v=1566305913",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886030258212,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_15_1866f4de-76c3-492c-94c3-706b48f4acc8.png?v=1566305917",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886030389284,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_16_0726d67b-026d-42b2-931a-a34d7231ca17.png?v=1566305919",
+    "alt": null,
+    "variant_ids": []
+   },
+   {
+    "id": 11886030618660,
+    "src": "https://cdn.shopify.com/s/files/1/2488/6292/products/Artboard_1_copy_17_3f8ee5b4-d6f4-4a88-964c-92fd25421c45.png?v=1566305922",
+    "alt": null,
+    "variant_ids": []
+   }
+  ]
+ }
+]

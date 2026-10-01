@@ -1,0 +1,29 @@
+{
+  "name": "kitenzo-vanilla-core",
+  "private": true,
+  "type": "module",
+  "description": "A Kitenzo custom component with no framework: a mixed-case bundle builder on @kitenzo/core alone, in plain TypeScript and DOM, shipped to a Shopify theme as two assets and a Liquid section.",
+  "scripts": {
+    "dev": "vite",
+    "build:embed": "vite build --config vite.config.embed.ts",
+    "package:embed": "bun run build:embed && bash scripts/package-embed.sh",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "bun run build:embed && playwright test",
+    "verify": "bun run typecheck && bun run test && bun run test:e2e",
+    "snapshot": "bun scripts/snapshot-demo-store.ts",
+    "rename": "node scripts/rename.mjs",
+    "size": "bun run build:embed && node scripts/size.mjs"
+  },
+  "dependencies": {
+    "@kitenzo/core": "^0.9.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^22.10.0",
+    "esbuild": "0.25.12",
+    "typescript": "^5.9.2",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4"
+  }
+}

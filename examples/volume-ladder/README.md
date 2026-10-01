@@ -1,0 +1,94 @@
+# Volume Ladder
+
+A compact "buy more, save more" widget that sits in a product page's narrow right-hand column, next to the product photos, and adapts to the width of that column rather than the width of the screen.
+
+![The ladder in a product page's column at 1440px](docs/screenshots/desktop-part.png)
+
+| Phone (iPhone 14) | Grid layout, full width |
+|---|---|
+| ![The ladder on a phone, buy panel stuck to the bottom](docs/screenshots/mobile-part.png) | ![The same bundle as a full-width grid](docs/screenshots/desktop-grid-part.png) |
+
+It shows three things:
+
+- **Container queries.** The widget's root is a CSS container. Every layout rule asks how wide the widget is, never how wide the viewport is. At 1440px the widget is 460px wide, in a column beside the photos, and it lays itself out as it would on a phone. Give the same ladder a 900px container and it puts the products beside the ladder.
+- **Two layouts from one asset.** The section's **Layout** setting is written to `data-layout` on the mount element. `ladder` (the default) is the compact column widget. `grid` is the same bundle as a full-width section, with the tiers laid out across the page as tiles. It is the same script, the same stylesheet and the same component tree. Only one class on the root differs.
+- **Shopify Markets pricing.** Every amount is in the shopper's currency: unit prices, each ladder row's per-pouch price, the total, the compare-at price and the saving. Ladder rows are priced by the SDK for the selection each row stands for, so "4 pouches, ¥1,518 each" is what checkout will charge.
+
+The ladder's rows are the bundle's discount tiers, read from the bundle. Nothing in the widget says "2 for 10%". Change the tiers in Kitenzo and the rows change.
+
+## The bundle it expects
+
+The demo bundle (`dev/catalog.ts`, bundle 2006) is four whey protein flavours from the Kitenzo demo store:
+
+- one step, `Choose your flavours`, with no rule of its own;
+- a bundle-wide minimum of 2 and no maximum;
+- a tiered **percentage** discount on the **number of products**: 2+ 10%, 3+ 15%, 4+ 20%, 6+ 25% (there is no tier at 5, on purpose);
+- Peanut Butter has only 3 left, so its stepper stops below the top tier.
+
+What it accepts, and how:
+
+| Bundle shape | What the widget does |
+|---|---|
+| Tiers on the number of products (`gte`, `gt`, `eq`) | One ladder row per tier, lowest first. An `eq` tier is earned at its count only. |
+| Percentage tiers combined by "best tier" (the default) | Rows say "Save 15%". |
+| Money-off tiers, set-price tiers, or cumulative tiers | Rows show the amount saved, priced by the SDK, in the shopper's currency. |
+| Products at different prices | Rows quote the cheapest product and drop the "each" price, which would not be exact. |
+| A flat discount, or no discount | No ladder. The widget still sells the bundle, and the theme editor tells the merchant why the ladder is hidden. |
+| Tiers on the bundle's value or on one product's quantity | Left out of the ladder (they cannot be said as "N pouches"), with a note in the theme editor. Checkout still applies them. |
+| A tier above the bundle's maximum | Left out, because nobody can reach it, with a note in the theme editor. |
+| Several steps | The products render as one group per step. The ladder counts across the bundle. |
+| Required products | Listed under the products as "Included". |
+| Required personalisation | Refused: the theme editor says to use a section that collects it. |
+
+## Edge cases, and the scenario that shows each
+
+Run the dev server and add `?scenario=<id>` (several, comma separated), or use the toolbar in the corner. Add `&layout=grid` to see any of them in the grid layout.
+
+| Scenario | What you should see |
+|---|---|
+| (none) | The ladder in a product page's column, tiers derived from the bundle, Peanut Butter capped at 3. |
+| `market-eur`, `market-jpy` | Every amount in EUR or JPY (no decimals in JPY), ladder rows included. No £ anywhere. |
+| `low-stock` | Chocolate has 2 left; the stepper stops and says why. |
+| `all-sold-out` | Every flavour shown and unpickable; the buy button explains the bundle is not available. |
+| `hide-sold-out` | The shop hides sold-out products. Combine with `all-sold-out`: the step is kept, visibly unpickable, rather than left empty. |
+| `archived-and-draft` | An archived flavour is never offered; a draft follows the shop's setting. |
+| `hostile-strings` | Quotes, markup and right-to-left titles render as text in the narrow rows without breaking the column. |
+| `contradictory-rules` | The theme editor names the clashing rules; the storefront shows one neutral line. |
+| `empty-bundle` | A sentence instead of an empty frame. |
+| `slow-api`, `loading-forever` | A loading state, inside the column, at the widget's size. |
+| `bundle-404`, `api-500`, `api-offline` | "Not available" for an unpublished bundle, "please refresh" only for our own failures. |
+| `cart-422`, `cart-429`, `cart-500`, `cart-offline` | The cart's reason as a sentence under the button, never a status code. |
+| `theme-editor` | Problems explained to the merchant, including why the ladder is hidden for a bundle with no count tiers. |
+| `draft-bundle` | An unpublished bundle previews in the editor and cannot be added. |
+| `?theme=hostile` | A theme with a transformed, container-typed ancestor and hostile bare-element rules. |
+| `?sections=2` | Two sections on one page, each mounted once. |
+
+## Run it
+
+```bash
+bun install
+bun run dev            # http://localhost:5186, the ladder beside the product photos
+                       # http://localhost:5186/?layout=grid, the full-width grid
+bun run verify         # typecheck, unit tests, build the theme asset, e2e on desktop Chromium and mobile WebKit
+bun run package:embed  # the install kit for a merchant: assets, section, INSTALL.md, MERCHANT-SETUP.md
+```
+
+The end-to-end suite runs the conformance suite on **both layouts**: the ladder mounted in a product page's column, and the grid in a full-width section. `e2e/volume-ladder.spec.ts` adds this example's own checks: rows derived from the tiers, the climb from tier to tier, the widget staying inside its 460px column at 1440 with no horizontal overflow, the layout following the container rather than the viewport, and every amount in the shopper's currency under `market-eur` and `market-jpy`.
+
+## How it works
+
+| File | What it does |
+|---|---|
+| `src/ladder.ts` | Pure functions. `tierLadder` turns the bundle's discount tiers into rows and notes for the merchant; `ladderProgress` says which tier a count earns and what the next one takes; `referencePick` and `rungSelection` choose the selection each row is priced for. Unit tested in `test/ladder.test.ts`. |
+| `src/money.ts` | `useMoney` formats every amount in the market's currency. `priceOf` prices a selection the shopper has not made through the same two SDK calls `useBundlePrice` makes, so ladder rows and the total always agree. |
+| `src/ui/Ladder.tsx` | The rows, the progress bar and the progress line. Rows are a list, not buttons: tapping "4 pouches" cannot choose four flavours for the shopper. |
+| `src/ui/Builder.tsx` | Selection, the cart and the two layouts. The layout is one class on the root (`vol-root--ladder` or `vol-root--grid`). |
+| `src/ui/ProductItem.tsx` | A product as a compact row (ladder) or a card (grid), sharing one picker hook. |
+| `src/ui/Summary.tsx` | The single buy panel: total, saving, button, status. It carries `cc-add-to-cart` and `cc-mobile-bar`, and on a phone it sticks to the bottom of the screen. |
+| `src/styles.css` | `.vol-root` is a named container (`container: vol / inline-size`). Every layout change is `@container vol (...)`. Viewport media queries are used only for the sticky phone panel, the dialog and the page around the widget. Colour defaults sit on the mount element so the merchant's settings, set there by the Liquid, are not overridden. |
+| `src/config.ts` | Reads `data-layout` (anything but `grid` is the ladder). |
+| `theme/kitenzo-volume-ladder.liquid` | The section. In the ladder layout it renders the product's own photos (`product.media`) beside the widget, so it can be a bundle product's main section; the grid layout is a page-width frame. |
+| `dev/shell.ts` | The markup the Liquid renders around the mount element, shared by the dev page and the e2e harness, so both test the widget in the column it ships in. |
+| `dev/catalog.ts` | The demo bundle. |
+
+Everything else (the mount registry, content parsing, the SDK data fix, the mock backend, scenarios) is the starter's, unchanged in purpose. See `starter/` and `guides/` for why each rule exists.

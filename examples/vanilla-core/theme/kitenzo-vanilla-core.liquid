@@ -1,0 +1,226 @@
+{% comment %}
+  Kitenzo custom component: theme section (Vanilla Core: a mixed case, no framework).
+
+  Install: upload kitenzo-vanilla-core.js and kitenzo-vanilla-core.css (from `bun run build:embed`) to the
+  theme's assets/ folder, and this file to sections/. Then add the section to a product template
+  (see INSTALL.md and MERCHANT-SETUP.md in the install kit).
+
+  Everything a merchant might want to change is a setting below, not code: every heading, label
+  and message, and the accent colours. What to sell (steps, products, counts, prices, discounts)
+  is not, because it comes from the bundle in Kitenzo.
+{% endcomment %}
+
+{{ 'kitenzo-vanilla-core.css' | asset_url | stylesheet_tag }}
+
+{%- liquid
+  # Which bundle to render. Kitenzo writes each bundle's id onto its own Shopify product as the
+  # `bundle-builder.bundle-id` metafield, so a product IS a bundle reference: "This product" reads
+  # it off the page's product, "Selected bundle" off a picked one. A draft bundle's product never
+  # appears in the picker, so the "Unpublished bundle ID" box is the way to design against one.
+  # This is the same resolution as Kitenzo's own app block.
+  assign bundle_source = section.settings.bundle_source | default: 'current_product'
+  if bundle_source == 'current_product'
+    assign resolved_bundle_id = product.metafields.bundle-builder.bundle-id | append: '' | strip
+  else
+    assign resolved_bundle_id = section.settings.bundle_product.metafields.bundle-builder.bundle-id | append: '' | strip
+  endif
+  if resolved_bundle_id == blank
+    assign resolved_bundle_id = section.settings.bundle_id | append: '' | strip
+  endif
+-%}
+
+{%- if resolved_bundle_id == blank -%}
+  {%- comment -%}
+    Nothing to render. The storefront shows nothing; only the merchant, in the theme editor, is
+    told why. Styled inline because the storefront never paints it.
+  {%- endcomment -%}
+  {%- if request.design_mode -%}
+    <div style="margin: 16px; padding: 16px; border: 1px solid #f1c27d; border-radius: 8px; background: #fff4e5; color: #4a3410; font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+      This product is not a Kitenzo bundle, so this section shows nothing on the storefront. Put
+      the section on a bundle product's template, or set "Bundle source" to "Selected bundle" and
+      pick one. A draft bundle will not appear in the picker: paste its ID into "Unpublished
+      bundle ID" instead.
+    </div>
+  {%- endif -%}
+{%- else -%}
+  {%- comment -%}
+    The theme's own fonts, so the widget looks like the rest of the store and follows it when the
+    merchant changes them. Most themes name these settings type_body_font and type_header_font;
+    check yours. When the theme has neither, the widget inherits the page's font.
+  {%- endcomment -%}
+  {%- liquid
+    assign body_font = settings.type_body_font
+    assign heading_font = settings.type_header_font
+  -%}
+  <style>
+    {%- if body_font %}
+    {{ body_font | font_face: font_display: 'swap' }}
+    {{ body_font | font_modify: 'weight', 'bold' | font_face: font_display: 'swap' }}
+    {%- endif %}
+    {%- if heading_font %}
+    {{ heading_font | font_face: font_display: 'swap' }}
+    {%- endif %}
+    #kitenzo-{{ section.id }} {
+      {%- if body_font %} --vnc-font-body: {{ body_font.family }}, {{ body_font.fallback_families }};{% endif %}
+      {%- if heading_font %} --vnc-font-heading: {{ heading_font.family }}, {{ heading_font.fallback_families }};{% endif %}
+      {%- if section.settings.accent_color != blank %} --vnc-accent: {{ section.settings.accent_color }};{% endif %}
+      {%- if section.settings.accent_contrast_color != blank %} --vnc-accent-contrast: {{ section.settings.accent_contrast_color }};{% endif %}
+    }
+  </style>
+
+  {%- comment -%}
+    The settings as one JSON blob, captured and then escaped once.
+
+    `json` escapes for JSON, not for an HTML attribute: an apostrophe passes straight through and
+    would close a single-quoted attribute early, losing every string to one "Maman's". Escaping
+    the captured blob fixes that, and the browser decodes it back to exact JSON before the widget
+    reads it.
+
+    Every string goes through `default: ''` first: a cleared text setting reaches Liquid as nil,
+    and `nil | json` is `null`, which the widget would ignore anyway; this keeps the blob honest.
+  {%- endcomment -%}
+  {%- capture kitenzo_content -%}
+    {
+      "heading": {{ section.settings.heading | default: '' | json }},
+      "intro": {{ section.settings.intro | default: '' | json }},
+      "addToCart": {{ section.settings.add_to_cart | default: '' | json }},
+      "adding": {{ section.settings.adding | default: '' | json }},
+      "added": {{ section.settings.added | default: '' | json }},
+      "chooseMore": {{ section.settings.choose_more | default: '' | json }},
+      "chooseMoreStep": {{ section.settings.choose_more_step | default: '' | json }},
+      "stepCount": {{ section.settings.step_count | default: '' | json }},
+      "stepCountRange": {{ section.settings.step_count_range | default: '' | json }},
+      "stepOptional": {{ section.settings.step_optional | default: '' | json }},
+      "stepFull": {{ section.settings.step_full | default: '' | json }},
+      "bundleFull": {{ section.settings.bundle_full | default: '' | json }},
+      "soldOut": {{ section.settings.sold_out | default: '' | json }},
+      "onlyLeft": {{ section.settings.only_left | default: '' | json }},
+      "stockReached": {{ section.settings.stock_reached | default: '' | json }},
+      "included": {{ section.settings.included | default: '' | json }},
+      "summaryHeading": {{ section.settings.summary_heading | default: '' | json }},
+      "summaryEmpty": {{ section.settings.summary_empty | default: '' | json }},
+      "caseCount": {{ section.settings.case_count | default: '' | json }},
+      "total": {{ section.settings.total | default: '' | json }},
+      "saving": {{ section.settings.saving | default: '' | json }},
+      "add": {{ section.settings.add | default: '' | json }},
+      "remove": {{ section.settings.remove | default: '' | json }},
+      "details": {{ section.settings.details | default: '' | json }},
+      "close": {{ section.settings.close | default: '' | json }},
+      "unavailable": {{ section.settings.unavailable | default: '' | json }},
+      "loadFailed": {{ section.settings.load_failed | default: '' | json }},
+      "editNotice": {{ section.settings.edit_notice | default: '' | json }},
+      "editMissing": {{ section.settings.edit_missing | default: '' | json }},
+      "notAllowed": {{ section.settings.not_allowed | default: '' | json }},
+      "retryAdd": {{ section.settings.retry_add | default: '' | json }},
+      "afterAdd": {{ section.settings.after_add | default: 'cart' | json }},
+      "hidePrices": {{ section.settings.hide_prices | json }}
+    }
+  {%- endcapture -%}
+
+  <div
+    id="kitenzo-{{ section.id }}"
+    data-vanilla-core-bundle="{{ resolved_bundle_id | escape }}"
+    data-api-key="{{ section.settings.api_key | strip | escape }}"
+    data-shop-domain="{{ shop.permanent_domain | escape }}"
+    data-country-code="{{ localization.country.iso_code | escape }}"
+    data-root-url="{{ routes.root_url | escape }}"
+    data-content="{{ kitenzo_content | escape }}"
+  ></div>
+  <script src="{{ 'kitenzo-vanilla-core.js' | asset_url }}" defer></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Kitenzo Vanilla Core",
+  "tag": "section",
+  "class": "kitenzo-section",
+  "settings": [
+    {
+      "type": "select",
+      "id": "bundle_source",
+      "label": "Bundle source",
+      "options": [
+        { "value": "current_product", "label": "This product (automatic)" },
+        { "value": "manual", "label": "Selected bundle" }
+      ],
+      "default": "current_product",
+      "info": "\"This product\" shows the bundle of whichever product this template is assigned to, so one template serves every bundle. Use \"Selected bundle\" on a page that is not a product."
+    },
+    {
+      "type": "product",
+      "id": "bundle_product",
+      "label": "Selected bundle",
+      "info": "Used when Bundle source is \"Selected bundle\". Pick the bundle's product."
+    },
+    {
+      "type": "text",
+      "id": "bundle_id",
+      "label": "Unpublished bundle ID",
+      "info": "A draft bundle does not appear in the picker. Paste its ID here to design against it in the theme editor. Leave blank once it is published."
+    },
+    {
+      "type": "paragraph",
+      "content": "Draws the bundle as a case that fills, sized from its limits (a case of 6, 12, and so on). Works with any Kitenzo bundle: any number of steps, counts per step or across the bundle, required products and product options. Bundles that ask for personalisation need a section that collects it."
+    },
+    {
+      "type": "text",
+      "id": "api_key",
+      "label": "Kitenzo headless API key",
+      "info": "From Kitenzo, Settings, Headless. It starts kit_live_ and is public (it ships in the page, like every storefront key), so create it with this store's domains as its allowed origins."
+    },
+    { "type": "header", "content": "Content" },
+    { "type": "text", "id": "heading", "label": "Heading", "info": "Leave blank to use the bundle's name." },
+    { "type": "textarea", "id": "intro", "label": "Introduction", "info": "Leave blank to use the bundle's description." },
+    {
+      "type": "select",
+      "id": "after_add",
+      "label": "After adding to the cart",
+      "options": [
+        { "value": "cart", "label": "Go to the cart" },
+        { "value": "stay", "label": "Stay on this page" }
+      ],
+      "default": "cart",
+      "info": "\"Stay\" suits themes with a cart drawer: the section fires a kitenzo:bundle-added event the drawer can listen for."
+    },
+    { "type": "checkbox", "id": "hide_prices", "label": "Hide prices", "default": false },
+    { "type": "header", "content": "Colours" },
+    { "type": "color", "id": "accent_color", "label": "Accent", "default": "#2b3d33" },
+    { "type": "color", "id": "accent_contrast_color", "label": "Text on accent", "default": "#fbf7ef" },
+    { "type": "header", "content": "Buttons" },
+    { "type": "text", "id": "add_to_cart", "label": "Add to cart", "default": "Add the case to cart" },
+    { "type": "text", "id": "adding", "label": "While adding", "default": "Adding…" },
+    { "type": "text", "id": "added", "label": "Once added", "default": "Added to your cart" },
+    { "type": "text", "id": "add", "label": "Add a product", "default": "Add" },
+    { "type": "text", "id": "remove", "label": "Remove a product", "default": "Remove" },
+    { "type": "text", "id": "details", "label": "Product details", "default": "Details" },
+    { "type": "text", "id": "close", "label": "Close", "default": "Close" },
+    { "type": "header", "content": "Steps" },
+    { "type": "text", "id": "step_count", "label": "Count, no limit", "default": "{count} chosen", "info": "{count} is how many are chosen." },
+    { "type": "text", "id": "step_count_range", "label": "Count, with a limit", "default": "{count} of {range} chosen", "info": "{range} is the step's limit, such as 3–6." },
+    { "type": "text", "id": "step_optional", "label": "Optional step", "default": "Optional" },
+    { "type": "text", "id": "step_full", "label": "Step is full", "default": "Your case is full. Take a bottle out to choose another." },
+    { "type": "text", "id": "bundle_full", "label": "Bundle is full", "default": "Your case is full. Take a bottle out to choose another." },
+    { "type": "text", "id": "choose_more", "label": "More needed", "default": "Choose {count} more to fill the case", "info": "Also used when the bundle has a single step." },
+    { "type": "text", "id": "choose_more_step", "label": "More needed in a step", "default": "Choose {count} more for “{step}”", "info": "For bundles with several steps. {step} is the step's name." },
+    { "type": "header", "content": "Products" },
+    { "type": "text", "id": "sold_out", "label": "Sold out", "default": "Sold out" },
+    { "type": "text", "id": "only_left", "label": "Low stock", "default": "Only {count} left" },
+    { "type": "text", "id": "stock_reached", "label": "No more stock", "default": "That is all we have of this one." },
+    { "type": "text", "id": "included", "label": "Included product", "default": "Included" },
+    { "type": "header", "content": "Summary" },
+    { "type": "text", "id": "summary_heading", "label": "Heading", "default": "Your case" },
+    { "type": "text", "id": "summary_empty", "label": "Nothing chosen", "default": "Your case is empty." },
+    { "type": "text", "id": "case_count", "label": "Case count", "default": "{count} of {size} bottles", "info": "Under the case picture. {size} is how many the case holds." },
+    { "type": "text", "id": "total", "label": "Total", "default": "Total" },
+    { "type": "text", "id": "saving", "label": "Saving", "default": "You save {amount}", "info": "{amount} is the saving, in the shopper's currency." },
+    { "type": "header", "content": "Messages" },
+    { "type": "text", "id": "unavailable", "label": "Bundle not available", "default": "This case is not available right now." },
+    { "type": "text", "id": "load_failed", "label": "Bundle failed to load", "default": "We could not load this case. Please refresh the page to try again." },
+    { "type": "textarea", "id": "edit_notice", "label": "Editing from the cart", "default": "You are changing a case from your cart. Adding it again replaces the one in your cart." },
+    { "type": "textarea", "id": "edit_missing", "label": "Edited items no longer available", "default": "Some bottles from your saved case are no longer available, so please choose again." },
+    { "type": "text", "id": "not_allowed", "label": "Selection not allowed", "default": "This combination cannot be bought as it is. Please change your selection.", "info": "Shown when a bundle rule other than a count (one per product, a price limit) refuses the selection." },
+    { "type": "text", "id": "retry_add", "label": "Connection lost while adding", "default": "Press the button again to finish adding it; you will not be charged twice." }
+  ],
+  "presets": [{ "name": "Kitenzo Vanilla Core" }]
+}
+{% endschema %}

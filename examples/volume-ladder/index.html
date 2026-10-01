@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Kitenzo Volume Ladder: dev</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link rel="stylesheet" href="/dev/theme.css" />
+    </head>
+    <body>
+        <!--
+            A stand-in for a merchant's theme: a supplements store's product page. dev/main.tsx renders
+            the section here exactly as theme/kitenzo-volume-ladder.liquid does on a real store (the
+            product's photos, then the mount element in the column beside them), installs the mock
+            backend, then loads src/embed.tsx: the same entry the theme asset is built from.
+        -->
+        <div class="theme-announcement">Free delivery on every bundle</div>
+        <header class="theme-header">
+            <span class="theme-header__logo">READY<span>nutrition</span></span>
+            <nav class="theme-header__nav"><a href="/">Protein</a><a href="/">Vitamins</a><a href="/">Bundles</a></nav>
+            <a class="theme-header__cart" href="/cart">Cart (<span id="dev-cart-count">0</span>)</a>
+        </header>
+        <main class="theme-main" id="theme-main">
+            <nav class="theme-breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/">Protein</a><span>/</span>Whey Protein Bundle</nav>
+        </main>
+        <footer class="theme-footer">Theme footer</footer>
+        <script type="module" src="/dev/main.tsx"></script>
+    </body>
+</html>

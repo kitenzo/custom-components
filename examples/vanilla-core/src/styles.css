@@ -1,0 +1,1077 @@
+/*
+ * The widget's styles. Three layers, in this order:
+ *
+ *   1. Tokens. Restyling for a brand is mostly this block. Fonts are the theme's own (the Liquid
+ *      section loads them and sets --vnc-font-*); the colours the merchant can change in the theme
+ *      editor arrive as --vnc-accent and --vnc-accent-contrast on the mount element.
+ *
+ *      The tokens are declared ON the mount element, at zero specificity (`:where()`), so the
+ *      section's `#kitenzo-<id> { --vnc-accent: … }` always wins and every element inside
+ *      inherits it. Declared on `.vnc-root` instead (a child of the mount), the defaults would
+ *      silently override the merchant's colours: a custom property set on an element beats the
+ *      one it would inherit.
+ *   2. A reset scoped to the widget root. Themes style bare elements (one ships
+ *      `button { padding: 1em 25px }`, another paints every element's colour), and namespaced
+ *      classes do not protect against that. The reset comes before every component rule, so each
+ *      component rule still wins over it.
+ *   3. Components. Every class is prefixed `vnc-`, because themes have their own `.card`,
+ *      `.drawer`, `.modal` and `.hidden`, and they will collide.
+ *
+ * Nothing here uses `position: fixed`: a theme ancestor with `transform` traps it. The dialog is a
+ * native <dialog> in the top layer; the mobile bar is `position: sticky`.
+ */
+
+/* 1. Tokens ------------------------------------------------------------------------------- */
+/* No font tokens here: until the section sets --vnc-font-*, `var()` finds nothing and the text
+   inherits the theme's font from the page, which is the right answer for a theme without one. */
+:where([data-vanilla-core-bundle]) {
+    --vnc-ink: #241e19;
+    --vnc-ink-soft: #6b6057;
+    --vnc-ink-faint: #9a8f85;
+    --vnc-surface: #fffdf9;
+    --vnc-paper: #f5efe5;
+    --vnc-line: #e4dacb;
+    --vnc-accent: #2b3d33;
+    --vnc-accent-contrast: #fbf7ef;
+    --vnc-brass: #9c7a45;
+    --vnc-danger: #9b2a22;
+    --vnc-radius: 4px;
+    --vnc-gap: 20px;
+    --vnc-shadow: 0 1px 2px rgb(36 30 25 / 6%), 0 12px 32px rgb(36 30 25 / 7%);
+    --vnc-focus: 0 0 0 3px color-mix(in srgb, var(--vnc-accent) 35%, transparent);
+
+    /* The case: a pine crate, pale glass, and a foil capsule per wine so a bottle in the case can
+       be matched to its shelf. */
+    --vnc-wood: #d2b386;
+    --vnc-wood-dark: #a9875a;
+    --vnc-wood-inner: #f1e6d3;
+    --vnc-glass: #4c6a4e;
+    --vnc-glass-edge: #34503a;
+    --vnc-label: #fbf8f1;
+    --vnc-capsule-1: #7a2331;
+    --vnc-capsule-2: #b08d4a;
+    --vnc-capsule-3: #2b3d33;
+    --vnc-capsule-4: #2a2624;
+    --vnc-capsule-5: #c2693d;
+    --vnc-capsule-6: #4f6a86;
+    --vnc-capsule-7: #8b9a6b;
+    --vnc-capsule-8: #7b5e8c;
+}
+
+/* 2. Reset, scoped to the root ------------------------------------------------------------ */
+.vnc-root,
+.vnc-root *,
+.vnc-root *::before,
+.vnc-root *::after,
+.vnc-dialog,
+.vnc-dialog * {
+    box-sizing: border-box;
+}
+
+/* A theme that paints every element its body colour (`*:not(a, h1, …) { color: … }`) lands on
+   anything with no colour of its own. Restore inheritance once, under the root. `:where()` keeps
+   this at one class of specificity, so every component rule below (also one class, and later)
+   still sets its own colour. */
+.vnc-root :where(*:not(svg, svg *)),
+.vnc-dialog :where(*:not(svg, svg *)) {
+    color: inherit;
+}
+
+/* Every element rule under the root sits in `:where()`, so it is one class of specificity and every
+   component rule below (one class, later) wins over it. Written as `.vnc-root p`, the reset
+   outranked `.vnc-header__intro` and quietly took its margin away. */
+.vnc-root :where(button, input, select),
+.vnc-dialog :where(button, select) {
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    min-height: 0;
+    width: auto;
+    height: auto;
+    font: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+    line-height: inherit;
+    border-radius: 0;
+    box-shadow: none;
+    background: none;
+    border: 0;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.vnc-root :where(button),
+.vnc-dialog :where(button) {
+    cursor: pointer;
+}
+
+.vnc-root :where(img),
+.vnc-dialog :where(img) {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+}
+
+.vnc-root :where(h2, h3, h4, p, ul),
+.vnc-dialog :where(h3, p) {
+    margin: 0;
+    padding: 0;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.vnc-root :where(ul) {
+    list-style: none;
+}
+
+/* A class that sets `display` beats the `hidden` attribute. Make the attribute win. */
+.vnc-root [hidden],
+.vnc-dialog [hidden] {
+    display: none !important;
+}
+
+.vnc-root :focus-visible,
+.vnc-dialog :focus-visible {
+    outline: none;
+    box-shadow: var(--vnc-focus);
+}
+
+/* 3. Components --------------------------------------------------------------------------- */
+.vnc-root {
+    font-family: var(--vnc-font-body);
+    color: var(--vnc-ink);
+    font-size: 16px;
+    line-height: 1.5;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 16px 0;
+}
+
+.vnc-root--state {
+    padding-bottom: 24px;
+}
+
+.vnc-header {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--vnc-line);
+}
+
+.vnc-header__title,
+.vnc-step__title,
+.vnc-summary__heading,
+.vnc-dialog__title,
+.vnc-card__title,
+.vnc-price__total {
+    font-family: var(--vnc-font-heading);
+    font-weight: 400;
+    line-height: 1.15;
+}
+
+.vnc-header__title {
+    font-size: clamp(30px, 4vw, 44px);
+    letter-spacing: -0.01em;
+}
+
+.vnc-header__intro {
+    margin-top: 10px;
+    color: var(--vnc-ink-soft);
+    font-size: 17px;
+    max-width: 56ch;
+}
+
+.vnc-notice {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 24px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--vnc-brass);
+    background: var(--vnc-paper);
+    color: var(--vnc-ink-soft);
+    font-size: 14px;
+}
+
+.vnc-layout {
+    display: grid;
+    gap: 40px;
+    align-items: start;
+}
+
+@media (min-width: 900px) {
+    .vnc-layout {
+        grid-template-columns: minmax(0, 1fr) 340px;
+    }
+}
+
+.vnc-steps {
+    display: grid;
+    gap: 48px;
+    min-width: 0;
+}
+
+.vnc-step {
+    scroll-margin-top: 96px;
+}
+
+.vnc-step__header {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.vnc-step__index {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--vnc-ink);
+    font-size: 14px;
+}
+
+.vnc-step[data-step-done] .vnc-step__index {
+    background: var(--vnc-accent);
+    border-color: var(--vnc-accent);
+    color: var(--vnc-accent-contrast);
+}
+
+.vnc-step__titles {
+    flex: 1;
+    min-width: 0;
+}
+
+.vnc-step__title {
+    font-size: 24px;
+    font-style: italic;
+}
+
+.vnc-step__description {
+    margin-top: 2px;
+    color: var(--vnc-ink-soft);
+    font-size: 14px;
+}
+
+.vnc-step__counter {
+    flex: none;
+    color: var(--vnc-ink-soft);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.vnc-step__counter--done {
+    color: var(--vnc-accent);
+}
+
+.vnc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr));
+    gap: var(--vnc-gap);
+}
+
+@media (max-width: 599.98px) {
+    .vnc-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+}
+
+.vnc-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border: 1px solid var(--vnc-line);
+    border-radius: var(--vnc-radius);
+    background: var(--vnc-surface);
+    overflow: hidden;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.vnc-card--chosen {
+    border-color: var(--vnc-accent);
+    box-shadow: inset 0 0 0 1px var(--vnc-accent);
+}
+
+.vnc-root .vnc-card__media {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    background: #fff;
+    overflow: hidden;
+}
+
+.vnc-card__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* The store's photographs stand each bottle in a lot of white: bring it forward. */
+    transform: scale(1.14);
+    transition: transform 400ms ease;
+}
+
+.vnc-card__media:hover img {
+    transform: scale(1.2);
+}
+
+.vnc-card--sold-out .vnc-card__media img {
+    opacity: 0.4;
+    filter: grayscale(0.7);
+}
+
+.vnc-card__placeholder {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    font-family: var(--vnc-font-heading);
+    font-size: 40px;
+    color: var(--vnc-ink-faint);
+}
+
+.vnc-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 3px 8px;
+    border: 1px solid var(--vnc-line);
+    background: var(--vnc-surface);
+    color: var(--vnc-ink-soft);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.vnc-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    padding: 14px 14px 12px;
+    border-top: 1px solid var(--vnc-line);
+}
+
+.vnc-card__title {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 19px;
+    overflow-wrap: anywhere;
+    min-width: 0;
+}
+
+/* The wine's foil, matched in the case graphic. */
+.vnc-card__capsule {
+    flex: none;
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--vnc-capsule, var(--vnc-ink-faint));
+    transform: translateY(-2px);
+}
+
+.vnc-card__price {
+    font-size: 14px;
+    color: var(--vnc-ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.vnc-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.vnc-card__actions {
+    margin-top: auto;
+    padding-top: 6px;
+}
+
+.vnc-card__message {
+    min-height: 1.4em;
+    font-size: 12px;
+    color: var(--vnc-ink-soft);
+}
+
+.vnc-options {
+    display: grid;
+    gap: 6px;
+}
+
+.vnc-option {
+    display: grid;
+    gap: 2px;
+    font-size: 12px;
+    color: var(--vnc-ink-soft);
+}
+
+.vnc-root .vnc-select,
+.vnc-dialog .vnc-select {
+    width: 100%;
+    padding: 6px 28px 6px 10px;
+    border: 1px solid var(--vnc-line);
+    border-radius: var(--vnc-radius);
+    background: var(--vnc-surface)
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%236b6057' stroke-width='1.5'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E")
+        no-repeat right 10px center;
+    color: var(--vnc-ink);
+    font-size: 14px;
+}
+
+.vnc-root .vnc-button,
+.vnc-dialog .vnc-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 18px;
+    border-radius: var(--vnc-radius);
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    transition: background 150ms ease, opacity 150ms ease, color 150ms ease;
+}
+
+.vnc-root .vnc-button--primary {
+    background: var(--vnc-accent);
+    color: var(--vnc-accent-contrast);
+    width: 100%;
+    min-height: 52px;
+}
+
+.vnc-root .vnc-button--secondary,
+.vnc-dialog .vnc-button--secondary {
+    border: 1px solid var(--vnc-ink);
+    color: var(--vnc-ink);
+    width: 100%;
+}
+
+.vnc-root .vnc-button--secondary:hover:not(:disabled, [aria-disabled='true']),
+.vnc-dialog .vnc-button--secondary:hover:not(:disabled, [aria-disabled='true']) {
+    background: var(--vnc-ink);
+    color: var(--vnc-surface);
+}
+
+.vnc-root .vnc-button[aria-disabled='true'],
+.vnc-root .vnc-button:disabled,
+.vnc-dialog .vnc-button[aria-disabled='true'],
+.vnc-dialog .vnc-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.vnc-root .vnc-button:disabled,
+.vnc-dialog .vnc-button:disabled {
+    border-color: var(--vnc-line);
+}
+
+.vnc-stepper {
+    display: grid;
+    grid-template-columns: 44px 1fr 44px;
+    align-items: center;
+    border: 1px solid var(--vnc-accent);
+    border-radius: var(--vnc-radius);
+    background: var(--vnc-accent);
+    color: var(--vnc-accent-contrast);
+    overflow: hidden;
+}
+
+.vnc-root .vnc-stepper__button,
+.vnc-dialog .vnc-stepper__button {
+    display: grid;
+    place-items: center;
+    height: 42px;
+    color: var(--vnc-accent-contrast);
+}
+
+.vnc-root .vnc-stepper__button[aria-disabled='true'],
+.vnc-dialog .vnc-stepper__button[aria-disabled='true'] {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.vnc-stepper__count {
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The case ---------------------------------------------------------------------------------- */
+.vnc-case {
+    display: grid;
+    gap: 10px;
+}
+
+.vnc-case__grid {
+    display: grid;
+    grid-template-columns: repeat(var(--vnc-case-columns, 3), minmax(0, 1fr));
+    gap: 6px;
+    padding: 10px 10px 14px;
+    border-radius: 3px;
+    background:
+        repeating-linear-gradient(90deg, rgb(255 255 255 / 0%) 0 13px, rgb(255 255 255 / 9%) 13px 14px, rgb(0 0 0 / 0%) 14px 31px, rgb(0 0 0 / 5%) 31px 32px),
+        var(--vnc-wood);
+    box-shadow: inset 0 -5px 0 var(--vnc-wood-dark), 0 10px 18px -12px rgb(36 30 25 / 45%);
+}
+
+.vnc-slot {
+    display: grid;
+    place-items: end center;
+    padding-top: 8px;
+    height: 88px;
+    border-radius: 2px;
+    background: var(--vnc-wood-inner);
+    box-shadow: inset 0 3px 6px rgb(120 90 50 / 22%);
+}
+
+.vnc-bottle {
+    width: auto;
+    height: 72px;
+    overflow: visible;
+}
+
+.vnc-bottle__glass {
+    fill: rgb(255 255 255 / 0%);
+    stroke: var(--vnc-wood-dark);
+    stroke-width: 1.1;
+    stroke-dasharray: 3 2.5;
+    transition: fill 250ms ease, stroke 250ms ease;
+}
+
+.vnc-slot--optional .vnc-bottle__glass {
+    opacity: 0.45;
+}
+
+.vnc-bottle__capsule,
+.vnc-bottle__label {
+    opacity: 0;
+    transition: opacity 250ms ease;
+}
+
+.vnc-slot[data-filled] .vnc-bottle {
+    animation: vnc-drop 320ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.vnc-slot[data-filled] .vnc-bottle__glass {
+    fill: var(--vnc-glass);
+    stroke: var(--vnc-glass-edge);
+    stroke-dasharray: none;
+    opacity: 1;
+}
+
+.vnc-slot[data-filled] .vnc-bottle__capsule {
+    fill: var(--vnc-capsule, var(--vnc-ink));
+    opacity: 1;
+}
+
+.vnc-slot[data-filled] .vnc-bottle__label {
+    fill: var(--vnc-label);
+    stroke: var(--vnc-capsule, var(--vnc-ink));
+    stroke-width: 0.8;
+    opacity: 1;
+}
+
+@keyframes vnc-drop {
+    from {
+        transform: translateY(-14px);
+        opacity: 0.2;
+    }
+}
+
+.vnc-case__caption {
+    text-align: center;
+    font-size: 14px;
+    font-style: italic;
+    color: var(--vnc-ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.vnc-case--full .vnc-case__caption {
+    color: var(--vnc-accent);
+}
+
+/* The case in the mobile bar: one row, the same bottles, small, with its count beside it. */
+.vnc-case--compact {
+    grid-auto-flow: column;
+    align-items: center;
+    justify-content: start;
+}
+
+.vnc-case--compact .vnc-case__caption {
+    text-align: left;
+    font-size: 11px;
+    line-height: 1.3;
+    max-width: 9ch;
+}
+
+.vnc-case--compact .vnc-case__grid {
+    grid-template-columns: repeat(var(--vnc-case-columns), 14px);
+    gap: 3px;
+    padding: 4px 4px 6px;
+    box-shadow: inset 0 -3px 0 var(--vnc-wood-dark);
+}
+
+.vnc-case--compact .vnc-slot {
+    height: 34px;
+    padding-top: 3px;
+}
+
+.vnc-case--compact .vnc-bottle {
+    height: 28px;
+}
+
+.vnc-case--compact .vnc-bottle__glass {
+    stroke-dasharray: none;
+    opacity: 0.5;
+}
+
+/* The summary rail ----------------------------------------------------------------------- */
+.vnc-summary {
+    display: grid;
+    gap: 16px;
+    padding: 24px;
+    border: 1px solid var(--vnc-line);
+    border-radius: var(--vnc-radius);
+    background: var(--vnc-paper);
+}
+
+@media (min-width: 900px) {
+    .vnc-summary {
+        position: sticky;
+        top: 24px;
+    }
+}
+
+.vnc-summary__heading {
+    font-size: 26px;
+}
+
+.vnc-summary__empty {
+    color: var(--vnc-ink-faint);
+    font-size: 14px;
+    font-style: italic;
+}
+
+.vnc-summary__lines {
+    display: grid;
+    gap: 8px;
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
+.vnc-summary__lines:empty {
+    display: none;
+}
+
+.vnc-line {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+}
+
+.vnc-root .vnc-line__thumb {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border: 1px solid var(--vnc-line);
+    background: #fff;
+}
+
+.vnc-line__title {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0 6px;
+    overflow-wrap: anywhere;
+    min-width: 0;
+}
+
+.vnc-line__variant {
+    flex-basis: 100%;
+    color: var(--vnc-ink-faint);
+    font-size: 12px;
+}
+
+.vnc-line__tag {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--vnc-accent);
+}
+
+.vnc-root .vnc-icon-button {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: var(--vnc-ink-soft);
+}
+
+.vnc-root .vnc-icon-button:hover {
+    background: var(--vnc-surface);
+    color: var(--vnc-ink);
+}
+
+.vnc-price {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: 2px 12px;
+    padding-top: 14px;
+    border-top: 1px solid var(--vnc-line);
+}
+
+.vnc-price--compact {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding-top: 0;
+    border: 0;
+}
+
+.vnc-price__label {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--vnc-ink-soft);
+}
+
+.vnc-price--compact .vnc-price__label {
+    display: none;
+}
+
+.vnc-price__amounts {
+    display: inline-flex;
+    gap: 8px;
+    align-items: baseline;
+}
+
+.vnc-price__compare {
+    color: var(--vnc-ink-faint);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+}
+
+.vnc-price__total {
+    font-size: 28px;
+    font-variant-numeric: tabular-nums;
+}
+
+.vnc-price__saving {
+    grid-column: 1 / -1;
+    justify-self: end;
+    color: var(--vnc-brass);
+    font-size: 13px;
+    font-style: italic;
+}
+
+.vnc-status {
+    min-height: 1.4em;
+    font-size: 14px;
+    color: var(--vnc-ink-soft);
+    text-align: center;
+}
+
+.vnc-status--error {
+    color: var(--vnc-danger);
+}
+
+/* Two live regions, always present; whichever has nothing to say takes no room. */
+.vnc-status:empty {
+    display: none;
+}
+
+.vnc-status-wrap {
+    min-height: 1.4em;
+}
+
+.vnc-summary__heading:focus {
+    outline: none;
+}
+
+.vnc-root--nudged .vnc-status {
+    animation: vnc-nudge 400ms ease;
+}
+
+@keyframes vnc-nudge {
+    25% {
+        transform: translateX(-4px);
+    }
+    75% {
+        transform: translateX(4px);
+    }
+}
+
+.vnc-mobile-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    display: grid;
+    gap: 8px;
+    margin: 32px -16px 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: var(--vnc-surface);
+    border-top: 1px solid var(--vnc-line);
+    box-shadow: 0 -10px 28px rgb(36 30 25 / 9%);
+}
+
+.vnc-root .vnc-mobile-bar .vnc-buy {
+    min-height: 48px;
+}
+
+.vnc-mobile-bar .vnc-status {
+    font-size: 13px;
+}
+
+.vnc-mobile-bar .vnc-status-wrap {
+    min-height: 0;
+}
+
+.vnc-mobile-bar__info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+
+.vnc-mobile-bar__count {
+    display: grid;
+    place-items: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--vnc-ink);
+    color: var(--vnc-surface);
+    font-size: 13px;
+}
+
+.vnc-mobile-bar .vnc-price__total {
+    font-size: 20px;
+}
+
+.vnc-mobile-bar .vnc-price__compare {
+    font-size: 12px;
+}
+
+/* One buy button on screen at a time: the rail's on wide screens, the bar's on narrow ones. */
+@media (min-width: 900px) {
+    .vnc-mobile-bar {
+        display: none;
+    }
+}
+
+@media (max-width: 899.98px) {
+    .vnc-summary .vnc-buy,
+    .vnc-summary .vnc-status-wrap {
+        display: none;
+    }
+}
+
+/* The dialog ------------------------------------------------------------------------------ */
+.vnc-dialog {
+    width: min(880px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    padding: 0;
+    border: 0;
+    border-radius: var(--vnc-radius);
+    background: var(--vnc-surface);
+    color: var(--vnc-ink);
+    font-family: var(--vnc-font-body);
+    font-size: 16px;
+    line-height: 1.5;
+    box-shadow: 0 24px 64px rgb(0 0 0 / 25%);
+}
+
+.vnc-dialog::backdrop {
+    background: rgb(36 30 25 / 50%);
+}
+
+.vnc-dialog__inner {
+    position: relative;
+    display: grid;
+    gap: 28px;
+    padding: 28px;
+}
+
+@media (min-width: 720px) {
+    .vnc-dialog__inner {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.vnc-dialog .vnc-dialog__close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--vnc-surface);
+    box-shadow: var(--vnc-shadow);
+}
+
+.vnc-dialog__photo img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: contain;
+    background: #fff;
+}
+
+/* On a phone the photograph gives way to the words and the button. */
+@media (max-width: 719.98px) {
+    .vnc-dialog__inner {
+        gap: 16px;
+        padding: 20px;
+    }
+
+    .vnc-dialog__photo img {
+        max-height: 38dvh;
+    }
+
+    .vnc-dialog__title {
+        font-size: 26px;
+    }
+}
+
+.vnc-dialog__thumbs {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    overflow-x: auto;
+}
+
+.vnc-dialog .vnc-dialog__thumb {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    overflow: hidden;
+    border: 1px solid var(--vnc-line);
+}
+
+.vnc-dialog .vnc-dialog__thumb[aria-current='true'] {
+    border-color: var(--vnc-accent);
+    box-shadow: inset 0 0 0 1px var(--vnc-accent);
+}
+
+.vnc-dialog__details {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.vnc-dialog__title {
+    font-size: 32px;
+    padding-right: 40px;
+}
+
+.vnc-dialog__description {
+    color: var(--vnc-ink-soft);
+    font-size: 15px;
+    white-space: pre-line;
+}
+
+/* In the dialog the controls follow the words, rather than sinking to the foot of the column. */
+.vnc-dialog .vnc-controls {
+    flex: none;
+}
+
+.vnc-dialog .vnc-card__actions {
+    margin-top: 0;
+}
+
+.vnc-dialog .vnc-card__message {
+    min-height: 1.4em;
+    font-size: 13px;
+    color: var(--vnc-ink-soft);
+}
+
+/* States ------------------------------------------------------------------------------------ */
+.vnc-loading {
+    display: grid;
+    gap: 12px;
+    min-height: 520px;
+    align-content: start;
+}
+
+.vnc-loading__bar {
+    display: block;
+    height: 120px;
+    border-radius: var(--vnc-radius);
+    background: linear-gradient(90deg, var(--vnc-paper), #fbf8f2, var(--vnc-paper));
+    background-size: 200% 100%;
+    animation: vnc-shimmer 1.4s linear infinite;
+}
+
+.vnc-loading__bar:first-child {
+    height: 44px;
+    width: 40%;
+}
+
+@keyframes vnc-shimmer {
+    to {
+        background-position: -200% 0;
+    }
+}
+
+.vnc-error {
+    margin-bottom: 16px;
+    padding: 16px;
+    border-left: 3px solid var(--vnc-brass);
+    background: var(--vnc-paper);
+    color: var(--vnc-ink);
+}
+
+.vnc-editor-panel {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    margin: 16px 0;
+    padding: 14px 16px;
+    border-radius: 8px;
+    background: #fff4e5;
+    border: 1px solid #f1c27d;
+    color: #4a3410;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+}
+
+.vnc-editor-panel svg {
+    margin-top: 3px;
+}
+
+.vnc-editor-panel__title {
+    font-weight: 600;
+    margin-bottom: 4px !important;
+}
+
+.vnc-editor-panel__list {
+    display: grid;
+    gap: 6px;
+    list-style: disc !important;
+    padding-left: 18px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vnc-root *,
+    .vnc-dialog * {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}

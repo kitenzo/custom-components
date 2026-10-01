@@ -1,0 +1,1397 @@
+/*
+ * The widget's styles. Three layers, in this order:
+ *
+ *   1. Tokens. Restyling for a brand is mostly this block. Fonts are the theme's own (the Liquid
+ *      section loads them and sets --skr-font-*); the colours the merchant can change in the theme
+ *      editor arrive as --skr-accent and --skr-accent-contrast on the mount element, and the
+ *      height of a sticky theme header as --skr-sticky-top.
+ *   2. A reset scoped to the widget root. Themes style bare elements (one ships
+ *      `button { padding: 1em 25px }`, another paints every element's colour), and namespaced
+ *      classes do not protect against that. The reset comes before every component rule, so each
+ *      component rule still wins over it.
+ *   3. Components. Every class is prefixed `skr-`, because themes have their own `.card`,
+ *      `.drawer`, `.modal` and `.hidden`, and they will collide.
+ *
+ * Nothing here uses `position: fixed`: a theme ancestor with `transform` traps it. The dialog is a
+ * native <dialog> in the top layer; the step bar and the mobile bar are `position: sticky`.
+ *
+ * The look is a skincare brand's: warm paper, near-black ink, the product photographs' own sand
+ * behind every image so the bottles sit on one surface, the theme's heading font set large and
+ * light, and room around everything.
+ */
+
+/* 1. Tokens ------------------------------------------------------------------------------- */
+/* Declared on the mount element, at zero specificity, so the values the Liquid section sets on
+   that same element (`#kitenzo-<section id>`, an id selector) always win, and the widget root
+   inherits whichever applies. Declaring them on `.skr-root` instead would quietly override the
+   merchant's colours, the theme's fonts and the sticky header's height with these defaults. */
+:where([data-skincare-routine-bundle]) {
+    --skr-font-body: inherit;
+    --skr-font-heading: inherit;
+    --skr-ink: #24201c;
+    --skr-ink-soft: #6b625a;
+    --skr-ink-faint: #9a9088;
+    --skr-surface: #fffdf9;
+    --skr-canvas: #f6f1ea;
+    /* The sand the LUMERA photographs are shot on, so a letterboxed image has no seam. */
+    --skr-photo: #f2ebe3;
+    --skr-line: #e6ddd2;
+    --skr-line-strong: #cfc4b7;
+    --skr-accent: #2a2521;
+    --skr-accent-contrast: #faf7f2;
+    --skr-sage: #5f7360;
+    --skr-danger: #9b2c1f;
+    --skr-success: #4f6b4f;
+    --skr-radius: 18px;
+    --skr-radius-small: 10px;
+    --skr-gap: 20px;
+    --skr-sticky-top: 0px;
+    --skr-shadow: 0 1px 2px rgb(36 32 28 / 5%), 0 12px 32px rgb(36 32 28 / 7%);
+    --skr-focus: 0 0 0 3px color-mix(in srgb, var(--skr-accent) 30%, transparent);
+    --skr-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* 2. Reset, scoped to the root ------------------------------------------------------------ */
+.skr-root,
+.skr-root *,
+.skr-root *::before,
+.skr-root *::after {
+    box-sizing: border-box;
+}
+
+/* A theme that paints every element its body colour (`*:not(a, h1, …) { color: … }`) lands on
+   anything with no colour of its own. Restore inheritance once, under the root. `:where()` keeps
+   this at one class of specificity, so every component rule below (also one class, and later)
+   still sets its own colour. */
+.skr-root :where(*:not(svg, svg *)) {
+    color: inherit;
+}
+
+.skr-root :where(button, input, select) {
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    min-height: 0;
+    width: auto;
+    height: auto;
+    font: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+    line-height: inherit;
+    border-radius: 0;
+    box-shadow: none;
+    background: none;
+    border: 0;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.skr-root :where(button) {
+    cursor: pointer;
+}
+
+.skr-root :where(img) {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+}
+
+/* `:where()` again: one class of specificity, so a component class (an eyebrow on a <p>, a
+   heading's own margin) wins by coming later, while every bare theme rule still loses. */
+.skr-root :where(h2, h3, h4, p, ul, ol, li) {
+    margin: 0;
+    padding: 0;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.skr-root :where(ul, ol) {
+    list-style: none;
+}
+
+/* A class that sets `display` beats the `hidden` attribute. Make the attribute win. */
+.skr-root [hidden] {
+    display: none;
+}
+
+.skr-root :focus-visible {
+    outline: none;
+    box-shadow: var(--skr-focus);
+}
+
+/* Headings that take focus when a step or question changes show no ring: they are not controls. */
+.skr-root [tabindex='-1']:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* 3. Components --------------------------------------------------------------------------- */
+.skr-root {
+    font-family: var(--skr-font-body);
+    color: var(--skr-ink);
+    font-size: 16px;
+    line-height: 1.55;
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 40px 16px 0;
+    scroll-margin-top: var(--skr-sticky-top);
+    -webkit-font-smoothing: antialiased;
+}
+
+@media (min-width: 900px) {
+    .skr-root {
+        padding: 64px 24px 0;
+    }
+}
+
+.skr-root--state {
+    padding-bottom: 24px;
+}
+
+/* --- Type ---------------------------------------------------------------------------------- */
+.skr-eyebrow {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--skr-ink-soft);
+}
+
+.skr-display,
+.skr-header__title,
+.skr-panel__title,
+.skr-summary__heading,
+.skr-dialog__title,
+.skr-card__name,
+.skr-review__name {
+    font-family: var(--skr-font-heading);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+}
+
+.skr-display {
+    margin-top: 14px;
+    font-size: clamp(38px, 5.2vw, 64px);
+}
+
+.skr-display--question {
+    font-size: clamp(30px, 3.8vw, 46px);
+    max-width: 18ch;
+}
+
+.skr-lede {
+    margin-top: 18px;
+    max-width: 46ch;
+    font-size: 17px;
+    color: var(--skr-ink-soft);
+}
+
+.skr-reason {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--skr-sage);
+}
+
+.skr-reason::before {
+    content: '';
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    transform: translateY(-1px);
+}
+
+/* --- Buttons and links --------------------------------------------------------------------- */
+.skr-root .skr-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 12px 24px;
+    border-radius: 999px;
+    font-weight: 500;
+    font-size: 15px;
+    letter-spacing: 0.01em;
+    transition: background 200ms var(--skr-ease), color 200ms var(--skr-ease), border-color 200ms var(--skr-ease), opacity 200ms var(--skr-ease);
+}
+
+.skr-root .skr-button--primary {
+    background: var(--skr-accent);
+    color: var(--skr-accent-contrast);
+}
+
+.skr-root .skr-button--primary:hover:not([aria-disabled='true']) {
+    background: color-mix(in srgb, var(--skr-accent) 86%, white);
+}
+
+.skr-root .skr-button--secondary {
+    border: 1px solid var(--skr-line-strong);
+    color: var(--skr-ink);
+    background: transparent;
+}
+
+.skr-root .skr-button--secondary:hover:not(:disabled):not([aria-disabled='true']) {
+    border-color: var(--skr-ink);
+}
+
+.skr-root .skr-button--chosen {
+    background: var(--skr-accent);
+    color: var(--skr-accent-contrast);
+    border: 1px solid var(--skr-accent);
+}
+
+.skr-root .skr-button--wide {
+    min-width: 220px;
+}
+
+.skr-root .skr-button[aria-disabled='true'],
+.skr-root .skr-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.skr-root .skr-button--chosen[aria-disabled='true'] {
+    opacity: 0.7;
+}
+
+.skr-root .skr-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--skr-ink);
+    text-decoration: underline;
+    text-decoration-color: var(--skr-line-strong);
+    text-underline-offset: 4px;
+    transition: text-decoration-color 200ms var(--skr-ease);
+}
+
+.skr-root .skr-link:hover {
+    text-decoration-color: currentColor;
+}
+
+.skr-root .skr-link--quiet {
+    text-decoration: none;
+    color: var(--skr-ink-soft);
+}
+
+.skr-root .skr-link--quiet:hover {
+    color: var(--skr-ink);
+}
+
+/* --- The quiz ------------------------------------------------------------------------------ */
+.skr-quiz {
+    padding-bottom: 72px;
+    animation: skr-rise 500ms var(--skr-ease);
+}
+
+.skr-quiz--intro {
+    display: grid;
+    gap: 48px;
+    align-items: center;
+}
+
+@media (min-width: 900px) {
+    .skr-quiz--intro {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+        gap: 80px;
+        min-height: 520px;
+    }
+}
+
+.skr-quiz__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px 28px;
+    margin-top: 36px;
+}
+
+.skr-quiz__still {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    align-items: end;
+}
+
+.skr-quiz__still--1 {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.skr-quiz__still--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Arches: three bottles in the shape a pharmacy window gives them. */
+.skr-root .skr-quiz__still img {
+    width: 100%;
+    aspect-ratio: 3 / 4.4;
+    object-fit: cover;
+    border-radius: 999px 999px 14px 14px;
+    background: var(--skr-photo);
+}
+
+.skr-root .skr-quiz__still img:nth-child(2) {
+    aspect-ratio: 3 / 5;
+}
+
+.skr-quiz__progress {
+    height: 2px;
+    background: var(--skr-line);
+    overflow: hidden;
+}
+
+.skr-quiz__progress span {
+    display: block;
+    height: 100%;
+    background: var(--skr-accent);
+    transition: width 400ms var(--skr-ease);
+}
+
+.skr-quiz__bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 0 0;
+}
+
+.skr-quiz__question {
+    max-width: 820px;
+    margin: 48px auto 0;
+    animation: skr-rise 450ms var(--skr-ease);
+}
+
+.skr-answers {
+    display: grid;
+    gap: 12px;
+    margin-top: 40px;
+}
+
+@media (min-width: 640px) {
+    .skr-answers {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.skr-root .skr-answer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 68px;
+    padding: 16px 20px 16px 24px;
+    border: 1px solid var(--skr-line);
+    border-radius: 14px;
+    background: var(--skr-surface);
+    text-align: left;
+    transition: border-color 200ms var(--skr-ease), background 200ms var(--skr-ease);
+}
+
+.skr-root .skr-answer:hover {
+    border-color: var(--skr-line-strong);
+}
+
+.skr-root .skr-answer--selected,
+.skr-root .skr-answer--selected:hover {
+    border-color: var(--skr-accent);
+    background: var(--skr-canvas);
+}
+
+.skr-answer__label {
+    font-size: 17px;
+}
+
+.skr-answer__mark {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--skr-line-strong);
+    border-radius: 50%;
+    transition: background 200ms var(--skr-ease), border-color 200ms var(--skr-ease);
+}
+
+.skr-answer--selected .skr-answer__mark {
+    border-color: var(--skr-accent);
+    background: var(--skr-accent);
+    color: var(--skr-accent-contrast);
+}
+
+.skr-quiz__footer {
+    display: flex;
+    justify-content: center;
+    margin-top: 48px;
+}
+
+@keyframes skr-rise {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+/* --- Layout -------------------------------------------------------------------------------- */
+.skr-notice {
+    margin-bottom: 28px;
+    padding: 14px 18px;
+    border-radius: var(--skr-radius-small);
+    background: var(--skr-canvas);
+    color: var(--skr-ink-soft);
+    font-size: 14px;
+}
+
+.skr-layout {
+    display: grid;
+    gap: 40px;
+    align-items: start;
+}
+
+@media (min-width: 900px) {
+    .skr-layout {
+        grid-template-columns: minmax(0, 1fr) 340px;
+        gap: 56px;
+    }
+}
+
+.skr-main {
+    min-width: 0;
+}
+
+/* --- The wizard ---------------------------------------------------------------------------- */
+.skr-header {
+    margin-bottom: 28px;
+}
+
+.skr-header__title {
+    font-size: clamp(30px, 3.4vw, 42px);
+}
+
+.skr-header__intro {
+    margin-top: 10px;
+    max-width: 56ch;
+    color: var(--skr-ink-soft);
+}
+
+/* The step bar: a capsule that floats over the products as they scroll, rather than a strip
+   that would need to match a background colour it cannot know. */
+.skr-pills {
+    position: sticky;
+    top: calc(var(--skr-sticky-top) + 12px);
+    z-index: 3;
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+    padding: 5px;
+    border: 1px solid var(--skr-line);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--skr-surface) 94%, transparent);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 6px 24px rgb(36 32 28 / 6%);
+}
+
+.skr-pills__list {
+    display: flex;
+    gap: 4px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.skr-pills__list::-webkit-scrollbar {
+    display: none;
+}
+
+.skr-root .skr-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 18px 5px 5px;
+    border-radius: 999px;
+    font-size: 14px;
+    white-space: nowrap;
+    transition: background 200ms var(--skr-ease), color 200ms var(--skr-ease);
+}
+
+.skr-root .skr-pill:hover:not([aria-disabled='true']):not(.skr-pill--current) {
+    background: var(--skr-canvas);
+}
+
+.skr-root .skr-pill[aria-disabled='true'] {
+    color: var(--skr-ink-faint);
+    cursor: not-allowed;
+}
+
+.skr-pill__mark {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--skr-canvas);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.skr-root .skr-pill--done .skr-pill__mark {
+    background: var(--skr-sage);
+    color: #fff;
+}
+
+.skr-root .skr-pill--current {
+    background: var(--skr-accent);
+    color: var(--skr-accent-contrast);
+}
+
+.skr-root .skr-pill--current .skr-pill__mark {
+    background: color-mix(in srgb, var(--skr-accent-contrast) 16%, transparent);
+    color: var(--skr-accent-contrast);
+}
+
+.skr-panel {
+    padding-top: 36px;
+    animation: skr-rise 400ms var(--skr-ease);
+}
+
+.skr-panel__header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.skr-panel__title {
+    margin-top: 8px;
+    font-size: clamp(28px, 3vw, 36px);
+}
+
+.skr-panel__description {
+    margin-top: 6px;
+    color: var(--skr-ink-soft);
+}
+
+.skr-panel__counter {
+    flex: none;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--skr-canvas);
+    font-size: 13px;
+    color: var(--skr-ink-soft);
+}
+
+.skr-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+    gap: 28px var(--skr-gap);
+}
+
+@media (max-width: 479.98px) {
+    .skr-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 24px 12px;
+    }
+}
+
+.skr-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.skr-root .skr-card__media {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--skr-photo);
+    box-shadow: inset 0 0 0 1px transparent;
+    transition: box-shadow 250ms var(--skr-ease);
+}
+
+.skr-card__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 600ms var(--skr-ease);
+}
+
+.skr-card__media:hover img {
+    transform: scale(1.03);
+}
+
+.skr-root .skr-card--chosen .skr-card__media {
+    box-shadow: inset 0 0 0 2px var(--skr-accent);
+}
+
+.skr-card--sold-out .skr-card__media img {
+    opacity: 0.45;
+    filter: grayscale(0.7);
+}
+
+.skr-card__placeholder {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    font-family: var(--skr-font-heading);
+    font-size: 40px;
+    color: var(--skr-ink-faint);
+}
+
+.skr-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    max-width: calc(100% - 20px);
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--skr-surface) 88%, transparent);
+    color: var(--skr-ink);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.skr-badge--muted {
+    color: var(--skr-ink-soft);
+}
+
+.skr-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    padding-top: 14px;
+}
+
+.skr-card__title {
+    display: grid;
+    gap: 3px;
+    font-weight: 400;
+}
+
+.skr-card__name {
+    font-size: 19px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.skr-card__kind {
+    font-size: 13px;
+    color: var(--skr-ink-soft);
+    overflow-wrap: anywhere;
+}
+
+/* Price, size and button sit at the foot of every card, so a row lines up whether or not a card
+   has a reason to show. */
+.skr-card__meta {
+    display: grid;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 4px;
+}
+
+.skr-card__price {
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+}
+
+.skr-card__actions {
+    padding-top: 6px;
+}
+
+.skr-root .skr-choose {
+    width: 100%;
+    min-height: 42px;
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
+.skr-card__message {
+    min-height: 1.4em;
+    font-size: 12px;
+    color: var(--skr-ink-soft);
+}
+
+.skr-options {
+    display: grid;
+    gap: 6px;
+}
+
+.skr-option {
+    display: grid;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--skr-ink-soft);
+}
+
+.skr-root .skr-select {
+    width: 100%;
+    min-height: 38px;
+    padding: 7px 30px 7px 12px;
+    border: 1px solid var(--skr-line);
+    border-radius: var(--skr-radius-small);
+    background: var(--skr-surface)
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%236b625a' stroke-width='1.5'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E")
+        no-repeat right 12px center;
+    color: var(--skr-ink);
+    font-size: 14px;
+}
+
+.skr-root .skr-select:hover {
+    border-color: var(--skr-line-strong);
+}
+
+.skr-stepper {
+    display: grid;
+    grid-template-columns: 42px 1fr 42px;
+    align-items: center;
+    border: 1px solid var(--skr-accent);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.skr-root .skr-stepper__button {
+    display: grid;
+    place-items: center;
+    height: 40px;
+    color: var(--skr-accent);
+}
+
+.skr-root .skr-stepper__button[aria-disabled='true'] {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.skr-stepper__count {
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+/* The same width as the add buttons it replaces. */
+.skr-root .skr-add {
+    width: 100%;
+}
+
+.skr-nav {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 16px;
+    margin-top: 40px;
+    padding: 24px 0 8px;
+    border-top: 1px solid var(--skr-line);
+}
+
+.skr-nav__status {
+    font-size: 13px;
+    color: var(--skr-ink-soft);
+    text-align: right;
+}
+
+.skr-root--nudged .skr-nav__status,
+.skr-root--nudged .skr-status {
+    color: var(--skr-ink);
+    animation: skr-nudge 400ms ease;
+}
+
+@media (max-width: 599.98px) {
+    .skr-nav {
+        grid-template-columns: auto 1fr;
+    }
+
+    /* The mobile bar right below says the same thing, for the same step. */
+    .skr-nav__status {
+        display: none;
+    }
+
+    .skr-root .skr-nav__next {
+        justify-self: end;
+    }
+}
+
+/* --- The summary rail ---------------------------------------------------------------------- */
+.skr-summary {
+    display: grid;
+    gap: 20px;
+    padding: 28px;
+    border-radius: var(--skr-radius);
+    background: var(--skr-canvas);
+}
+
+@media (min-width: 900px) {
+    .skr-summary {
+        position: sticky;
+        top: calc(var(--skr-sticky-top) + 24px);
+    }
+
+    .skr-layout--review .skr-summary {
+        margin-top: 120px;
+    }
+}
+
+.skr-summary__heading {
+    font-size: 24px;
+}
+
+.skr-summary__lines {
+    display: grid;
+    gap: 16px;
+}
+
+.skr-line {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+}
+
+.skr-root .skr-line__thumb {
+    display: block;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--skr-radius-small);
+    object-fit: cover;
+    background: var(--skr-photo);
+}
+
+.skr-line--empty .skr-line__thumb {
+    background: transparent;
+    border: 1px dashed var(--skr-line-strong);
+}
+
+.skr-line__text {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+}
+
+.skr-line__step {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--skr-ink-soft);
+}
+
+.skr-line__title {
+    font-size: 15px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.skr-line--empty .skr-line__title {
+    color: var(--skr-ink-faint);
+}
+
+.skr-line__detail {
+    font-size: 13px;
+    color: var(--skr-ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.skr-line__reason {
+    font-size: 12px;
+    color: var(--skr-sage);
+    overflow-wrap: anywhere;
+}
+
+.skr-root .skr-line__change {
+    align-self: start;
+    font-size: 13px;
+}
+
+.skr-price {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: 4px 12px;
+    padding-top: 18px;
+    border-top: 1px solid var(--skr-line);
+}
+
+.skr-summary--totals .skr-price {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.skr-price--compact {
+    padding-top: 0;
+    border: 0;
+}
+
+.skr-price__label {
+    color: var(--skr-ink-soft);
+}
+
+.skr-price__amounts {
+    display: inline-flex;
+    gap: 10px;
+    align-items: baseline;
+}
+
+.skr-price__compare {
+    color: var(--skr-ink-faint);
+    font-size: 15px;
+}
+
+.skr-price__total {
+    font-family: var(--skr-font-heading);
+    font-weight: 400;
+    font-size: 26px;
+    font-variant-numeric: tabular-nums;
+}
+
+.skr-price__saving {
+    grid-column: 1 / -1;
+    justify-self: end;
+    color: var(--skr-success);
+    font-size: 13px;
+}
+
+.skr-root .skr-buy {
+    width: 100%;
+    min-height: 54px;
+}
+
+.skr-status {
+    min-height: 1.4em;
+    font-size: 13px;
+    color: var(--skr-ink-soft);
+    text-align: center;
+}
+
+.skr-status--error {
+    color: var(--skr-danger);
+}
+
+.skr-status:empty {
+    display: none;
+}
+
+.skr-status-wrap {
+    min-height: 1.4em;
+}
+
+@keyframes skr-nudge {
+    25% {
+        transform: translateX(-4px);
+    }
+    75% {
+        transform: translateX(4px);
+    }
+}
+
+/* --- Your routine (the review) ------------------------------------------------------------- */
+.skr-review {
+    padding-bottom: 24px;
+    animation: skr-rise 500ms var(--skr-ease);
+}
+
+.skr-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 22px;
+}
+
+.skr-chip {
+    padding: 5px 14px;
+    border: 1px solid var(--skr-line-strong);
+    border-radius: 999px;
+    font-size: 13px;
+    color: var(--skr-ink-soft);
+}
+
+.skr-review__list {
+    margin-top: 44px;
+    border-top: 1px solid var(--skr-line);
+}
+
+.skr-review__row {
+    display: grid;
+    grid-template-columns: 36px 128px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 28px;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--skr-line);
+}
+
+.skr-review__number {
+    align-self: start;
+    padding-top: 4px;
+    font-family: var(--skr-font-heading);
+    font-size: 15px;
+    color: var(--skr-ink-faint);
+    font-variant-numeric: tabular-nums;
+}
+
+.skr-review__photo {
+    display: block;
+    aspect-ratio: 1;
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--skr-photo);
+}
+
+.skr-review__row--empty .skr-review__photo {
+    background: transparent;
+    border: 1px dashed var(--skr-line-strong);
+}
+
+.skr-review__photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.skr-review__text {
+    display: grid;
+    gap: 6px;
+    justify-items: start;
+    min-width: 0;
+}
+
+.skr-review__name {
+    font-size: 26px;
+    overflow-wrap: anywhere;
+}
+
+.skr-review__kind {
+    margin-top: -2px;
+    color: var(--skr-ink-soft);
+    overflow-wrap: anywhere;
+}
+
+.skr-review__end {
+    display: grid;
+    gap: 10px;
+    justify-items: end;
+    text-align: right;
+}
+
+.skr-review__price {
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.skr-review__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px 28px;
+    margin-top: 36px;
+}
+
+@media (max-width: 639.98px) {
+    .skr-review__row {
+        grid-template-columns: 96px minmax(0, 1fr);
+        gap: 6px 18px;
+        padding: 20px 0;
+    }
+
+    .skr-review__number {
+        display: none;
+    }
+
+    .skr-review__photo {
+        grid-row: span 2;
+        align-self: start;
+    }
+
+    .skr-review__name {
+        font-size: 21px;
+    }
+
+    .skr-review__end {
+        grid-column: 2;
+        grid-auto-flow: column;
+        justify-content: space-between;
+        align-items: baseline;
+        text-align: left;
+    }
+}
+
+/* --- The mobile bar ------------------------------------------------------------------------ */
+.skr-mobile-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 12px;
+    margin: 32px -16px 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: var(--skr-surface);
+    border-top: 1px solid var(--skr-line);
+    box-shadow: 0 -10px 30px rgb(36 32 28 / 7%);
+}
+
+.skr-root .skr-mobile-bar .skr-buy {
+    width: auto;
+    min-height: 48px;
+    padding: 10px 20px;
+}
+
+.skr-mobile-bar .skr-status-wrap {
+    grid-column: 1 / -1;
+    min-height: 0;
+}
+
+.skr-mobile-bar .skr-status {
+    text-align: left;
+}
+
+.skr-mobile-bar__info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.skr-mobile-bar__count {
+    display: grid;
+    place-items: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--skr-canvas);
+    font-size: 13px;
+}
+
+.skr-mobile-bar .skr-price__label {
+    display: none;
+}
+
+.skr-mobile-bar .skr-price__total {
+    font-size: 21px;
+}
+
+.skr-mobile-bar .skr-price__compare {
+    font-size: 13px;
+}
+
+/* One buy button on screen at a time: the rail's on wide screens, the bar's on narrow ones. */
+@media (min-width: 900px) {
+    .skr-mobile-bar {
+        display: none;
+    }
+}
+
+@media (max-width: 899.98px) {
+    .skr-summary .skr-buy,
+    .skr-summary .skr-status-wrap {
+        display: none;
+    }
+
+    /* In the review, the bar already says the total: the rail would only repeat it. */
+    .skr-summary--totals {
+        display: none;
+    }
+}
+
+/* --- The details dialog -------------------------------------------------------------------- */
+.skr-dialog {
+    width: min(920px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    padding: 0;
+    border: 0;
+    border-radius: var(--skr-radius);
+    background: var(--skr-surface);
+    color: var(--skr-ink);
+    font-family: var(--skr-font-body);
+    box-shadow: 0 30px 80px rgb(20 16 12 / 28%);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.skr-dialog::backdrop {
+    background: rgb(36 32 28 / 40%);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+}
+
+.skr-dialog__inner {
+    position: relative;
+    display: grid;
+    gap: 28px;
+    padding: 20px;
+}
+
+@media (min-width: 720px) {
+    .skr-dialog__inner {
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        padding: 28px;
+    }
+}
+
+.skr-root .skr-dialog__close,
+.skr-dialog .skr-dialog__close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--skr-surface);
+    box-shadow: var(--skr-shadow);
+}
+
+.skr-dialog__gallery img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 14px;
+    background: var(--skr-photo);
+}
+
+.skr-dialog__thumbs {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    overflow-x: auto;
+}
+
+.skr-root .skr-dialog__thumb {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--skr-radius-small);
+    overflow: hidden;
+    border: 2px solid transparent;
+}
+
+.skr-root .skr-dialog__thumb[aria-current='true'] {
+    border-color: var(--skr-accent);
+}
+
+.skr-dialog__details {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-top: 8px;
+}
+
+.skr-dialog__title {
+    display: grid;
+    gap: 6px;
+    padding-right: 44px;
+}
+
+.skr-dialog__name {
+    font-size: clamp(26px, 3vw, 32px);
+}
+
+.skr-dialog__kind {
+    font-family: var(--skr-font-body);
+    font-size: 15px;
+    color: var(--skr-ink-soft);
+    letter-spacing: normal;
+}
+
+.skr-dialog__description {
+    color: var(--skr-ink-soft);
+    font-size: 15px;
+    white-space: pre-line;
+}
+
+.skr-dialog .skr-card__actions {
+    margin-top: 4px;
+    padding-top: 0;
+}
+
+/* --- Loading, errors, the theme editor ----------------------------------------------------- */
+.skr-loading {
+    display: grid;
+    gap: 14px;
+    min-height: 520px;
+    align-content: start;
+}
+
+.skr-loading__bar {
+    display: block;
+    height: 140px;
+    border-radius: var(--skr-radius);
+    background: linear-gradient(90deg, var(--skr-canvas), #fbf8f4, var(--skr-canvas));
+    background-size: 200% 100%;
+    animation: skr-shimmer 1.4s linear infinite;
+}
+
+.skr-loading__bar:first-child {
+    height: 56px;
+    width: 45%;
+}
+
+@keyframes skr-shimmer {
+    to {
+        background-position: -200% 0;
+    }
+}
+
+.skr-error {
+    margin-bottom: 24px;
+    padding: 16px 18px;
+    border-radius: var(--skr-radius-small);
+    background: var(--skr-canvas);
+    color: var(--skr-ink);
+}
+
+.skr-editor-panel {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    margin: 16px 0;
+    padding: 14px 16px;
+    border-radius: 8px;
+    background: #fff4e5;
+    border: 1px solid #f1c27d;
+    color: #4a3410;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+}
+
+.skr-editor-panel svg {
+    margin-top: 3px;
+}
+
+.skr-editor-panel__title {
+    font-weight: 600;
+    margin-bottom: 4px !important;
+}
+
+.skr-editor-panel__list {
+    display: grid;
+    gap: 6px;
+    list-style: disc !important;
+    padding-left: 18px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skr-root *,
+    .skr-dialog * {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}

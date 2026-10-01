@@ -1,0 +1,649 @@
+[
+ {
+  "id": 11088641490980,
+  "title": "With Love Letterpress Card",
+  "handle": "with-love-letterpress-card",
+  "body_html": "<p>A letterpress card with With Love pressed into the front, for every occasion in between. Write your message at checkout and we print it inside in espresso ink. Up to 300 characters, always in our house type, never in biro.</p><p><strong>Personalisation:</strong> gift message printed inside (up to 300 characters).</p>",
+  "vendor": "Wrenwood Gifting Co.",
+  "product_type": "Card",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 51077483003940,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-CRD-LOV",
+    "available": true,
+    "price": "3.00",
+    "compare_at_price": null,
+    "grams": 15,
+    "featured_image": null
+   }
+  ],
+  "images": []
+ },
+ {
+  "id": 11088641458212,
+  "title": "Get Well Soon Letterpress Card",
+  "handle": "get-well-soon-letterpress-card",
+  "body_html": "<p>A letterpress card with Get Well Soon pressed into the front. Write your message at checkout and we print it inside in espresso ink. Up to 300 characters, always in our house type, never in biro.</p><p><strong>Personalisation:</strong> gift message printed inside (up to 300 characters).</p>",
+  "vendor": "Wrenwood Gifting Co.",
+  "product_type": "Card",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 51077482971172,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-CRD-GET",
+    "available": true,
+    "price": "3.00",
+    "compare_at_price": null,
+    "grams": 15,
+    "featured_image": null
+   }
+  ],
+  "images": []
+ },
+ {
+  "id": 11088641425444,
+  "title": "New Baby Letterpress Card",
+  "handle": "new-baby-letterpress-card",
+  "body_html": "<p>A letterpress card with Hello Little One pressed into the front. Write your message at checkout and we print it inside in espresso ink. Up to 300 characters, always in our house type, never in biro.</p><p><strong>Personalisation:</strong> gift message printed inside (up to 300 characters).</p>",
+  "vendor": "Wrenwood Gifting Co.",
+  "product_type": "Card",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 51077482938404,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-CRD-BAB",
+    "available": true,
+    "price": "3.00",
+    "compare_at_price": null,
+    "grams": 15,
+    "featured_image": null
+   }
+  ],
+  "images": []
+ },
+ {
+  "id": 11088641392676,
+  "title": "New Home Letterpress Card",
+  "handle": "new-home-letterpress-card",
+  "body_html": "<p>A letterpress card with Welcome Home pressed into the front. Write your message at checkout and we print it inside in espresso ink. Up to 300 characters, always in our house type, never in biro.</p><p><strong>Personalisation:</strong> gift message printed inside (up to 300 characters).</p>",
+  "vendor": "Wrenwood Gifting Co.",
+  "product_type": "Card",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 51077482905636,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-CRD-HOM",
+    "available": true,
+    "price": "3.00",
+    "compare_at_price": null,
+    "grams": 15,
+    "featured_image": null
+   }
+  ],
+  "images": []
+ },
+ {
+  "id": 11088641359908,
+  "title": "Thank You Letterpress Card",
+  "handle": "thank-you-letterpress-card",
+  "body_html": "<p>A letterpress card with Thank You pressed into the front. Write your message at checkout and we print it inside in espresso ink. Up to 300 characters, always in our house type, never in biro.</p><p><strong>Personalisation:</strong> gift message printed inside (up to 300 characters).</p>",
+  "vendor": "Wrenwood Gifting Co.",
+  "product_type": "Card",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 51077482872868,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-CRD-THA",
+    "available": true,
+    "price": "3.00",
+    "compare_at_price": null,
+    "grams": 15,
+    "featured_image": null
+   }
+  ],
+  "images": []
+ },
+ {
+  "id": 11088641327140,
+  "title": "Happy Birthday Letterpress Card",
+  "handle": "happy-birthday-letterpress-card",
+  "body_html": "<p>A letterpress card with Happy Birthday pressed into the front. Write your message at checkout and we print it inside in espresso ink. Up to 300 characters, always in our house type, never in biro.</p><p><strong>Personalisation:</strong> gift message printed inside (up to 300 characters).</p>",
+  "vendor": "Wrenwood Gifting Co.",
+  "product_type": "Card",
+  "tags": [],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 51077482840100,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-CRD-BIR",
+    "available": true,
+    "price": "3.00",
+    "compare_at_price": null,
+    "grams": 15,
+    "featured_image": null
+   }
+  ],
+  "images": []
+ },
+ {
+  "id": 11088589750308,
+  "title": "Botanical Bath Soak",
+  "handle": "botanical-bath-soak",
+  "body_html": "<p>Magnesium salts with chamomile and lavender in a glass jar with a cork stopper. The universal sign that someone deserves a night off.</p>",
+  "vendor": "Wrenwood Gifting Co.",
+  "product_type": "Bath",
+  "tags": [
+   "bath",
+   "contents"
+  ],
+  "options": [
+   {
+    "name": "Title",
+    "position": 1,
+    "values": [
+     "Default Title"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 51077381160996,
+    "title": "Default Title",
+    "option1": "Default Title",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-BAT-SOA",
+    "available": true,
+    "price": "12.00",
+    "compare_at_price": null,
+    "grams": 300,
+    "featured_image": null
+   }
+  ],
+  "images": []
+ },
+ {
+  "id": 11088589717540,
+  "title": "Merino Lounge Socks",
+  "handle": "merino-lounge-socks",
+  "body_html": "<p>Midweight merino socks in colours that match the box. One size, endlessly regifted, never returned.</p>",
+  "vendor": "Wrenwood Gifting Co.",
+  "product_type": "Apparel",
+  "tags": [
+   "apparel",
+   "contents"
+  ],
+  "options": [
+   {
+    "name": "Colour",
+    "position": 1,
+    "values": [
+     "Oat",
+     "Clay",
+     "Forest"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 51077381062692,
+    "title": "Oat",
+    "option1": "Oat",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-SOC-OAT",
+    "available": true,
+    "price": "12.00",
+    "compare_at_price": null,
+    "grams": 80,
+    "featured_image": null
+   },
+   {
+    "id": 51077381095460,
+    "title": "Clay",
+    "option1": "Clay",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-SOC-CLA",
+    "available": true,
+    "price": "12.00",
+    "compare_at_price": null,
+    "grams": 80,
+    "featured_image": null
+   },
+   {
+    "id": 51077381128228,
+    "title": "Forest",
+    "option1": "Forest",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-SOC-FOR",
+    "available": true,
+    "price": "12.00",
+    "compare_at_price": null,
+    "grams": 80,
+    "featured_image": null
+   }
+  ],
+  "images": []
+ },
+ {
+  "id": 11088589684772,
+  "title": "Loose Leaf Tea Tin",
+  "handle": "loose-leaf-tea-tin",
+  "body_html": "<p>A refillable tin of loose leaf tea, blended in Yorkshire. Quietly excellent alongside the candle.</p>",
+  "vendor": "Wrenwood Gifting Co.",
+  "product_type": "Food",
+  "tags": [
+   "contents",
+   "food"
+  ],
+  "options": [
+   {
+    "name": "Blend",
+    "position": 1,
+    "values": [
+     "English Breakfast",
+     "Chamomile & Honey"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 51077380997156,
+    "title": "English Breakfast",
+    "option1": "English Breakfast",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-TEA-ENG",
+    "available": true,
+    "price": "9.00",
+    "compare_at_price": null,
+    "grams": 120,
+    "featured_image": null
+   },
+   {
+    "id": 51077381029924,
+    "title": "Chamomile & Honey",
+    "option1": "Chamomile & Honey",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-TEA-CHA",
+    "available": true,
+    "price": "9.00",
+    "compare_at_price": null,
+    "grams": 120,
+    "featured_image": null
+   }
+  ],
+  "images": []
+ },
+ {
+  "id": 11088589652004,
+  "title": "Small-Batch Chocolate Bar",
+  "handle": "small-batch-chocolate-bar",
+  "body_html": "<p>Stone-ground chocolate wrapped in paper that matches the box. The reliable crowd-pleaser of any gift box.</p>",
+  "vendor": "Wrenwood Gifting Co.",
+  "product_type": "Food",
+  "tags": [
+   "contents",
+   "food"
+  ],
+  "options": [
+   {
+    "name": "Flavour",
+    "position": 1,
+    "values": [
+     "Dark Sea Salt",
+     "Milk Hazelnut",
+     "White Raspberry"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 51077380898852,
+    "title": "Dark Sea Salt",
+    "option1": "Dark Sea Salt",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-CHO-DAR",
+    "available": true,
+    "price": "6.50",
+    "compare_at_price": null,
+    "grams": 100,
+    "featured_image": null
+   },
+   {
+    "id": 51077380931620,
+    "title": "Milk Hazelnut",
+    "option1": "Milk Hazelnut",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-CHO-MIL",
+    "available": true,
+    "price": "6.50",
+    "compare_at_price": null,
+    "grams": 100,
+    "featured_image": null
+   },
+   {
+    "id": 51077380964388,
+    "title": "White Raspberry",
+    "option1": "White Raspberry",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-CHO-WHI",
+    "available": true,
+    "price": "6.50",
+    "compare_at_price": null,
+    "grams": 100,
+    "featured_image": null
+   }
+  ],
+  "images": []
+ },
+ {
+  "id": 11088589553700,
+  "title": "Engravable Brass Matchbox",
+  "handle": "engravable-brass-matchbox",
+  "body_html": "<p>A solid keepsake matchbox that outlives the matches. Machine engraved with up to three initials, then polished and wrapped in tissue.</p><p><strong>Personalisation:</strong> engraving, up to 3 initials.</p>",
+  "vendor": "Wrenwood Gifting Co.",
+  "product_type": "Keepsake",
+  "tags": [
+   "contents",
+   "keepsake"
+  ],
+  "options": [
+   {
+    "name": "Finish",
+    "position": 1,
+    "values": [
+     "Brass",
+     "Matte Black"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 51077380669476,
+    "title": "Brass",
+    "option1": "Brass",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-MAT-BRA",
+    "available": true,
+    "price": "18.00",
+    "compare_at_price": null,
+    "grams": 90,
+    "featured_image": null
+   },
+   {
+    "id": 51077380702244,
+    "title": "Matte Black",
+    "option1": "Matte Black",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-MAT-BLK",
+    "available": true,
+    "price": "18.00",
+    "compare_at_price": null,
+    "grams": 90,
+    "featured_image": null
+   }
+  ],
+  "images": []
+ },
+ {
+  "id": 11088589520932,
+  "title": "Hand-Poured Soy Candle",
+  "handle": "hand-poured-soy-candle",
+  "body_html": "<p>Small-batch soy wax candle in an amber glass jar, 40 hour burn. Add a name and we print it onto the label, so the gift reads as theirs before the lid is even off.</p><p><strong>Personalisation:</strong> name printed on the label (up to 15 characters).</p>",
+  "vendor": "Wrenwood Gifting Co.",
+  "product_type": "Candle",
+  "tags": [
+   "candle",
+   "contents"
+  ],
+  "options": [
+   {
+    "name": "Scent",
+    "position": 1,
+    "values": [
+     "Fig & Cedarwood",
+     "Sea Salt & Sage",
+     "Vanilla Ember"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 51077380571172,
+    "title": "Fig & Cedarwood",
+    "option1": "Fig & Cedarwood",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-CAN-FIG",
+    "available": true,
+    "price": "14.00",
+    "compare_at_price": null,
+    "grams": 250,
+    "featured_image": null
+   },
+   {
+    "id": 51077380603940,
+    "title": "Sea Salt & Sage",
+    "option1": "Sea Salt & Sage",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-CAN-SEA",
+    "available": true,
+    "price": "14.00",
+    "compare_at_price": null,
+    "grams": 250,
+    "featured_image": null
+   },
+   {
+    "id": 51077380636708,
+    "title": "Vanilla Ember",
+    "option1": "Vanilla Ember",
+    "option2": null,
+    "option3": null,
+    "sku": "WW-CAN-VAN",
+    "available": true,
+    "price": "14.00",
+    "compare_at_price": null,
+    "grams": 250,
+    "featured_image": null
+   }
+  ],
+  "images": []
+ },
+ {
+  "id": 11088589488164,
+  "title": "The Keepsake Gift Box",
+  "handle": "keepsake-gift-box",
+  "body_html": "<p>Every gift starts with the box. Rigid kraft construction with a lift-off lid, lined with oat tissue. Add the recipient's name and it is foil printed by hand on the lid before dispatch.</p><p><strong>Personalisation:</strong> recipient name printed on the lid (up to 20 characters).</p>",
+  "vendor": "Wrenwood Gifting Co.",
+  "product_type": "Gift Box Packaging",
+  "tags": [],
+  "options": [
+   {
+    "name": "Size",
+    "position": 1,
+    "values": [
+     "Petite",
+     "Classic",
+     "Grand"
+    ]
+   },
+   {
+    "name": "Colour",
+    "position": 2,
+    "values": [
+     "Oat",
+     "Terracotta"
+    ]
+   }
+  ],
+  "variants": [
+   {
+    "id": 51077380374564,
+    "title": "Petite / Oat",
+    "option1": "Petite",
+    "option2": "Oat",
+    "option3": null,
+    "sku": "WW-BOX-PET-OAT",
+    "available": true,
+    "price": "6.00",
+    "compare_at_price": null,
+    "grams": 200,
+    "featured_image": null
+   },
+   {
+    "id": 51077380407332,
+    "title": "Petite / Terracotta",
+    "option1": "Petite",
+    "option2": "Terracotta",
+    "option3": null,
+    "sku": "WW-BOX-PET-TER",
+    "available": true,
+    "price": "6.00",
+    "compare_at_price": null,
+    "grams": 200,
+    "featured_image": null
+   },
+   {
+    "id": 51077380440100,
+    "title": "Classic / Oat",
+    "option1": "Classic",
+    "option2": "Oat",
+    "option3": null,
+    "sku": "WW-BOX-CLA-OAT",
+    "available": true,
+    "price": "9.00",
+    "compare_at_price": null,
+    "grams": 300,
+    "featured_image": null
+   },
+   {
+    "id": 51077380472868,
+    "title": "Classic / Terracotta",
+    "option1": "Classic",
+    "option2": "Terracotta",
+    "option3": null,
+    "sku": "WW-BOX-CLA-TER",
+    "available": true,
+    "price": "9.00",
+    "compare_at_price": null,
+    "grams": 300,
+    "featured_image": null
+   },
+   {
+    "id": 51077380505636,
+    "title": "Grand / Oat",
+    "option1": "Grand",
+    "option2": "Oat",
+    "option3": null,
+    "sku": "WW-BOX-GRA-OAT",
+    "available": true,
+    "price": "14.00",
+    "compare_at_price": null,
+    "grams": 420,
+    "featured_image": null
+   },
+   {
+    "id": 51077380538404,
+    "title": "Grand / Terracotta",
+    "option1": "Grand",
+    "option2": "Terracotta",
+    "option3": null,
+    "sku": "WW-BOX-GRA-TER",
+    "available": true,
+    "price": "14.00",
+    "compare_at_price": null,
+    "grams": 420,
+    "featured_image": null
+   }
+  ],
+  "images": []
+ }
+]

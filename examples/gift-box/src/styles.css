@@ -1,0 +1,1416 @@
+/*
+ * The widget's styles. Three layers, in this order:
+ *
+ *   1. Tokens. Restyling for a brand is mostly this block. Fonts are the theme's own (the Liquid
+ *      section loads them and sets --gft-font-*); the colours the merchant can change in the theme
+ *      editor arrive as --gft-accent and --gft-accent-contrast on the mount element.
+ *   2. A reset scoped to the widget root. Themes style bare elements (one ships
+ *      `button { padding: 1em 25px }`, another paints every element's colour), and namespaced
+ *      classes do not protect against that. Every reset selector is `.gft-root :where(…)`: one
+ *      class of specificity, enough to beat a theme's bare `button {…}` and never enough to beat
+ *      a component rule, which comes later.
+ *   3. Components. Every class is prefixed `gft-`, because themes have their own `.card`,
+ *      `.drawer`, `.modal` and `.hidden`, and they will collide.
+ *
+ * Nothing here uses `position: fixed`: a theme ancestor with `transform` traps it. The dialog is a
+ * native <dialog> in the top layer; the mobile bar is `position: sticky`.
+ *
+ * The look is a stationer's: warm paper, hairlines, the theme's own serif doing the talking, and
+ * drawn product tiles where photographs would be (ui/art.ts). The accent is used sparingly, for
+ * what the shopper has chosen and the one button that buys.
+ */
+
+/* 1. Tokens ------------------------------------------------------------------------------- */
+/* Declared on the mount element, at zero specificity, so the values the Liquid section sets on
+   that same element (`#kitenzo-<section id>`, an id selector) always win, and the widget root
+   inherits whichever applies. Declaring them on `.gft-root` instead would quietly override the
+   merchant's colours and the theme's fonts with these defaults. */
+:where([data-gift-box-bundle]) {
+    --gft-font-body: inherit;
+    --gft-font-heading: inherit;
+    --gft-ink: #2b2520;
+    --gft-ink-soft: #675d54;
+    --gft-ink-faint: #8f8378;
+    --gft-surface: #fffdf9;
+    --gft-surface-sunk: #f5efe6;
+    --gft-line: #e7ddcf;
+    --gft-line-strong: #cbbba6;
+    --gft-accent: #8f4a32;
+    --gft-accent-contrast: #ffffff;
+    --gft-danger: #a3261b;
+    --gft-success: #4d6a43;
+    --gft-flame: #e0a447;
+    --gft-match: #b4533a;
+    --gft-radius: 6px;
+    --gft-radius-small: 4px;
+    --gft-gap: 16px;
+    --gft-shadow: 0 1px 2px rgb(43 37 32 / 5%), 0 12px 32px -12px rgb(43 37 32 / 18%);
+    --gft-focus: 0 0 0 3px color-mix(in srgb, var(--gft-accent) 32%, transparent);
+    /* How far below the top of the window sticky parts stop: clear of a theme's sticky header. */
+    --gft-sticky-top: 88px;
+}
+
+/* 2. Reset, scoped to the root ------------------------------------------------------------ */
+.gft-root,
+.gft-root *,
+.gft-root *::before,
+.gft-root *::after,
+.gft-dialog,
+.gft-dialog * {
+    box-sizing: border-box;
+}
+
+/* A theme that paints every element its body colour (`*:not(a, h1, …) { color: … }`) lands on
+   anything with no colour of its own. Restore inheritance once, under the root. `:where()` keeps
+   this at one class of specificity, so every component rule below (also one class, and later)
+   still sets its own colour. */
+.gft-root :where(*:not(svg, svg *)) {
+    color: inherit;
+}
+
+.gft-root :where(button, input, select, textarea) {
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    min-height: 0;
+    width: auto;
+    height: auto;
+    font: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+    line-height: inherit;
+    border-radius: 0;
+    box-shadow: none;
+    background: none;
+    border: 0;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.gft-root :where(button) {
+    cursor: pointer;
+}
+
+.gft-root :where(img) {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+}
+
+.gft-root :where(h2, h3, h4, p, ul) {
+    margin: 0;
+    padding: 0;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.gft-root :where(ul) {
+    list-style: none;
+}
+
+/* A class that sets `display` beats the `hidden` attribute. Make the attribute win. */
+.gft-root [hidden] {
+    display: none !important;
+}
+
+.gft-root :focus-visible {
+    outline: none;
+    box-shadow: var(--gft-focus);
+}
+
+.gft-visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    white-space: nowrap !important;
+}
+
+/* 3. Components --------------------------------------------------------------------------- */
+.gft-root {
+    font-family: var(--gft-font-body);
+    color: var(--gft-ink);
+    font-size: 16px;
+    line-height: 1.5;
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 32px 16px 0;
+    /* A merchant's pasted URL or a product name with no spaces must wrap, not widen the page. */
+    overflow-wrap: break-word;
+}
+
+.gft-root--state {
+    padding-bottom: 24px;
+}
+
+.gft-header {
+    max-width: 640px;
+    margin-bottom: 36px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--gft-line);
+}
+
+.gft-header__title,
+.gft-step__title,
+.gft-summary__heading,
+.gft-dialog__title,
+.gft-featured__title {
+    font-family: var(--gft-font-heading);
+    font-weight: 500;
+    line-height: 1.15;
+}
+
+.gft-header__title {
+    font-size: clamp(30px, 4vw, 44px);
+    letter-spacing: -0.01em;
+}
+
+.gft-header__intro {
+    margin-top: 12px;
+    color: var(--gft-ink-soft);
+    font-size: 17px;
+    max-width: 56ch;
+}
+
+.gft-notice {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 28px;
+    padding: 14px 18px;
+    border-left: 3px solid var(--gft-accent);
+    border-radius: var(--gft-radius-small);
+    background: var(--gft-surface-sunk);
+    color: var(--gft-ink-soft);
+    font-size: 15px;
+}
+
+.gft-notice__strong {
+    color: var(--gft-ink);
+    font-weight: 600;
+}
+
+.gft-layout {
+    display: grid;
+    gap: 40px;
+    align-items: start;
+}
+
+@media (min-width: 900px) {
+    .gft-layout {
+        grid-template-columns: minmax(0, 1fr) 340px;
+        gap: 48px;
+    }
+}
+
+.gft-steps {
+    display: grid;
+    gap: 56px;
+    min-width: 0;
+}
+
+.gft-step {
+    scroll-margin-top: calc(var(--gft-sticky-top) + 8px);
+}
+
+.gft-step__header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.gft-step__index {
+    flex: none;
+    padding-top: 3px;
+    font-family: var(--gft-font-heading);
+    font-size: 15px;
+    font-style: italic;
+    font-variant-numeric: lining-nums;
+    color: var(--gft-ink-faint);
+}
+
+.gft-step[data-step-done] .gft-step__index {
+    color: var(--gft-accent);
+}
+
+.gft-step__titles {
+    flex: 1;
+    min-width: 0;
+}
+
+.gft-step__title {
+    font-size: 24px;
+}
+
+.gft-step__description {
+    margin-top: 4px;
+    color: var(--gft-ink-soft);
+    font-size: 15px;
+}
+
+.gft-step__counter {
+    flex: none;
+    margin-top: 2px;
+    padding: 4px 11px;
+    border: 1px solid var(--gft-line);
+    border-radius: 999px;
+    color: var(--gft-ink-soft);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.gft-step__counter--done {
+    border-color: color-mix(in srgb, var(--gft-accent) 35%, transparent);
+    background: color-mix(in srgb, var(--gft-accent) 8%, transparent);
+    color: var(--gft-accent);
+}
+
+.gft-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 176px), 1fr));
+    gap: var(--gft-gap);
+}
+
+@media (max-width: 520px) {
+    .gft-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+}
+
+/* --- Drawn product tiles (ui/art.ts, ui/ProductArt.tsx) ---------------------------------- */
+.gft-art {
+    --gft-paper: #efe6d6;
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--gft-paper);
+    color: var(--gft-ink);
+    container-type: inline-size;
+}
+
+/* A hairline mat inside the edge: the tile reads as a printed plate, not an empty box. */
+.gft-art::after {
+    content: '';
+    position: absolute;
+    inset: 6%;
+    border: 1px solid rgb(43 37 32 / 9%);
+    pointer-events: none;
+}
+
+.gft-art--photo::after {
+    display: none;
+}
+
+.gft-art--photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.gft-art__svg {
+    width: 72%;
+    height: 72%;
+    overflow: visible;
+}
+
+.gft-art__svg path,
+.gft-art__svg rect {
+    vector-effect: non-scaling-stroke;
+    stroke: currentColor;
+    stroke-width: 1.35px;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.gft-art__b {
+    fill: rgb(255 255 255 / 62%);
+}
+
+.gft-art__b--lid {
+    fill: color-mix(in srgb, var(--gft-paper) 25%, white);
+}
+
+.gft-art--tinted .gft-art__b {
+    fill: color-mix(in srgb, var(--gft-tint) 88%, white);
+}
+
+.gft-art--tinted .gft-art__b--lid {
+    fill: color-mix(in srgb, var(--gft-tint) 92%, black);
+}
+
+.gft-art__l {
+    fill: rgb(255 255 255 / 78%);
+}
+
+.gft-art__s {
+    fill: none;
+}
+
+.gft-art__glow {
+    fill: var(--gft-flame);
+}
+
+.gft-art__svg .gft-art__heads {
+    stroke: var(--gft-match);
+    stroke-width: 5px;
+}
+
+.gft-art__svg .gft-art__dots {
+    stroke-width: 2.5px;
+}
+
+.gft-art__cork {
+    fill: #d9bf98;
+}
+
+.gft-art__plate {
+    fill: rgb(255 255 255 / 45%);
+    stroke-dasharray: 2 2;
+}
+
+.gft-art__inscription {
+    font-family: var(--gft-font-heading);
+    font-size: 7px;
+    letter-spacing: 0.04em;
+    fill: var(--gft-ink);
+    stroke: none;
+}
+
+.gft-art__card {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 52%;
+    aspect-ratio: 5 / 7;
+    padding: 5cqi;
+    background: #fffdf8;
+    box-shadow:
+        inset 0 0 0 4cqi #fffdf8,
+        inset 0 0 0 calc(4cqi + 1px) color-mix(in srgb, var(--gft-accent) 30%, transparent),
+        0 1px 0 rgb(43 37 32 / 6%),
+        0 10cqi 16cqi -8cqi rgb(43 37 32 / 30%);
+    transform: rotate(-3deg);
+}
+
+.gft-art__card-front {
+    font-family: var(--gft-font-heading);
+    font-style: italic;
+    font-size: 7cqi;
+    line-height: 1.15;
+    text-align: center;
+    color: var(--gft-accent);
+    overflow-wrap: break-word;
+    hyphens: none;
+}
+
+.gft-art__initial {
+    font-family: var(--gft-font-heading);
+    font-size: 42cqi;
+    line-height: 1;
+    color: var(--gft-ink-soft);
+}
+
+/* --- Product cards ----------------------------------------------------------------------- */
+.gft-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border: 1px solid var(--gft-line);
+    border-radius: var(--gft-radius);
+    background: var(--gft-surface);
+    overflow: hidden;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.gft-card--chosen {
+    border-color: var(--gft-accent);
+    box-shadow: 0 0 0 1px var(--gft-accent);
+}
+
+.gft-root .gft-card__media {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--gft-surface-sunk);
+}
+
+.gft-card--sold-out .gft-art {
+    filter: grayscale(0.85);
+    opacity: 0.55;
+}
+
+.gft-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--gft-surface);
+    color: var(--gft-ink);
+    box-shadow: 0 1px 2px rgb(43 37 32 / 12%);
+}
+
+.gft-badge--muted {
+    color: var(--gft-ink-soft);
+}
+
+.gft-badge--count {
+    left: auto;
+    right: 10px;
+    min-width: 26px;
+    text-align: center;
+    background: var(--gft-accent);
+    color: var(--gft-accent-contrast);
+}
+
+.gft-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    padding: 14px;
+}
+
+.gft-card__title {
+    font-family: var(--gft-font-heading);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.gft-card__price {
+    font-size: 14px;
+    color: var(--gft-ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.gft-card__personal {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    color: var(--gft-accent);
+}
+
+.gft-card__personal svg {
+    flex: none;
+}
+
+.gft-card__actions {
+    margin-top: auto;
+}
+
+.gft-card__message {
+    min-height: 1.4em;
+    font-size: 12px;
+    color: var(--gft-ink-soft);
+}
+
+/* --- The featured product (a step with one product: the box) ----------------------------- */
+.gft-root .gft-featured__media {
+    aspect-ratio: 4 / 3;
+}
+
+.gft-featured {
+    display: grid;
+    border: 1px solid var(--gft-line);
+    border-radius: var(--gft-radius);
+    background: var(--gft-surface);
+    overflow: hidden;
+}
+
+.gft-featured--chosen {
+    border-color: var(--gft-accent);
+    box-shadow: 0 0 0 1px var(--gft-accent);
+}
+
+@media (min-width: 640px) {
+    .gft-featured {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    }
+
+    .gft-root .gft-featured__media {
+        aspect-ratio: auto;
+        min-height: 100%;
+    }
+}
+
+.gft-featured__body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px;
+}
+
+.gft-featured__titles {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 16px;
+}
+
+.gft-featured__title {
+    font-size: 24px;
+}
+
+.gft-featured__price {
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+}
+
+.gft-featured__description {
+    color: var(--gft-ink-soft);
+    font-size: 15px;
+}
+
+.gft-featured__actions {
+    margin-top: 4px;
+}
+
+/* --- Options ----------------------------------------------------------------------------- */
+.gft-options {
+    display: grid;
+    gap: 12px;
+}
+
+.gft-option {
+    display: grid;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--gft-ink-soft);
+}
+
+.gft-option__label {
+    display: flex;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.gft-option__value {
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    color: var(--gft-ink);
+}
+
+.gft-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.gft-root .gft-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 8px 16px;
+    border: 1px solid var(--gft-line-strong);
+    border-radius: 999px;
+    background: var(--gft-surface);
+    color: var(--gft-ink);
+    font-size: 14px;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+
+.gft-root .gft-chip:hover {
+    border-color: var(--gft-ink);
+}
+
+.gft-root .gft-chip[aria-pressed='true'] {
+    border-color: var(--gft-ink);
+    background: var(--gft-ink);
+    color: var(--gft-surface);
+}
+
+.gft-root .gft-chip--unreachable {
+    border-style: dashed;
+    color: var(--gft-ink-faint);
+}
+
+.gft-chip--unreachable .gft-chip__text {
+    text-decoration: line-through;
+}
+
+.gft-root .gft-chips--swatches .gft-chip {
+    width: 34px;
+    min-height: 34px;
+    height: 34px;
+    padding: 0;
+    border-color: var(--gft-line);
+}
+
+.gft-root .gft-chips--swatches .gft-chip[aria-pressed='true'] {
+    background: var(--gft-surface);
+    border-color: var(--gft-ink);
+    box-shadow: inset 0 0 0 2px var(--gft-surface), 0 0 0 1px var(--gft-ink);
+}
+
+.gft-chip__swatch {
+    display: block;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px rgb(43 37 32 / 15%);
+}
+
+/* A sold-out combination keeps its swatch, crossed through. */
+.gft-chips--swatches .gft-chip--unreachable::after {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 1px;
+    background: var(--gft-ink-soft);
+    transform: rotate(-45deg);
+}
+
+.gft-root .gft-select {
+    width: 100%;
+    padding: 8px 30px 8px 10px;
+    border: 1px solid var(--gft-line-strong);
+    border-radius: var(--gft-radius-small);
+    background: var(--gft-surface)
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23675d54' stroke-width='1.5'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E")
+        no-repeat right 10px center;
+    color: var(--gft-ink);
+    font-size: 14px;
+}
+
+/* --- Buttons ----------------------------------------------------------------------------- */
+.gft-root .gft-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 18px;
+    border-radius: var(--gft-radius-small);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.01em;
+    transition: background 150ms ease, color 150ms ease, opacity 150ms ease;
+}
+
+.gft-root .gft-button--primary {
+    min-height: 52px;
+    background: var(--gft-accent);
+    color: var(--gft-accent-contrast);
+    width: 100%;
+}
+
+.gft-root .gft-button--secondary {
+    border: 1px solid var(--gft-ink);
+    color: var(--gft-ink);
+    width: 100%;
+}
+
+.gft-root .gft-button--secondary:hover:not(:disabled, [aria-disabled='true']) {
+    background: var(--gft-ink);
+    color: var(--gft-surface);
+}
+
+.gft-root .gft-button--chosen {
+    width: 100%;
+    border: 1px solid var(--gft-accent);
+    background: color-mix(in srgb, var(--gft-accent) 9%, var(--gft-surface));
+    color: var(--gft-accent);
+}
+
+.gft-root .gft-button[aria-disabled='true'],
+.gft-root .gft-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.gft-root .gft-button:disabled {
+    border-color: var(--gft-line-strong);
+}
+
+.gft-stepper {
+    display: grid;
+    grid-template-columns: 44px 1fr 44px;
+    align-items: center;
+    border: 1px solid var(--gft-accent);
+    border-radius: var(--gft-radius-small);
+    overflow: hidden;
+}
+
+.gft-root .gft-stepper__button {
+    display: grid;
+    place-items: center;
+    height: 42px;
+    color: var(--gft-accent);
+}
+
+.gft-root .gft-stepper__button[aria-disabled='true'] {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.gft-stepper__count {
+    text-align: center;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- What the shopper writes (ui/Personalise.tsx) ---------------------------------------- */
+.gft-personal {
+    display: grid;
+    gap: 20px;
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid var(--gft-line);
+    border-top: 3px double var(--gft-line-strong);
+    border-radius: var(--gft-radius);
+    background: var(--gft-surface-sunk);
+}
+
+.gft-personal__heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gft-accent);
+}
+
+.gft-personal__item {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.gft-personal__item + .gft-personal__item {
+    padding-top: 20px;
+    border-top: 1px solid var(--gft-line);
+}
+
+.gft-personal__art {
+    width: 72px;
+    height: 72px;
+    border-radius: var(--gft-radius-small);
+}
+
+.gft-personal__fields {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+}
+
+.gft-personal__product {
+    font-family: var(--gft-font-heading);
+    font-size: 17px;
+    line-height: 1.25;
+}
+
+.gft-personal__variant {
+    margin-left: 8px;
+    font-family: var(--gft-font-body);
+    font-size: 13px;
+    color: var(--gft-ink-faint);
+}
+
+.gft-field {
+    display: grid;
+    gap: 6px;
+}
+
+.gft-field__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.gft-field__label {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.gft-field__badge {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gft-ink-faint);
+}
+
+.gft-field__badge--required {
+    color: var(--gft-accent);
+}
+
+/* 16px or more, or iOS zooms the page in when the field takes focus. */
+.gft-root .gft-field__control {
+    width: 100%;
+    padding: 11px 13px;
+    border: 1px solid var(--gft-line-strong);
+    border-radius: var(--gft-radius-small);
+    background: var(--gft-surface);
+    color: var(--gft-ink);
+    font-size: 16px;
+}
+
+.gft-root .gft-field__control::placeholder {
+    color: var(--gft-ink-faint);
+    opacity: 1;
+}
+
+.gft-root .gft-field__control--short {
+    font-family: var(--gft-font-heading);
+    font-size: 19px;
+    letter-spacing: 0.08em;
+}
+
+/* Ruled like a card's inside, in the theme's serif: what they type is what gets printed. */
+.gft-root .gft-field__control--long {
+    min-height: 132px;
+    resize: vertical;
+    padding: 10px 14px;
+    font-family: var(--gft-font-heading);
+    font-size: 18px;
+    font-style: italic;
+    line-height: 30px;
+    background-color: #fffefb;
+    background-image: linear-gradient(transparent 29px, color-mix(in srgb, var(--gft-accent) 16%, transparent) 29px, color-mix(in srgb, var(--gft-accent) 16%, transparent) 30px);
+    background-size: 100% 30px;
+    background-position: 0 10px;
+    background-attachment: local;
+}
+
+.gft-root .gft-field__control:focus-visible {
+    border-color: var(--gft-accent);
+}
+
+.gft-root .gft-field--invalid .gft-field__control {
+    border-color: var(--gft-danger);
+}
+
+.gft-field__check {
+    display: flex;
+}
+
+.gft-root .gft-field__checkbox {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--gft-line-strong);
+    border-radius: var(--gft-radius-small);
+    background: var(--gft-surface);
+}
+
+.gft-root .gft-field__checkbox:checked {
+    border-color: var(--gft-accent);
+    background: var(--gft-accent);
+    box-shadow: inset 0 0 0 4px var(--gft-surface);
+}
+
+.gft-field__foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--gft-ink-soft);
+}
+
+.gft-field__count {
+    flex: none;
+    font-variant-numeric: tabular-nums;
+}
+
+.gft-field__count--over,
+.gft-field__error {
+    color: var(--gft-danger);
+    font-weight: 600;
+}
+
+.gft-field__error {
+    font-size: 13px;
+}
+
+/* --- The box preview (the summary rail) -------------------------------------------------- */
+.gft-summary {
+    display: grid;
+    gap: 18px;
+    padding: 22px;
+    border: 1px solid var(--gft-line);
+    border-radius: var(--gft-radius);
+    background: var(--gft-surface);
+    box-shadow: var(--gft-shadow);
+}
+
+@media (min-width: 900px) {
+    .gft-summary {
+        position: sticky;
+        top: var(--gft-sticky-top);
+    }
+}
+
+.gft-summary__heading {
+    font-size: 22px;
+}
+
+.gft-tray {
+    --gft-tray: #cdb593;
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border-radius: var(--gft-radius);
+    background: color-mix(in srgb, var(--gft-tray) 45%, #fffaf2);
+    box-shadow:
+        inset 0 0 0 1px color-mix(in srgb, var(--gft-tray) 80%, black),
+        inset 0 12px 20px -14px rgb(43 37 32 / 45%);
+}
+
+.gft-tray--empty {
+    background: transparent;
+    box-shadow: none;
+    border: 1px dashed var(--gft-line-strong);
+    min-height: 120px;
+    place-items: center;
+}
+
+.gft-tray__empty {
+    max-width: 22ch;
+    text-align: center;
+    color: var(--gft-ink-faint);
+    font-size: 14px;
+}
+
+.gft-tray__inside {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 64px;
+    align-content: flex-start;
+}
+
+.gft-tray__item {
+    width: 56px;
+    height: 56px;
+    border-radius: 3px;
+    box-shadow: 0 1px 0 rgb(43 37 32 / 10%), 0 6px 10px -6px rgb(43 37 32 / 40%);
+}
+
+.gft-tray__item:nth-child(3n + 1) {
+    transform: rotate(-2deg);
+}
+
+.gft-tray__item:nth-child(3n + 2) {
+    transform: rotate(1.5deg);
+}
+
+.gft-tray__label {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--gft-tray) 30%, var(--gft-ink));
+}
+
+.gft-summary__lines {
+    display: grid;
+    gap: 12px;
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
+.gft-line {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+    font-size: 14px;
+}
+
+.gft-line__thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--gft-radius-small);
+}
+
+.gft-line__title {
+    display: grid;
+    gap: 1px;
+    padding-top: 2px;
+    overflow-wrap: anywhere;
+}
+
+.gft-line__variant {
+    color: var(--gft-ink-faint);
+    font-size: 12px;
+}
+
+.gft-line__written {
+    margin-top: 2px;
+    font-family: var(--gft-font-heading);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--gft-accent);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.gft-line__written-label {
+    font-family: var(--gft-font-body);
+    font-style: normal;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--gft-ink-faint);
+}
+
+.gft-line__tag {
+    font-size: 12px;
+    color: var(--gft-accent);
+}
+
+.gft-root .gft-icon-button {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: var(--gft-ink-soft);
+}
+
+.gft-root .gft-icon-button:hover {
+    background: var(--gft-surface-sunk);
+}
+
+.gft-price {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: 4px 12px;
+    padding-top: 14px;
+    border-top: 1px solid var(--gft-line);
+}
+
+.gft-price--compact {
+    padding-top: 0;
+    border: 0;
+}
+
+.gft-price__label {
+    color: var(--gft-ink-soft);
+}
+
+.gft-price__amounts {
+    display: inline-flex;
+    gap: 8px;
+    align-items: baseline;
+}
+
+.gft-price__compare {
+    color: var(--gft-ink-faint);
+    font-size: 14px;
+}
+
+.gft-price__total {
+    font-family: var(--gft-font-heading);
+    font-size: 24px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+.gft-price__saving {
+    grid-column: 1 / -1;
+    justify-self: end;
+    color: var(--gft-success);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.gft-status {
+    min-height: 1.4em;
+    font-size: 13px;
+    color: var(--gft-ink-soft);
+    text-align: center;
+}
+
+.gft-status--error {
+    color: var(--gft-danger);
+}
+
+.gft-status:empty {
+    display: none;
+}
+
+.gft-status-wrap {
+    min-height: 1.4em;
+}
+
+.gft-summary__heading:focus {
+    outline: none;
+}
+
+.gft-root--nudged .gft-status {
+    animation: gft-nudge 400ms ease;
+}
+
+@keyframes gft-nudge {
+    25% {
+        transform: translateX(-4px);
+    }
+    75% {
+        transform: translateX(4px);
+    }
+}
+
+.gft-mobile-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 12px;
+    margin: 28px -16px 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: var(--gft-surface);
+    border-top: 1px solid var(--gft-line);
+    box-shadow: 0 -10px 28px rgb(43 37 32 / 10%);
+}
+
+.gft-mobile-bar .gft-buy {
+    width: auto;
+    min-height: 48px;
+}
+
+.gft-mobile-bar .gft-status-wrap {
+    grid-column: 1 / -1;
+    min-height: 0;
+    text-align: left;
+}
+
+.gft-mobile-bar .gft-status {
+    text-align: left;
+}
+
+.gft-mobile-bar__info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.gft-mobile-bar__count {
+    display: grid;
+    place-items: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--gft-ink);
+    color: var(--gft-surface);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.gft-mobile-bar .gft-price__total {
+    font-size: 19px;
+}
+
+/* One buy button on screen at a time: the rail's on wide screens, the bar's on narrow ones. */
+@media (min-width: 900px) {
+    .gft-mobile-bar {
+        display: none;
+    }
+}
+
+@media (max-width: 899.98px) {
+    .gft-summary .gft-buy,
+    .gft-summary .gft-status-wrap {
+        display: none;
+    }
+}
+
+/* --- The details dialog ------------------------------------------------------------------ */
+.gft-dialog {
+    width: min(880px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    padding: 0;
+    border: 0;
+    border-radius: var(--gft-radius);
+    background: #fffdf9;
+    color: #2b2520;
+    font-family: var(--gft-font-body);
+    box-shadow: 0 24px 64px rgb(0 0 0 / 25%);
+}
+
+.gft-dialog::backdrop {
+    background: rgb(43 37 32 / 45%);
+}
+
+.gft-dialog__inner {
+    position: relative;
+    display: grid;
+    gap: 24px;
+    padding: 24px;
+}
+
+@media (min-width: 720px) {
+    .gft-dialog__inner {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.gft-root .gft-dialog__close,
+.gft-dialog .gft-dialog__close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--gft-surface);
+    box-shadow: var(--gft-shadow);
+}
+
+.gft-dialog__gallery img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: var(--gft-radius-small);
+    background: var(--gft-surface-sunk);
+}
+
+.gft-dialog__art {
+    aspect-ratio: 1;
+    height: auto;
+    border-radius: var(--gft-radius-small);
+}
+
+.gft-dialog__thumbs {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    overflow-x: auto;
+}
+
+.gft-root .gft-dialog__thumb {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--gft-radius-small);
+    overflow: hidden;
+    border: 2px solid transparent;
+}
+
+.gft-root .gft-dialog__thumb[aria-current='true'] {
+    border-color: var(--gft-accent);
+}
+
+.gft-dialog__details {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.gft-dialog__title {
+    font-size: 26px;
+    padding-right: 40px;
+}
+
+.gft-dialog__description {
+    color: var(--gft-ink-soft);
+    font-size: 15px;
+    white-space: pre-line;
+}
+
+/* --- States ------------------------------------------------------------------------------ */
+.gft-loading {
+    display: grid;
+    gap: 12px;
+    min-height: 480px;
+    align-content: start;
+}
+
+.gft-loading__bar {
+    display: block;
+    height: 120px;
+    border-radius: var(--gft-radius);
+    background: linear-gradient(90deg, var(--gft-surface-sunk), #fbf8f2, var(--gft-surface-sunk));
+    background-size: 200% 100%;
+    animation: gft-shimmer 1.4s linear infinite;
+}
+
+.gft-loading__bar:first-child {
+    height: 40px;
+    width: 40%;
+}
+
+@keyframes gft-shimmer {
+    to {
+        background-position: -200% 0;
+    }
+}
+
+.gft-error {
+    padding: 16px;
+    border-radius: var(--gft-radius-small);
+    background: var(--gft-surface-sunk);
+    color: var(--gft-ink);
+}
+
+.gft-editor-panel {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    margin: 16px 0;
+    padding: 14px 16px;
+    border-radius: 8px;
+    background: #fff4e5;
+    border: 1px solid #f1c27d;
+    color: #4a3410;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+}
+
+.gft-editor-panel svg {
+    margin-top: 3px;
+}
+
+.gft-editor-panel__title {
+    font-weight: 600;
+    margin-bottom: 4px !important;
+}
+
+.gft-editor-panel__list {
+    display: grid;
+    gap: 6px;
+    list-style: disc !important;
+    padding-left: 18px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gft-root *,
+    .gft-dialog * {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}

@@ -1,0 +1,758 @@
+{% comment %}
+  Kitenzo custom component: theme section.
+
+  Install: upload kitenzo-skincare-routine.js and kitenzo-skincare-routine.css (from `bun run build:embed`) to the
+  theme's assets/ folder, and this file to sections/. Then add the section to a product template
+  (see INSTALL.md and MERCHANT-SETUP.md in the install kit).
+
+  Everything a merchant might want to change is a setting below, not code: every heading, label
+  and message, and the accent colours. What to sell (steps, products, counts, prices, discounts)
+  is not, because it comes from the bundle in Kitenzo.
+{% endcomment %}
+
+{{ 'kitenzo-skincare-routine.css' | asset_url | stylesheet_tag }}
+
+{%- liquid
+  # Which bundle to render. Kitenzo writes each bundle's id onto its own Shopify product as the
+  # `bundle-builder.bundle-id` metafield, so a product IS a bundle reference: "This product" reads
+  # it off the page's product, "Selected bundle" off a picked one. A draft bundle's product never
+  # appears in the picker, so the "Unpublished bundle ID" box is the way to design against one.
+  # This is the same resolution as Kitenzo's own app block.
+  assign bundle_source = section.settings.bundle_source | default: 'current_product'
+  if bundle_source == 'current_product'
+    assign resolved_bundle_id = product.metafields.bundle-builder.bundle-id | append: '' | strip
+  else
+    assign resolved_bundle_id = section.settings.bundle_product.metafields.bundle-builder.bundle-id | append: '' | strip
+  endif
+  if resolved_bundle_id == blank
+    assign resolved_bundle_id = section.settings.bundle_id | append: '' | strip
+  endif
+-%}
+
+{%- if resolved_bundle_id == blank -%}
+  {%- comment -%}
+    Nothing to render. The storefront shows nothing; only the merchant, in the theme editor, is
+    told why. Styled inline because the storefront never paints it.
+  {%- endcomment -%}
+  {%- if request.design_mode -%}
+    <div style="margin: 16px; padding: 16px; border: 1px solid #f1c27d; border-radius: 8px; background: #fff4e5; color: #4a3410; font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+      This product is not a Kitenzo bundle, so this section shows nothing on the storefront. Put
+      the section on a bundle product's template, or set "Bundle source" to "Selected bundle" and
+      pick one. A draft bundle will not appear in the picker: paste its ID into "Unpublished
+      bundle ID" instead.
+    </div>
+  {%- endif -%}
+{%- else -%}
+  {%- comment -%}
+    The theme's own fonts, so the widget looks like the rest of the store and follows it when the
+    merchant changes them. Most themes name these settings type_body_font and type_header_font;
+    check yours. When the theme has neither, the widget inherits the page's font.
+  {%- endcomment -%}
+  {%- liquid
+    assign body_font = settings.type_body_font
+    assign heading_font = settings.type_header_font
+  -%}
+  <style>
+    {%- if body_font %}
+    {{ body_font | font_face: font_display: 'swap' }}
+    {{ body_font | font_modify: 'weight', 'bold' | font_face: font_display: 'swap' }}
+    {%- endif %}
+    {%- if heading_font %}
+    {{ heading_font | font_face: font_display: 'swap' }}
+    {%- endif %}
+    #kitenzo-{{ section.id }} {
+      {%- if body_font %} --skr-font-body: {{ body_font.family }}, {{ body_font.fallback_families }};{% endif %}
+      {%- if heading_font %} --skr-font-heading: {{ heading_font.family }}, {{ heading_font.fallback_families }};{% endif %}
+      {%- if section.settings.accent_color != blank %} --skr-accent: {{ section.settings.accent_color }};{% endif %}
+      {%- if section.settings.accent_contrast_color != blank %} --skr-accent-contrast: {{ section.settings.accent_contrast_color }};{% endif %}
+      --skr-sticky-top: {{ section.settings.sticky_offset | default: 0 }}px;
+    }
+  </style>
+
+  {%- comment -%}
+    The settings as one JSON blob, captured and then escaped once.
+
+    `json` escapes for JSON, not for an HTML attribute: an apostrophe passes straight through and
+    would close a single-quoted attribute early, losing every string to one "Maman's". Escaping
+    the captured blob fixes that, and the browser decodes it back to exact JSON before the widget
+    reads it.
+
+    Every string goes through `default: ''` first: a cleared text setting reaches Liquid as nil,
+    and `nil | json` is `null`, which the widget would ignore anyway; this keeps the blob honest.
+  {%- endcomment -%}
+  {%- comment -%}
+    The quiz is the section's "Question" blocks, written as a list in block order. The list is
+    always written, even empty: a merchant who removes every question has turned the quiz off.
+  {%- endcomment -%}
+  {%- capture kitenzo_content -%}
+    {
+      "heading": {{ section.settings.heading | default: '' | json }},
+      "intro": {{ section.settings.intro | default: '' | json }},
+      "addToCart": {{ section.settings.add_to_cart | default: '' | json }},
+      "adding": {{ section.settings.adding | default: '' | json }},
+      "added": {{ section.settings.added | default: '' | json }},
+      "chooseMore": {{ section.settings.choose_more | default: '' | json }},
+      "chooseMoreStep": {{ section.settings.choose_more_step | default: '' | json }},
+      "stepCount": {{ section.settings.step_count | default: '' | json }},
+      "stepCountRange": {{ section.settings.step_count_range | default: '' | json }},
+      "stepOptional": {{ section.settings.step_optional | default: '' | json }},
+      "stepFull": {{ section.settings.step_full | default: '' | json }},
+      "bundleFull": {{ section.settings.bundle_full | default: '' | json }},
+      "soldOut": {{ section.settings.sold_out | default: '' | json }},
+      "onlyLeft": {{ section.settings.only_left | default: '' | json }},
+      "stockReached": {{ section.settings.stock_reached | default: '' | json }},
+      "included": {{ section.settings.included | default: '' | json }},
+      "summaryHeading": {{ section.settings.summary_heading | default: '' | json }},
+      "summaryEmpty": {{ section.settings.summary_empty | default: '' | json }},
+      "total": {{ section.settings.total | default: '' | json }},
+      "saving": {{ section.settings.saving | default: '' | json }},
+      "add": {{ section.settings.add | default: '' | json }},
+      "remove": {{ section.settings.remove | default: '' | json }},
+      "details": {{ section.settings.details | default: '' | json }},
+      "close": {{ section.settings.close | default: '' | json }},
+      "unavailable": {{ section.settings.unavailable | default: '' | json }},
+      "loadFailed": {{ section.settings.load_failed | default: '' | json }},
+      "editNotice": {{ section.settings.edit_notice | default: '' | json }},
+      "editMissing": {{ section.settings.edit_missing | default: '' | json }},
+      "notAllowed": {{ section.settings.not_allowed | default: '' | json }},
+      "retryAdd": {{ section.settings.retry_add | default: '' | json }},
+      "quizEyebrow": {{ section.settings.quiz_eyebrow | default: '' | json }},
+      "quizHeading": {{ section.settings.quiz_heading | default: '' | json }},
+      "quizIntro": {{ section.settings.quiz_intro | default: '' | json }},
+      "quizStart": {{ section.settings.quiz_start | default: '' | json }},
+      "quizSkip": {{ section.settings.quiz_skip | default: '' | json }},
+      "quizProgress": {{ section.settings.quiz_progress | default: '' | json }},
+      "back": {{ section.settings.back | default: '' | json }},
+      "routineHeading": {{ section.settings.routine_heading | default: '' | json }},
+      "routineIntro": {{ section.settings.routine_intro | default: '' | json }},
+      "routineReason": {{ section.settings.routine_reason | default: '' | json }},
+      "routineFallback": {{ section.settings.routine_fallback | default: '' | json }},
+      "routineAdjust": {{ section.settings.routine_adjust | default: '' | json }},
+      "routineRetake": {{ section.settings.routine_retake | default: '' | json }},
+      "recommended": {{ section.settings.recommended | default: '' | json }},
+      "stepEmpty": {{ section.settings.step_empty | default: '' | json }},
+      "wizardStep": {{ section.settings.wizard_step | default: '' | json }},
+      "wizardContinue": {{ section.settings.wizard_continue | default: '' | json }},
+      "wizardReview": {{ section.settings.wizard_review | default: '' | json }},
+      "choose": {{ section.settings.choose | default: '' | json }},
+      "chosen": {{ section.settings.chosen | default: '' | json }},
+      "change": {{ section.settings.change | default: '' | json }},
+      "questions": [
+        {%- assign question_count = 0 -%}
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'question' -%}
+            {%- if question_count > 0 -%},{%- endif -%}
+            {%- assign question_count = question_count | plus: 1 -%}
+            {
+              "title": {{ block.settings.title | default: '' | json }},
+              "hint": {{ block.settings.hint | default: '' | json }},
+              "answers": [
+                { "label": {{ block.settings.a1_label | default: '' | json }}, "tags": {{ block.settings.a1_tags | default: '' | json }} },
+                { "label": {{ block.settings.a2_label | default: '' | json }}, "tags": {{ block.settings.a2_tags | default: '' | json }} },
+                { "label": {{ block.settings.a3_label | default: '' | json }}, "tags": {{ block.settings.a3_tags | default: '' | json }} },
+                { "label": {{ block.settings.a4_label | default: '' | json }}, "tags": {{ block.settings.a4_tags | default: '' | json }} },
+                { "label": {{ block.settings.a5_label | default: '' | json }}, "tags": {{ block.settings.a5_tags | default: '' | json }} }
+              ]
+            }
+          {%- endif -%}
+        {%- endfor -%}
+      ],
+      "afterAdd": {{ section.settings.after_add | default: 'cart' | json }},
+      "hidePrices": {{ section.settings.hide_prices | json }}
+    }
+  {%- endcapture -%}
+
+  <div
+    id="kitenzo-{{ section.id }}"
+    data-skincare-routine-bundle="{{ resolved_bundle_id | escape }}"
+    data-api-key="{{ section.settings.api_key | strip | escape }}"
+    data-shop-domain="{{ shop.permanent_domain | escape }}"
+    data-country-code="{{ localization.country.iso_code | escape }}"
+    data-root-url="{{ routes.root_url | escape }}"
+    data-content="{{ kitenzo_content | escape }}"
+  ></div>
+  <script src="{{ 'kitenzo-skincare-routine.js' | asset_url }}" defer></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Kitenzo Skincare Routine",
+  "tag": "section",
+  "class": "kitenzo-section",
+  "settings": [
+    {
+      "type": "select",
+      "id": "bundle_source",
+      "label": "Bundle source",
+      "options": [
+        {
+          "value": "current_product",
+          "label": "This product (automatic)"
+        },
+        {
+          "value": "manual",
+          "label": "Selected bundle"
+        }
+      ],
+      "default": "current_product",
+      "info": "\"This product\" shows the bundle of whichever product this template is assigned to, so one template serves every bundle. Use \"Selected bundle\" on a page that is not a product."
+    },
+    {
+      "type": "product",
+      "id": "bundle_product",
+      "label": "Selected bundle",
+      "info": "Used when Bundle source is \"Selected bundle\". Pick the bundle's product."
+    },
+    {
+      "type": "text",
+      "id": "bundle_id",
+      "label": "Unpublished bundle ID",
+      "info": "A draft bundle does not appear in the picker. Paste its ID here to design against it in the theme editor. Leave blank once it is published."
+    },
+    {
+      "type": "paragraph",
+      "content": "Starts with a short skin quiz that builds a routine from your product tags, then lets the shopper adjust it one step at a time. Works with any Kitenzo bundle of steps; each step's count, auto-advance and discount come from the bundle in Kitenzo."
+    },
+    {
+      "type": "text",
+      "id": "api_key",
+      "label": "Kitenzo headless API key",
+      "info": "From Kitenzo, Settings, Headless. It starts kit_live_ and is public (it ships in the page, like every storefront key), so create it with this store's domains as its allowed origins."
+    },
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Leave blank to use the bundle's name."
+    },
+    {
+      "type": "textarea",
+      "id": "intro",
+      "label": "Introduction",
+      "info": "Leave blank to use the bundle's description."
+    },
+    {
+      "type": "select",
+      "id": "after_add",
+      "label": "After adding to the cart",
+      "options": [
+        {
+          "value": "cart",
+          "label": "Go to the cart"
+        },
+        {
+          "value": "stay",
+          "label": "Stay on this page"
+        }
+      ],
+      "default": "cart",
+      "info": "\"Stay\" suits themes with a cart drawer: the section fires a kitenzo:bundle-added event the drawer can listen for."
+    },
+    {
+      "type": "checkbox",
+      "id": "hide_prices",
+      "label": "Hide prices",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "Colours"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent",
+      "default": "#2a2521"
+    },
+    {
+      "type": "color",
+      "id": "accent_contrast_color",
+      "label": "Text on accent",
+      "default": "#faf7f2"
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "range",
+      "id": "sticky_offset",
+      "label": "Space above the step bar",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "default": 0,
+      "info": "The step bar sticks to the top of the screen as the shopper scrolls. If your theme has a sticky header, set this to its height so the bar sits below it."
+    },
+    {
+      "type": "header",
+      "content": "Quiz"
+    },
+    {
+      "type": "paragraph",
+      "content": "The questions are this section's blocks: add, remove or reorder them like any block. Each answer matches product tags. The routine takes, in each step, the product that matches the most answers, never a sold-out one; when nothing matches it takes the first available product."
+    },
+    {
+      "type": "text",
+      "id": "quiz_eyebrow",
+      "label": "Label above the heading",
+      "default": "Skin consultation"
+    },
+    {
+      "type": "text",
+      "id": "quiz_heading",
+      "label": "Heading",
+      "default": "Find your routine"
+    },
+    {
+      "type": "textarea",
+      "id": "quiz_intro",
+      "label": "Introduction",
+      "default": "A few short questions about your skin, and we will build a cleanse, treat and moisturise routine around your answers. You can change anything before it goes in your cart."
+    },
+    {
+      "type": "text",
+      "id": "quiz_start",
+      "label": "Start button",
+      "default": "Start"
+    },
+    {
+      "type": "text",
+      "id": "quiz_skip",
+      "label": "Skip link",
+      "default": "Skip the quiz and choose myself"
+    },
+    {
+      "type": "text",
+      "id": "quiz_progress",
+      "label": "Progress",
+      "default": "Question {current} of {total}",
+      "info": "{current} is the question number, {total} how many there are."
+    },
+    {
+      "type": "text",
+      "id": "back",
+      "label": "Back",
+      "default": "Back"
+    },
+    {
+      "type": "header",
+      "content": "Your routine"
+    },
+    {
+      "type": "text",
+      "id": "routine_heading",
+      "label": "Heading",
+      "default": "Your routine"
+    },
+    {
+      "type": "textarea",
+      "id": "routine_intro",
+      "label": "Introduction",
+      "default": "Chosen from your answers. Change any step, or add the set as it is."
+    },
+    {
+      "type": "text",
+      "id": "routine_reason",
+      "label": "Why a product was chosen",
+      "default": "Matches: {reasons}",
+      "info": "{reasons} is the tags it matched, as words: \"dry skin, brightening\"."
+    },
+    {
+      "type": "text",
+      "id": "routine_fallback",
+      "label": "When nothing matched",
+      "default": "Our suggestion for this step"
+    },
+    {
+      "type": "text",
+      "id": "routine_adjust",
+      "label": "Adjust button",
+      "default": "Adjust your routine"
+    },
+    {
+      "type": "text",
+      "id": "routine_retake",
+      "label": "Retake link",
+      "default": "Retake the quiz"
+    },
+    {
+      "type": "text",
+      "id": "recommended",
+      "label": "Recommended badge",
+      "default": "Recommended"
+    },
+    {
+      "type": "text",
+      "id": "step_empty",
+      "label": "Step with nothing chosen",
+      "default": "Not chosen yet"
+    },
+    {
+      "type": "header",
+      "content": "Steps wizard"
+    },
+    {
+      "type": "text",
+      "id": "wizard_step",
+      "label": "Step number",
+      "default": "Step {current} of {total}",
+      "info": "{current} is the step number, {total} how many there are."
+    },
+    {
+      "type": "text",
+      "id": "wizard_continue",
+      "label": "Continue",
+      "default": "Continue"
+    },
+    {
+      "type": "text",
+      "id": "wizard_review",
+      "label": "Continue, on the last step",
+      "default": "Review your routine"
+    },
+    {
+      "type": "text",
+      "id": "choose",
+      "label": "Choose a product",
+      "default": "Choose"
+    },
+    {
+      "type": "text",
+      "id": "chosen",
+      "label": "Chosen product",
+      "default": "Chosen"
+    },
+    {
+      "type": "text",
+      "id": "change",
+      "label": "Change a step",
+      "default": "Change"
+    },
+    {
+      "type": "header",
+      "content": "Buttons"
+    },
+    {
+      "type": "text",
+      "id": "add_to_cart",
+      "label": "Add to cart",
+      "default": "Add routine to cart"
+    },
+    {
+      "type": "text",
+      "id": "adding",
+      "label": "While adding",
+      "default": "Adding…"
+    },
+    {
+      "type": "text",
+      "id": "added",
+      "label": "Once added",
+      "default": "Added to your cart"
+    },
+    {
+      "type": "text",
+      "id": "add",
+      "label": "Add a product",
+      "default": "Add"
+    },
+    {
+      "type": "text",
+      "id": "remove",
+      "label": "Remove a product",
+      "default": "Remove"
+    },
+    {
+      "type": "text",
+      "id": "details",
+      "label": "Product details",
+      "default": "Details"
+    },
+    {
+      "type": "text",
+      "id": "close",
+      "label": "Close",
+      "default": "Close"
+    },
+    {
+      "type": "header",
+      "content": "Steps"
+    },
+    {
+      "type": "text",
+      "id": "step_count",
+      "label": "Count, no limit",
+      "default": "{count} chosen",
+      "info": "{count} is how many are chosen."
+    },
+    {
+      "type": "text",
+      "id": "step_count_range",
+      "label": "Count, with a limit",
+      "default": "{count} of {range} chosen",
+      "info": "{range} is the step's limit, such as 3–6."
+    },
+    {
+      "type": "text",
+      "id": "step_optional",
+      "label": "Optional step",
+      "default": "Optional"
+    },
+    {
+      "type": "text",
+      "id": "step_full",
+      "label": "Step is full",
+      "default": "This step is full. Remove one to choose another."
+    },
+    {
+      "type": "text",
+      "id": "bundle_full",
+      "label": "Bundle is full",
+      "default": "Your bundle is full. Remove one to choose another."
+    },
+    {
+      "type": "text",
+      "id": "choose_more",
+      "label": "More needed",
+      "default": "Add {count} more to continue"
+    },
+    {
+      "type": "text",
+      "id": "choose_more_step",
+      "label": "More needed in a step",
+      "default": "Add {count} more to “{step}”",
+      "info": "{step} is the step's name."
+    },
+    {
+      "type": "header",
+      "content": "Products"
+    },
+    {
+      "type": "text",
+      "id": "sold_out",
+      "label": "Sold out",
+      "default": "Sold out"
+    },
+    {
+      "type": "text",
+      "id": "only_left",
+      "label": "Low stock",
+      "default": "Only {count} left"
+    },
+    {
+      "type": "text",
+      "id": "stock_reached",
+      "label": "No more stock",
+      "default": "That is all we have of this one."
+    },
+    {
+      "type": "text",
+      "id": "included",
+      "label": "Included product",
+      "default": "Included"
+    },
+    {
+      "type": "header",
+      "content": "Summary"
+    },
+    {
+      "type": "text",
+      "id": "summary_heading",
+      "label": "Heading",
+      "default": "Your routine"
+    },
+    {
+      "type": "text",
+      "id": "summary_empty",
+      "label": "Nothing chosen",
+      "default": "Nothing chosen yet."
+    },
+    {
+      "type": "text",
+      "id": "total",
+      "label": "Total",
+      "default": "Total"
+    },
+    {
+      "type": "text",
+      "id": "saving",
+      "label": "Saving",
+      "default": "You save {amount}",
+      "info": "{amount} is the saving, in the shopper's currency."
+    },
+    {
+      "type": "header",
+      "content": "Messages"
+    },
+    {
+      "type": "text",
+      "id": "unavailable",
+      "label": "Bundle not available",
+      "default": "This bundle is not available right now."
+    },
+    {
+      "type": "text",
+      "id": "load_failed",
+      "label": "Bundle failed to load",
+      "default": "We could not load this bundle. Please refresh the page to try again."
+    },
+    {
+      "type": "textarea",
+      "id": "edit_notice",
+      "label": "Editing from the cart",
+      "default": "You are editing a bundle from your cart. Adding it again replaces the one in your cart."
+    },
+    {
+      "type": "textarea",
+      "id": "edit_missing",
+      "label": "Edited items no longer available",
+      "default": "Some items from your saved bundle are no longer available, so please choose again."
+    },
+    {
+      "type": "text",
+      "id": "not_allowed",
+      "label": "Selection not allowed",
+      "default": "This combination cannot be bought as it is. Please change your selection.",
+      "info": "Shown when a bundle rule other than a count (one per product, a price limit) refuses the selection."
+    },
+    {
+      "type": "text",
+      "id": "retry_add",
+      "label": "Connection lost while adding",
+      "default": "Press the button again to finish adding it; you will not be charged twice."
+    }
+  ],
+  "presets": [
+    {
+      "name": "Kitenzo Skincare Routine",
+      "blocks": [
+        {
+          "type": "question",
+          "settings": {
+            "title": "How would you describe your skin?",
+            "hint": "Think about how it feels by midday, before any products.",
+            "a1_label": "Dry",
+            "a1_tags": "dry-skin, very-dry-skin",
+            "a2_label": "Oily",
+            "a2_tags": "oily-skin",
+            "a3_label": "Combination",
+            "a3_tags": "combination-skin",
+            "a4_label": "Sensitive",
+            "a4_tags": "sensitive-skin",
+            "a5_label": "Balanced, or not sure",
+            "a5_tags": "all-skin-types"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "title": "What would you most like to improve?",
+            "hint": "Choose the one that matters most to you right now.",
+            "a1_label": "Breakouts",
+            "a1_tags": "acne-prone, blemish-control",
+            "a2_label": "Dullness and uneven tone",
+            "a2_tags": "brightening, uneven-tone, dullness",
+            "a3_label": "Fine lines",
+            "a3_tags": "anti-ageing, fine-lines, mature-skin, plumping, peptide",
+            "a4_label": "Redness and irritation",
+            "a4_tags": "barrier-repair, sensitive-skin",
+            "a5_label": "Dehydration",
+            "a5_tags": "hydration, hyaluronic-acid"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "title": "When will you use it?",
+            "hint": "We lean towards products made for that time of day.",
+            "a1_label": "Mornings",
+            "a1_tags": "morning-only, daily",
+            "a2_label": "Evenings",
+            "a2_tags": "evening-only, overnight",
+            "a3_label": "Both"
+          }
+        }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "type": "question",
+      "name": "Question",
+      "limit": 5,
+      "settings": [
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Question",
+          "info": "Clear it to hide this question without deleting the block."
+        },
+        {
+          "type": "text",
+          "id": "hint",
+          "label": "Hint"
+        },
+        {
+          "type": "text",
+          "id": "a1_label",
+          "label": "Answer 1",
+          "info": "Clear an answer to remove it."
+        },
+        {
+          "type": "text",
+          "id": "a1_tags",
+          "label": "Answer 1 tags",
+          "info": "Product tags this answer matches, separated by commas, exactly as they are on your products. Blank: the answer steers nothing."
+        },
+        {
+          "type": "text",
+          "id": "a2_label",
+          "label": "Answer 2"
+        },
+        {
+          "type": "text",
+          "id": "a2_tags",
+          "label": "Answer 2 tags"
+        },
+        {
+          "type": "text",
+          "id": "a3_label",
+          "label": "Answer 3"
+        },
+        {
+          "type": "text",
+          "id": "a3_tags",
+          "label": "Answer 3 tags"
+        },
+        {
+          "type": "text",
+          "id": "a4_label",
+          "label": "Answer 4"
+        },
+        {
+          "type": "text",
+          "id": "a4_tags",
+          "label": "Answer 4 tags"
+        },
+        {
+          "type": "text",
+          "id": "a5_label",
+          "label": "Answer 5"
+        },
+        {
+          "type": "text",
+          "id": "a5_tags",
+          "label": "Answer 5 tags"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 5
+}
+{% endschema %}
