@@ -11,7 +11,7 @@ import { expect, test } from '@playwright/test';
 
 import { createMockBackend } from '../dev/mock/backend';
 import { loadFixtures } from '../dev/catalog';
-import { buyButton, completeSelection, openWidget, pick, product, requestsTo, widget } from './harness';
+import { buyButton, completeSelection, openWidget, pick, pressRefused, product, requestsTo, widget } from './harness';
 
 test.describe('loads', () => {
     test('renders every product of the bundle, and nothing that is not in it', async ({ page }) => {
@@ -108,17 +108,21 @@ test.describe('selection', () => {
         await pick(page, 'spicy-pineapple-marg', 4);
         const card = product(page, 'spicy-pineapple-marg');
         await expect(card).toHaveAttribute('data-cc-quantity', '4');
-        await card.getByTestId('cc-pick').click({ force: true });
+        await pressRefused(card.getByTestId('cc-pick'));
         await expect(card).toHaveAttribute('data-cc-quantity', '4');
         await expect(card.locator('[role="status"]')).toContainText('all we have');
     });
 
     // This case has no per-step rule, so "full" is the bundle-wide maximum: 24 cans.
     test('a full case refuses one more, and says so', async ({ page }) => {
+        // 24 presses. In CI, Linux WebKit renders in software and each press costs more as the case
+        // fills (0.6s at the first can, 2.7s by the twentieth), so the whole climb needs more than the
+        // default 30s. On a GPU-backed browser it takes about a second.
+        test.slow();
         await openWidget(page);
         await pick(page, 'passionfruit-mojito', 24);
         const other = product(page, 'pear-cardamom');
-        await other.getByTestId('cc-pick').click({ force: true });
+        await pressRefused(other.getByTestId('cc-pick'));
         await expect(other).toHaveAttribute('data-cc-quantity', '0');
         await expect(other.locator('[role="status"]')).toContainText('full');
     });

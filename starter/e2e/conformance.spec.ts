@@ -11,7 +11,7 @@ import { expect, test } from '@playwright/test';
 
 import { createMockBackend } from '../dev/mock/backend';
 import { loadFixtures } from '../dev/catalog';
-import { buyButton, completeSelection, openWidget, pick, product, requestsTo, widget } from './harness';
+import { buyButton, completeSelection, openWidget, pick, pressRefused, product, requestsTo, widget } from './harness';
 
 test.describe('loads', () => {
     test('renders every product of the bundle, and nothing that is not in it', async ({ page }) => {
@@ -61,7 +61,7 @@ test.describe('selection', () => {
         await expect(buyButton(page)).toHaveAttribute('aria-disabled', 'true');
         await expect(page.locator('.kst-status').filter({ visible: true }).first()).toContainText('3 more');
 
-        await buyButton(page).click({ force: true });
+        await pressRefused(buyButton(page));
         expect(requestsTo(backend, /configure|cart\/add/)).toHaveLength(0);
     });
 
@@ -108,7 +108,7 @@ test.describe('selection', () => {
         await pick(page, 'beetroot-berry', 3);
         const card = product(page, 'beetroot-berry');
         await expect(card).toHaveAttribute('data-cc-quantity', '3');
-        await card.getByTestId('cc-pick').click({ force: true });
+        await pressRefused(card.getByTestId('cc-pick'));
         await expect(card).toHaveAttribute('data-cc-quantity', '3');
         await expect(card.locator('[role="status"]')).toContainText('all we have');
     });
@@ -117,7 +117,7 @@ test.describe('selection', () => {
         await openWidget(page);
         await pick(page, 'strawberries-cream', 6);
         const other = product(page, 'pineapple-mango');
-        await other.getByTestId('cc-pick').click({ force: true });
+        await pressRefused(other.getByTestId('cc-pick'));
         await expect(other).toHaveAttribute('data-cc-quantity', '0');
         await expect(other.locator('[role="status"]')).toContainText('full');
     });

@@ -73,6 +73,10 @@ test.describe('filters', () => {
 
 test.describe('discount ladder', () => {
     test('says what the next tier is worth: the theme\'s copy, then each tier\'s own customText, then the top', async ({ page }) => {
+        // 24 presses. In CI, Linux WebKit renders in software and each press costs more as the case
+        // fills (0.6s at the first can, 2.7s by the twentieth), so the whole climb needs more than the
+        // default 30s. On a GPU-backed browser it takes about a second.
+        test.slow();
         await openWidget(page);
         await expect(ladder(page)).toHaveText('Add 6 more to unlock 5% off');
         await pick(page, 'passionfruit-mojito', 7);

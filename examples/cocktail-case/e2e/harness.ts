@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import { loadFixtures } from '../dev/catalog';
 import { createMockBackend, type MockBackend } from '../dev/mock/backend';
@@ -131,6 +131,19 @@ export async function pick(page: Page, handle: string, times = 1) {
     for (let index = 0; index < times; index += 1) {
         await product(page, handle).getByTestId('cc-pick').click();
     }
+}
+
+/**
+ * Press a control that is meant to refuse (`aria-disabled`), as a shopper would.
+ *
+ * Playwright will not click an aria-disabled control, so this forces it, and a forced click lands on
+ * whatever is on top at the control's position. Near the bottom of a phone screen that is the
+ * sticky mobile bar, and the press never reaches the control. Centre it first, as a shopper's
+ * thumb would.
+ */
+export async function pressRefused(control: Locator) {
+    await control.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+    await control.click({ force: true });
 }
 
 /** A complete, valid selection for the cocktail case: the smallest case, six cans. */
