@@ -78,8 +78,12 @@ export async function openWidget(page: Page, options: OpenOptions = {}) {
     };
     const sections = Array.from({ length: options.sections ?? 1 }, (_, index) => mount(index + 1)).join('\n');
     const designMode = combined.designMode ? '<script>window.Shopify = { designMode: true };</script>' : '';
+    // Every theme sets a body font, and the widget inherits it. Left on the browser default instead,
+    // Linux WebKit (CI's mobile browser) paints this page at one frame every two seconds, which
+    // starves Playwright's "is it stable?" check and times tests out. A real store never hits it.
+    const themeFont = '<style>body { font: 16px/1.5 sans-serif; }</style>';
     const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="/assets/${ASSET}.css"><style>${HOSTILE}</style>${designMode}${options.head ?? ''}</head>
+        <link rel="stylesheet" href="/assets/${ASSET}.css"><style>${HOSTILE}</style>${themeFont}${designMode}${options.head ?? ''}</head>
         <body><header style="position:sticky;top:0;z-index:5;background:#1b407c;color:#fff;padding:12px">Hostile theme</header>
         <main class="theme-main">${sections}</main><footer style="height:200px"></footer></body></html>`;
 

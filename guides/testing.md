@@ -42,6 +42,8 @@ Tests load bundles through the real SDK client against the mock backend (`test/s
 
 `e2e/conformance.spec.ts`, in Playwright, on the **built** asset (`dist-embed/`), mounted the way the Liquid section mounts it, under the hostile theme (`dev/hostile.css`), at desktop (Chromium, 1440) and on a phone (WebKit, iPhone 14). It checks loading, errors, selection, sold out, stock caps, full steps, the dialog, the full cart sequence, `_bundles` merging, cart errors, locale prefixes, basket Edit, two sections, the theme editor's reload, hostile strings, the button reset, markets and hidden prices.
 
+The harness page sets a body font, as every theme does. Without one, Linux WebKit (the mobile browser in CI) painted one design at a frame every two seconds, which starves Playwright's "is it stable?" check: tests passed on a Mac and timed out in CI. If a suite is mysteriously slow only on Linux, count animation frames before blaming the widget.
+
 Every check drives the widget through the public test contract ([the-contract.md](the-contract.md)), so the same suite runs on every component. Fitting it to a new bundle means changing the helpers in `e2e/harness.ts` (`completeSelection`, the handles), not the checks.
 
 Add your component's own behaviour in `e2e/<name>.spec.ts`.
