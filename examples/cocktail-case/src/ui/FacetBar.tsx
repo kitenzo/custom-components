@@ -6,16 +6,22 @@
  * says "Fruity, 5, toggle button, pressed". A chip whose count is 0 stays pressable: pressing it
  * shows the "nothing matches" line and a way out, which explains more than a dead chip would.
  */
+import { memo, useMemo } from 'react';
+
 import { text } from '../content';
-import { facetGroups, isFiltering, toggleFacet, type Taggable } from '../facets';
+import { facetGroups, isFiltering, toggleFacet } from '../facets';
 import { useBuilder } from './context';
 import { CloseIcon } from './Icons';
 
-export function FacetBar({ products }: { products: Taggable[] }) {
-    const { content, facetDefs, activeFacets, setActiveFacets } = useBuilder();
-    const groups = facetGroups(products, facetDefs, activeFacets);
+/*
+ * Memoised, and its chips with it: they follow the products on the page, the configured facets
+ * and the pressed chips, none of which a pick changes. It reads no selection.
+ */
+export const FacetBar = memo(function FacetBar({ products }: { products: { id: string }[] }) {
+    const { content, facets, activeFacets, setActiveFacets } = useBuilder();
+    const groups = useMemo(() => facetGroups(products, facets, activeFacets), [products, facets, activeFacets]);
     if (groups.length === 0) return null;
-    const filtering = isFiltering(facetDefs, activeFacets);
+    const filtering = isFiltering(facets, activeFacets);
 
     return (
         <div className="ckc-facets" role="group" aria-label={text(content, 'filterLabel')} data-testid="ckc-facets">
@@ -49,4 +55,4 @@ export function FacetBar({ products }: { products: Taggable[] }) {
             ) : null}
         </div>
     );
-}
+});

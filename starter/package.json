@@ -12,11 +12,12 @@
     "test:e2e": "bun run build:embed && playwright test",
     "verify": "bun run typecheck && bun run test && bun run test:e2e",
     "snapshot": "bun scripts/snapshot-demo-store.ts",
-    "rename": "node scripts/rename.mjs"
+    "rename": "node scripts/rename.mjs",
+    "screenshots": "bun scripts/screenshots.ts"
   },
   "dependencies": {
-    "@kitenzo/core": "^0.9.0",
-    "@kitenzo/react": "^0.9.0",
+    "@kitenzo/core": "^0.10.2",
+    "@kitenzo/react": "^0.10.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

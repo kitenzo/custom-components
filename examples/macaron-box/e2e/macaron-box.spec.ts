@@ -3,9 +3,10 @@
  *
  * Box sizes from the bundle's `eq` rules, a tray that fills in pick order and empties the slot you
  * tap, a smaller box that asks before it drops anything, "Fill the rest" that routes around sold
- * out and low stock, and a buy button that waits for the box the shopper chose. Driven through the
- * test contract plus this widget's own hooks (`data-mcb-size`, `data-mcb-slot`, `mcb-tray`,
- * `mcb-fill`, `mcb-switch-dialog`), on the built asset, desktop and phone.
+ * out and low stock, a flavour that adds to a set price, and a buy button that waits for the box
+ * the shopper chose. Driven through the test contract plus this widget's own hooks
+ * (`data-mcb-size`, `data-mcb-slot`, `data-mcb-surcharge`, `mcb-tray`, `mcb-fill`,
+ * `mcb-switch-dialog`), on the built asset, desktop and phone.
  */
 import { expect, test, type Page } from '@playwright/test';
 
@@ -195,6 +196,38 @@ test.describe('the buy button', () => {
         await chooseSize(page, 6);
         await page.getByTestId('mcb-fill').click();
         await expect(page.getByTestId('cc-price').filter({ visible: true }).first()).toHaveText(cardPrice!);
+    });
+});
+
+test.describe('a flavour that costs extra', () => {
+    test('each size reads "From", the flavour says what it adds, and the total is the SDK\'s for what is in the box', async ({ page }) => {
+        await openWidget(page, { bundleId: 2004 });
+        await expect(sizeCards(page).nth(0)).toContainText('From £6.50');
+        // A set price: no flavour shows a price of its own, and only pistachio adds to the box.
+        await expect(page.locator('[data-cc-product] [data-price-value]')).toHaveCount(0);
+        await expect(page.locator('[data-mcb-surcharge]')).toHaveCount(1);
+        await expect(product(page, 'pistachio-macaron').locator('[data-mcb-surcharge]')).toHaveText('+£0.50');
+
+        await chooseSize(page, 6);
+        await expect(page.locator('.mcb-price--pending').filter({ visible: true }).first()).toContainText('From £6.50');
+        await pick(page, 'pistachio-macaron', 2);
+        await pick(page, 'vanilla-macaron', 4);
+        await expect(page.getByTestId('cc-price').filter({ visible: true }).first()).toHaveAttribute('data-price-value', '7.50');
+    });
+
+    test('the merchant\'s wording, and nothing about money when prices are hidden', async ({ page }) => {
+        await openWidget(page, { bundleId: 2004, content: { surchargeNote: '{amount} extra' } });
+        await expect(product(page, 'pistachio-macaron').locator('[data-mcb-surcharge]')).toHaveText('£0.50 extra');
+        await openWidget(page, { bundleId: 2004, content: { hidePrices: true } });
+        await expect(product(page, 'pistachio-macaron')).toBeVisible();
+        await expect(page.locator('[data-mcb-surcharge]')).toHaveCount(0);
+    });
+
+    test('a box sold at one price per size says nothing on its flavours', async ({ page }) => {
+        await openWidget(page);
+        await expect(sizeCards(page).nth(0)).not.toContainText('From');
+        await expect(product(page, 'pistachio-macaron')).toBeVisible();
+        await expect(page.locator('[data-cc-product] [data-price-value], [data-mcb-surcharge]')).toHaveCount(0);
     });
 });
 

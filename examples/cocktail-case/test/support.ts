@@ -50,7 +50,7 @@ export function soldOut(product: Fixture['products'][number]): Fixture['products
 /**
  * Take a product out of the bundle's step and make it a required product: included in every
  * case, with `variantIds: []` ("any variant"), as the API sends it. This bundle has none of its
- * own, but the widget still has to handle one (and the SDK fix in src/sdkFixes.ts still applies).
+ * own, but the widget still has to handle one.
  */
 export function withRequired(fixture: Fixture, handle: string): Fixture {
     const product = fixture.products.find((entry) => entry.handle === handle)!;

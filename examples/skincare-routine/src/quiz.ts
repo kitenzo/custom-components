@@ -7,11 +7,11 @@
  * formula, and a merchant with different tags rewires it in the theme editor (content.ts).
  *
  * `planRoutine` is pure and has no say over what is sold. It reads each step's count from the
- * bundle's own rules (through the model), skips anything sold out, and its result still goes
- * through `clampSeed` and the SDK's builder like any other seed. It cannot put a product in a
- * routine that the shopper could not have picked by hand.
+ * bundle's own rules (through the model) and offers every pick to a builder of its own, which
+ * takes only what a shopper could have picked by hand: nothing sold out, nothing a rule or the
+ * stock has no room for. The routine is whatever that builder ended up holding.
  */
-import type { SectionSelections } from '@kitenzo/react';
+import { createBundleBuilder, type SectionSelections } from '@kitenzo/react';
 
 import type { Content } from './content';
 import type { ViewModel, ViewProduct, ViewSection } from './model';
@@ -92,49 +92,44 @@ export function matchProduct(product: Pick<ViewProduct, 'tags'>, answers: QuizAn
     return { score, tags };
 }
 
-function firstAvailableVariant(product: ViewProduct) {
-    return product.soldOut ? undefined : product.variants.find((variant) => variant.available);
-}
-
 /**
  * How many products the quiz puts in a step: the step's own minimum. A step with no minimum is
- * optional, so it gets one only when something in it matched the answers and the step allows one.
+ * optional, so it gets one only when something in it matched the answers.
  */
 function wanted(section: ViewSection, bestScore: number): number {
     if (section.limits.min > 0) return section.limits.min;
-    return bestScore > 0 && section.limits.max >= 1 ? 1 : 0;
+    return bestScore > 0 ? 1 : 0;
 }
 
 /**
  * The routine for a set of answers, step by step.
  *
  * Products that match more answers come first; a tie keeps the merchant's own order in the step.
- * Sold-out products (and sold-out sizes) are never picked. When nothing in a step matches, or too
- * little matches to meet the step's minimum, the rest comes from the first available products in
- * the merchant's order, marked as a fallback so the widget does not claim a match it did not make.
- * Each product goes in once, in its first available variant.
+ * Only what the SDK's builder takes is in the routine, so a sold-out product (or size) is never
+ * picked. When nothing in a step matches, or too little matches to meet the step's minimum, the
+ * rest comes from the first products the builder takes in the merchant's order, marked as a
+ * fallback so the widget does not claim a match it did not make. Each product goes in once, in
+ * the first of its variants that can go in.
  */
 export function planRoutine(model: ViewModel, answers: QuizAnswer[]): RoutinePlan {
-    const selections: SectionSelections = {};
+    const builder = createBundleBuilder(model.bundle);
     const picks: Recommendation[] = [];
     for (const section of model.sections) {
         const candidates = section.products.flatMap((product, index) => {
-            const variant = firstAvailableVariant(product);
+            const variant = product.variants.find((entry) => builder.blockedReason(section.id, entry.id) === null);
             return variant ? [{ product, variant, index, match: matchProduct(product, answers) }] : [];
         });
-        const ranked = candidates
-            .filter((candidate) => candidate.match.score > 0)
-            .sort((a, b) => b.match.score - a.match.score || a.index - b.index);
-        const count = wanted(section, ranked[0]?.match.score ?? 0);
-        const chosen = ranked.slice(0, count);
-        for (const candidate of candidates) {
-            if (chosen.length >= count) break;
-            if (!chosen.includes(candidate)) chosen.push({ ...candidate, match: { score: 0, tags: [] } });
-        }
-        for (const { product, variant, match } of chosen) {
-            (selections[section.id] ??= []).push({ variantId: variant.id, quantity: 1 });
+        const ranked = candidates.filter((candidate) => candidate.match.score > 0).sort((a, b) => b.match.score - a.match.score || a.index - b.index);
+        const unmatched = candidates.filter((candidate) => candidate.match.score === 0);
+        let left = wanted(section, ranked[0]?.match.score ?? 0);
+        for (const { product, variant, match } of [...ranked, ...unmatched]) {
+            if (left === 0) break;
+            // A pick before this one can use up the room this one needed (one per product, a
+            // bundle-wide maximum): the builder refuses it and the next candidate gets its turn.
+            if (builder.addItem(section.id, variant.id, 1) === 0) continue;
+            left -= 1;
             picks.push({ sectionId: section.id, productId: product.id, variantId: variant.id, matched: match.tags });
         }
     }
-    return { selections, picks };
+    return { selections: builder.getState().selections, picks };
 }

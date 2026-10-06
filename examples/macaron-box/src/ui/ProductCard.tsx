@@ -6,22 +6,25 @@
  * many of it are in this step). The suites find and drive products through these, never through
  * class names or copy.
  */
+import { memo } from 'react';
+
 import { text } from '../content';
 import type { ViewProduct, ViewSection } from '../model';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
 import { imageAttrs } from './images';
-import { OptionPickers, QuantityControl } from './PickControls';
+import { FlavourPrice, OptionPickers, QuantityControl } from './PickControls';
 import { usePick } from './usePick';
 
-export function ProductCard({ product, section }: { product: ViewProduct; section: ViewSection }) {
-    const { money, content, openDetails, selection, box } = useBuilder();
+/*
+ * Memoised on the product and its step, both kept by the model between picks. A card is drawn
+ * again by its own state or by a change to either context, never by the Builder alone.
+ */
+export const ProductCard = memo(function ProductCard({ product, section }: { product: ViewProduct; section: ViewSection }) {
+    const { content, openDetails } = useBuilder();
+    const { selections } = useSelection();
     const pick = usePick(product, section);
     const photo = product.photos[0];
-    // In a box sold at a set price per size, one macaron's own price is not what anyone pays, so
-    // the card leaves it out and the size cards carry the price. Anywhere else, it shows.
-    const setPriced = box?.section.id === section.id && box.setPriced;
-    const price = content.hidePrices || setPriced ? null : money.format(money.unitPrice(pick.variant));
-    const inStep = (selection.selections[section.id] ?? [])
+    const inStep = (selections[section.id] ?? [])
         .filter((entry) => product.variants.some((variant) => variant.id === entry.variantId))
         .reduce((total, entry) => total + entry.quantity, 0);
 
@@ -49,11 +52,7 @@ export function ProductCard({ product, section }: { product: ViewProduct; sectio
             </button>
             <div className="mcb-card__body">
                 <h4 className="mcb-card__title">{product.title}</h4>
-                {price ? (
-                    <p className="mcb-card__price" data-price-value={money.unitPrice(pick.variant).toFixed(2)}>
-                        {price}
-                    </p>
-                ) : null}
+                <FlavourPrice variant={pick.variant} section={section} />
                 <OptionPickers pick={pick} product={product} />
                 <div className="mcb-card__actions">
                     <QuantityControl pick={pick} product={product} />
@@ -64,4 +63,4 @@ export function ProductCard({ product, section }: { product: ViewProduct; sectio
             </div>
         </article>
     );
-}
+});

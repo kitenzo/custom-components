@@ -1,119 +1,98 @@
 /*
- * The discount ladder: what the case saves now, what the next tier is worth, and how many more
- * cans reach it.
+ * The discount ladder, in the shop's words.
  *
- * Read from the bundle's own tiered discount, never typed into the widget: a merchant who
- * changes "12 cans, 10% off" to "10 cans, 12% off" in Kitenzo sees the ladder move on the next
- * page load. The price itself is still the SDK's (`useBundlePrice`); this only describes the
- * tiers so a shopper can see where they stand.
+ * The ladder itself is the SDK's. `getDiscountLadder` makes rungs of the bundle's tiers,
+ * `getDiscountLadderProgress` says where a count stands on them, and `getDiscountTierText` fills
+ * the merchant's own "reach the next tier" sentence. All three read the tier evaluation the price
+ * uses, so the ladder cannot promise a discount checkout will not give, and a merchant who changes
+ * "12 cans, 10% off" to "10 cans, 12% off" in Kitenzo sees it move on the next page load.
  *
- * A rung is a tier the shopper climbs by adding cans: a `total_products` tier with `gte` (or
- * `gt`, which is `gte` one higher). Tiers on spend (`total_price`), on one product's quantity
- * (`bulk_buy`), or with `lt` / `lte` / `eq` are not a ladder a count can climb, so they are left
- * off it (and counted in `skipped`, which the theme editor reports). Pricing still honours them.
+ * This file adds only words: what a shopper reads, from the theme's settings (how a discount is
+ * worded, "10% off", "£5 off", "£40 a case", and the sentence under the meter), and a sentence for
+ * the merchant about each tier the ladder leaves out.
  *
- * The message follows Kitenzo's own widget, so a tier's `customText` reads the same here as on a
- * store using the standard builder:
- *
- *   - the NEXT tier's `customText` speaks, with `{{ amount }}` = cans still needed,
- *     `{{ discount }}` = that tier's discount and `{{ currentDiscount }}` = the discount in force
- *     now. Percentages are bare numbers (the merchant writes the `%`), money is formatted;
- *   - with no `customText` (`null` or blank), the theme's own default copy speaks instead;
+ *   - the next tier's `customText` speaks when it has one, filled by the SDK;
+ *   - with none, the theme's own default copy speaks instead;
  *   - once every rung is reached, the theme's "top tier" copy speaks.
  */
-import type { BundleDiscount, DiscountType } from '@kitenzo/react';
+import {
+    getDiscountLadder,
+    getDiscountLadderProgress,
+    getDiscountTierText,
+    type BundleDetail,
+    type DiscountLadderProgress,
+    type DiscountRung,
+    type DiscountTier,
+    type DiscountType,
+    type MoneyFormatter,
+    type SectionSelections,
+} from '@kitenzo/react';
 
-import { fillTierText, text, type Content } from './content';
+import { text, type Content } from './content';
 
-export interface Rung {
-    /** Cans needed to reach this rung. */
-    threshold: number;
-    /** The tier's own discount value, as the API sent it. */
-    discount: number;
-    /** What the bundle is discounted by on this rung: the tiers combined by the bundle's operator. */
-    effective: number;
-    customText: string | null;
-    reached: boolean;
-}
+/** What words an amount of money: the bundle's own formatter (`useMoney`). */
+export type TierMoney = Pick<MoneyFormatter, 'format' | 'fromShopCurrency'>;
 
-export interface Ladder {
+export interface Ladder extends DiscountLadderProgress {
+    /** The rungs the meter draws, lowest count first. */
+    rungs: DiscountRung[];
     type: DiscountType;
-    rungs: Rung[];
+    /** The count the case stands at, as the engine counts it (required products included). */
     count: number;
-    /** The highest rung reached, or null below the first. */
-    current: Rung | null;
-    /** The first rung not yet reached, or null at the top. */
-    next: Rung | null;
-    /** Cans still needed to reach `next`. 0 at the top. */
-    remaining: number;
-    /** The discount in force now (0 below the first rung). */
-    inForce: number;
-    /** 0 to 1 along the ladder, where 1 is the top rung. */
-    progress: number;
-    /** Tiers the ladder cannot draw (see above). */
-    skipped: number;
 }
 
-function threshold(operation: string, value: number): number | null {
-    if (operation === 'gte') return Math.ceil(value);
-    if (operation === 'gt') return Math.floor(value) + 1;
-    return null;
+/**
+ * The rungs the meter draws: one per tier. The count just past an "exactly N" tier, where its
+ * discount stops, is a rung of the ladder too, but nothing to aim for.
+ */
+export function ladderRungs(bundle: BundleDetail): DiscountRung[] {
+    return getDiscountLadder(bundle).filter((rung) => rung.tier !== null);
 }
 
-/** The ladder for `count` cans, or null when the bundle has no tiered discount to climb. */
-export function tierLadder(discount: BundleDiscount | null | undefined, count: number): Ladder | null {
-    if (!discount || discount.flatOrTiered !== 'tiered' || !discount.type) return null;
-    const type = discount.type;
-    const tiers = discount.tiers ?? [];
-    const climbable = tiers.flatMap((tier) => {
-        const value = Number.parseFloat(tier.value);
-        const amount = Number.parseFloat(tier.discount);
-        const at = tier.type === 'total_products' && Number.isFinite(value) ? threshold(tier.operation, value) : null;
-        // A tier worth nothing is not a rung: the standard widget skips it too.
-        return at !== null && at > 0 && Number.isFinite(amount) && amount > 0
-            ? [{ threshold: at, discount: amount, customText: tier.customText?.trim() ? tier.customText : null }]
-            : [];
-    });
-    if (climbable.length === 0) return null;
-    climbable.sort((a, b) => a.threshold - b.threshold);
+const OPERATION_WORDS: Record<DiscountTier['operation'], string> = { gte: 'at least', gt: 'more than', eq: 'exactly', lte: 'at most', lt: 'fewer than' };
 
-    // Mirrors the SDK's getTieredDiscount: every active tier, combined by the bundle's operator.
-    const combine = (values: number[]) => (discount.operator === 'cumulative' ? values.reduce((sum, value) => sum + value, 0) : Math.max(...values));
-    const rungs: Rung[] = climbable.map((tier) => ({
-        ...tier,
-        effective: combine(climbable.filter((other) => other.threshold <= tier.threshold).map((other) => other.discount)),
-        reached: count >= tier.threshold,
-    }));
+/**
+ * Why the ladder is missing a tier: one sentence each, for the theme editor.
+ *
+ * The SDK decides what is a rung and does not say why a tier is not one, so these name the tier
+ * and the reasons there can be, without working any of them out again. A bundle with one discount
+ * for every case has no tiers to leave out, and simply has no ladder.
+ */
+export function ladderNotes(bundle: BundleDetail, rungs: DiscountRung[]): string[] {
+    const discount = bundle.discount;
+    const tiers = discount?.type && discount.flatOrTiered === 'tiered' ? (discount.tiers ?? []) : [];
+    const notes: string[] = [];
+    for (const tier of tiers) {
+        if (tier.type !== 'total_products') {
+            notes.push(`A tier on ${tier.type === 'total_price' ? 'the case\'s value' : 'one drink\'s quantity'} cannot be drawn as a count of cans, so the ladder leaves it out. Checkout still applies it.`);
+        } else if (!rungs.some((rung) => rung.tier === tier)) {
+            notes.push(
+                `The tier for ${OPERATION_WORDS[tier.operation]} ${Number.parseFloat(tier.value)} cans is not on the ladder: it is not a step up from the tiers around it, or no shopper can reach it within the case's limits. Checkout still applies it.`,
+            );
+        }
+    }
+    return notes;
+}
 
-    const reached = rungs.filter((rung) => rung.reached);
-    const current = reached[reached.length - 1] ?? null;
-    const next = rungs.find((rung) => !rung.reached) ?? null;
-    const top = rungs[rungs.length - 1]!.threshold;
-    return {
-        type,
-        rungs,
-        count,
-        current,
-        next,
-        remaining: next ? next.threshold - count : 0,
-        inForce: reached.length > 0 ? combine(reached.map((rung) => rung.discount)) : 0,
-        progress: Math.max(0, Math.min(1, count / top)),
-        skipped: tiers.length - climbable.length,
-    };
+/** The ladder for `count` cans, or null when the bundle has no tiers a count can climb. */
+export function readLadder(bundle: BundleDetail, count: number): Ladder | null {
+    const rungs = ladderRungs(bundle);
+    if (rungs.length === 0) return null;
+    return { ...getDiscountLadderProgress(bundle, count), rungs, type: rungs[0]!.discountType, count };
 }
 
 /** `10` reads as "10", `7.5` as "7.5": the way a merchant writes a percentage. */
-export function bareNumber(value: number): string {
+function bareNumber(value: number): string {
     return String(Math.round(value * 100) / 100);
 }
 
 /**
- * A discount as the shopper reads it in our own copy: "10% off", "£5 off", "£40 a case".
- * `formatMoney` returns null while the shop's money format loads.
+ * A discount as the shopper reads it in the theme's copy: "10% off", "£5 off", "£40 a case".
+ * A money discount is stored in the shop's currency, so it is converted for the shopper's market.
  */
-export function discountLabel(content: Content, type: DiscountType, value: number, formatMoney: (amount: number) => string | null): string {
+export function discountLabel(content: Content, type: DiscountType, value: number, money: TierMoney): string {
     if (type === 'percentage') return text(content, 'discountPercent', { value: bareNumber(value) });
-    const amount = formatMoney(value) ?? '';
+    const amount = money.format(money.fromShopCurrency(value));
     return text(content, type === 'price' ? 'discountPrice' : 'discountAmount', { amount });
 }
 
@@ -124,26 +103,12 @@ export interface LadderMessage {
 }
 
 /** What the ladder says right now. See the file comment for whose words speak when. */
-export function ladderMessage(ladder: Ladder, content: Content, formatMoney: (amount: number) => string | null): LadderMessage {
-    const label = (value: number) => discountLabel(content, ladder.type, value, formatMoney);
-    if (!ladder.next) {
-        return { text: text(content, 'tierMax', { discount: label(ladder.inForce) }), custom: false };
+export function ladderMessage(ladder: Ladder, bundle: BundleDetail, selections: SectionSelections, content: Content, money: TierMoney): LadderMessage {
+    const custom = getDiscountTierText(bundle, selections, { money });
+    if (custom !== null) return { text: custom, custom: true };
+    const label = (value: number) => discountLabel(content, ladder.type, value, money);
+    if (ladder.next) {
+        return { text: text(content, ladder.missing === 1 ? 'tierNextOne' : 'tierNext', { count: ladder.missing, discount: label(ladder.next.discount) }), custom: false };
     }
-    if (ladder.next.customText) {
-        // The standard widget's {{ discount }} / {{ currentDiscount }}: bare for a percentage
-        // (the % is in the merchant's copy), formatted money otherwise.
-        const placeholder = (value: number) => (ladder.type === 'percentage' ? bareNumber(value) : (formatMoney(value) ?? ''));
-        return {
-            text: fillTierText(ladder.next.customText, {
-                amount: ladder.remaining,
-                discount: placeholder(ladder.next.discount),
-                currentDiscount: placeholder(ladder.inForce),
-            }),
-            custom: true,
-        };
-    }
-    return {
-        text: text(content, ladder.remaining === 1 ? 'tierNextOne' : 'tierNext', { count: ladder.remaining, discount: label(ladder.next.effective) }),
-        custom: false,
-    };
+    return { text: ladder.discount ? text(content, 'tierMax', { discount: label(ladder.discount) }) : '', custom: false };
 }

@@ -2,8 +2,8 @@
  * A stand-in for the two servers a custom component talks to:
  *
  *   - the Kitenzo headless API (`/settings`, `/bundles/:id`, `/bundles/:id/products`,
- *     `/bundles/:id/configure`, `/bundles/:id/price`, and the saved-contents lookup the cart's
- *     "Edit" uses), and
+ *     `/bundles/:id/configure`, `/bundles/:id/price`, `/ab-tests/impression`, and the
+ *     saved-contents lookup the cart's "Edit" uses), and
  *   - the Shopify theme's AJAX cart (`/cart.js`, `/cart/add.js`, `/cart/update.js`, with any
  *     locale prefix such as `/en-gb/cart/add.js`).
  *
@@ -17,7 +17,8 @@
  */
 import { createBundleBuilder, type BundleDetail, type BundleProduct } from '@kitenzo/core';
 
-import type { Fixture, RawProduct, RawSettings } from './wire';
+import { feeProductId } from './catalog';
+import type { ABTestFields, Fixture, PersonalisationFieldFee, RawBundle, RawProduct, RawSettings } from './wire';
 
 export interface Market {
     countryCode: string;
@@ -27,6 +28,32 @@ export interface Market {
     /** Decimal places the currency uses: 0 for JPY, 3 for KWD. */
     decimals: number;
 }
+
+/**
+ * A running A/B test whose entry bundle (variant A) is the first fixture.
+ *
+ * Kitenzo assigns a shopper by hashing their visitor id, so which variant a browser gets is
+ * a coin toss. A scenario has to be the same on every load, so the test says what the hash would
+ * have: every shopper of this backend is `assigned` the same variant.
+ */
+export interface ABTest {
+    id: number;
+    assigned: 'a' | 'b';
+    /**
+     * B's page, root-relative, as the API sends it in `abTestRedirectTo`. Left out, it is
+     * `variantPage(B)`: a path of its own carrying `?bundle=<B>`, which the dev page and the e2e
+     * harness both read to choose the bundle they mount, so the redirect lands on a page that
+     * draws B without leaving the host.
+     */
+    pageB?: string;
+}
+
+/**
+ * The id the backend serves variant B under: a copy of bundle A, which is how most tests start (the
+ * merchant duplicates the bundle and changes one thing).
+ */
+export const variantBundleId = (bundleA: number) => bundleA + 100_000;
+export const variantPage = (bundleB: number) => `/pages/variant-b?bundle=${bundleB}`;
 
 export type Failure = 404 | 500 | 'network' | 'never';
 /** `lost-response`: the lines land, then the connection drops before the answer arrives. */
@@ -47,6 +74,8 @@ export interface Behaviour {
     market?: Market;
     /** Settings the shop has, over the fixture's own. */
     settings?: Partial<RawSettings>;
+    /** The shop is running this A/B test. */
+    abTest?: ABTest;
 }
 
 export interface MockRequest {
@@ -97,11 +126,19 @@ export interface SavedConfiguration {
     items: { variantId: number; quantity: number; sectionId: number | null }[];
 }
 
+/** A shopper counted once for the variant of a test they saw: the test's "unique visitors". */
+export interface CountedVisitor {
+    testId: number;
+    bundleId: number;
+    visitorId: string;
+}
+
 /** Everything that survives a page load in the browser adapter. */
 export interface BackendState {
     cart: Cart;
     saved: SavedConfiguration[];
     nextConfiguredId: number;
+    visitors: CountedVisitor[];
 }
 
 export interface MockBackend {
@@ -120,6 +157,7 @@ export function emptyState(): BackendState {
         cart: { token: 'mock-cart', items: [], attributes: {}, item_count: 0, total_price: 0, currency: 'GBP', note: null },
         saved: [],
         nextConfiguredId: 9001,
+        visitors: [],
     };
 }
 
@@ -150,6 +188,64 @@ function inMarket(products: RawProduct[], market: Market): RawProduct[] {
             };
         }),
     }));
+}
+
+/** The fees a bundle's fields charge, one per fee option. */
+function feesOf(bundle: RawBundle): PersonalisationFieldFee[] {
+    const fees = new Map<number, PersonalisationFieldFee>();
+    for (const fields of Object.values(bundle.personalisation ?? {})) {
+        for (const field of fields) if (field.fee) fees.set(field.fee.feeOptionId, field.fee);
+    }
+    return [...fees.values()];
+}
+
+/**
+ * The hidden product Kitenzo keeps for a fee option, as the theme's cart knows it: titled with the
+ * option's name, one default variant at the fee's amount, never sold out, with no photograph.
+ */
+function feeProduct(fee: PersonalisationFieldFee): RawProduct {
+    return {
+        descriptionHtml: `Personalisation fee: ${fee.name}`,
+        handle: `personalisation-fee-${fee.feeOptionId}`,
+        imageUrl: '',
+        images: [],
+        options: [],
+        shopifyProductGid: `gid://shopify/Product/${feeProductId(fee.feeOptionId)}`,
+        shopifyProductId: feeProductId(fee.feeOptionId),
+        status: 'ACTIVE',
+        tags: ['kitenzo-personalisation-fee'],
+        title: fee.name,
+        variants: [
+            {
+                available: true,
+                compareAtPrice: null,
+                grams: 0,
+                inventoryQuantity: 0,
+                maxOrderableQuantity: null,
+                optionValues: [],
+                price: fee.amount,
+                shopifyVariantGid: `gid://shopify/ProductVariant/${fee.variantId}`,
+                shopifyVariantId: String(fee.variantId),
+                sku: '',
+                title: 'Default Title',
+            },
+        ],
+    };
+}
+
+/**
+ * The bundle as `GET /bundles/:id` sends it. A fee is resolved for a native bundle only: the other
+ * types add no fee line, so a fee shown on one would be promised and never charged. The field
+ * keeps its `feeOptionId` either way.
+ */
+function withResolvedFees(bundle: RawBundle): RawBundle {
+    if (bundle.type === 'native' || !bundle.personalisation) return bundle;
+    return {
+        ...bundle,
+        personalisation: Object.fromEntries(
+            Object.entries(bundle.personalisation).map(([productId, fields]) => [productId, fields.map((field) => ({ ...field, fee: null }))]),
+        ),
+    };
 }
 
 export interface BackendOptions {
@@ -199,11 +295,8 @@ function toBundleDetail(fixture: Fixture): BundleDetail {
         })),
         requiredProducts: bundle.requiredProducts.map((entry) => {
             const raw = byId.get(entry.shopifyProductId);
-            const product = raw ? toProduct(raw, entry.variantIds) : undefined;
-            // The real engine reads an empty list as "any variant". The SDK's own check does not
-            // (guides/known-issues.md), so the mock lists them, or it would refuse every bundle
-            // with a required product.
-            return { ...entry, variantIds: entry.variantIds.length ? entry.variantIds : (product?.variants.map((variant) => variant.id) ?? []), product };
+            // An empty `variantIds` means "any variant", to the engine and to the SDK alike.
+            return { ...entry, product: raw ? toProduct(raw, entry.variantIds) : undefined };
         }),
     };
 }
@@ -215,11 +308,25 @@ export function createMockBackend(options: BackendOptions): MockBackend {
     const requests: MockRequest[] = [];
     const fixtures = new Map(options.fixtures.map((fixture) => [fixture.bundle.id, fixture]));
 
+    // A test that names no B runs against a copy of A, served like any other bundle of the shop.
+    const test = behaviour.abTest;
+    const entry = options.fixtures[0];
+    const bundleA = entry?.bundle.id;
+    const bundleB = test && bundleA !== undefined ? variantBundleId(bundleA) : undefined;
+    if (entry && bundleB !== undefined && !fixtures.has(bundleB)) {
+        fixtures.set(bundleB, { ...entry, bundle: { ...entry.bundle, id: bundleB } });
+    }
+
     // Every variant any bundle offers, so the cart can describe a line and refuse a sold-out one.
     const variants = new Map<string, { product: RawProduct; variant: RawProduct['variants'][number] }>();
-    for (const fixture of options.fixtures) {
+    for (const fixture of fixtures.values()) {
         for (const product of fixture.products) {
             for (const variant of product.variants) variants.set(variant.shopifyVariantId, { product, variant });
+        }
+        // A fee is a line for a product in no step, which the cart has to know like any other.
+        for (const fee of feesOf(withResolvedFees(fixture.bundle))) {
+            const product = feeProduct(fee);
+            variants.set(String(fee.variantId), { product, variant: product.variants[0]! });
         }
     }
     // The bundle's own Shopify product, which a native bundle's lines group under.
@@ -232,16 +339,76 @@ export function createMockBackend(options: BackendOptions): MockBackend {
 
     const changed = () => options.onChange?.(state);
 
+    /**
+     * The A/B fields for one bundle request, decided the way Kitenzo's routing decides them.
+     *
+     * Only A is an entry point. A shopper who reaches B is in the test only when their browser
+     * remembers being sent there by it (`ab_routed`) and their assignment agrees. A request with
+     * no `visitor_id` is from a client that takes no part. `ab_bypass` is the merchant looking
+     * from the admin: nobody is enrolled or redirected.
+     */
+    function routing(bundleId: number, query: Record<string, string>): ABTestFields {
+        if (!test || bundleA === undefined || bundleB === undefined) return {};
+        const visitorId = query.visitor_id || undefined;
+        const bypass = query.ab_bypass === 'true';
+        const assigned = test.assigned === 'a' ? bundleA : bundleB;
+
+        if (bundleId !== bundleA) {
+            const remembered = (query.ab_routed ?? '').split(',').filter((part) => /^\d+$/.test(part.trim())).map(Number);
+            if (bypass || !visitorId || bundleId !== bundleB || assigned !== bundleB || !remembered.includes(test.id)) return {};
+            return { abTestRouted: true, abTestVisitorId: visitorId, abTestBundleId: bundleId, abTestId: test.id };
+        }
+
+        if (bypass || !visitorId) return {};
+        const redirects = assigned !== bundleA;
+        // B's page could not show an unpublished B, so the shopper stays on A, outside the test.
+        if (redirects && !fixtures.get(bundleB)?.bundle.published) return {};
+        return {
+            abTestRouted: true as const,
+            abTestVisitorId: visitorId,
+            abTestBundleId: bundleId,
+            abTestId: test.id,
+            ...(redirects ? { abTestRedirectTo: test.pageB ?? variantPage(bundleB), abTestRedirectBundleId: bundleB } : {}),
+        };
+    }
+
+    /**
+     * `POST /ab-tests/impression`: count a shopper for the variant they saw, once. The assignment
+     * is worked out again here, because the key is public and a claim alone could pad either arm.
+     * A bundle in no running test is an ordinary answer (`recorded: false`), not an error.
+     */
+    function impression(request: MockRequest): MockResponse {
+        if (request.method !== 'POST') return fail(405, { detail: 'Method not allowed.' }, latency);
+        const body = (request.body ?? {}) as { bundleId?: unknown; visitorId?: unknown };
+        const asked = body.bundleId;
+        const bundleId = typeof asked === 'number' ? asked : typeof asked === 'string' && /^\s*-?\d+\s*$/.test(asked) ? Number(asked) : NaN;
+        if (!Number.isInteger(bundleId)) return fail(400, { detail: 'bundleId must be a number.' }, latency);
+        const visitorId = typeof body.visitorId === 'string' ? body.visitorId.trim() : '';
+        if (!visitorId) return fail(400, { detail: 'visitorId is required.' }, latency);
+        if (!fixtures.has(bundleId)) return fail(404, { detail: 'Not found.' }, latency);
+
+        const assigned = test?.assigned === 'a' ? bundleA : bundleB;
+        if (!test || bundleId !== assigned) return ok({ recorded: false, newVisitor: false }, latency);
+        const seen = state.visitors.some((visitor) => visitor.testId === test.id && visitor.bundleId === bundleId && visitor.visitorId === visitorId);
+        if (!seen) {
+            state.visitors.push({ testId: test.id, bundleId, visitorId });
+            changed();
+        }
+        return ok({ recorded: true, newVisitor: !seen }, latency);
+    }
+
     function api(path: string, request: MockRequest): MockResponse {
         if (path === '/settings') {
             if (behaviour.settingsFailure) return fail(500, { error: 'Internal server error.' }, latency);
             return ok(settingsFor(options.fixtures[0]), latency);
         }
 
+        if (path === '/ab-tests/impression') return impression(request);
+
         const match = /^\/bundles\/(\d+)(\/products|\/configure|\/price)?$/.exec(path);
         if (path === '/bundles') {
             return ok(
-                options.fixtures
+                [...fixtures.values()]
                     .filter((fixture) => fixture.bundle.published)
                     .map(({ bundle }) => ({
                         id: bundle.id,
@@ -271,7 +438,7 @@ export function createMockBackend(options: BackendOptions): MockBackend {
             if (!fixture || (!fixture.bundle.published && request.query.preview !== '1')) {
                 return fail(404, { error: 'Bundle not found.' }, latency);
             }
-            if (tail === '') return ok(fixture.bundle, latency);
+            if (tail === '') return ok({ ...withResolvedFees(fixture.bundle), ...routing(bundleId, request.query) }, latency);
             const market = behaviour.market;
             const country = request.query.countryCode;
             const products = market && country === market.countryCode ? inMarket(fixture.products, market) : fixture.products;

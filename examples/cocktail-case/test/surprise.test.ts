@@ -1,28 +1,36 @@
 import { describe, expect, it } from 'vitest';
 
-import type { SectionSelections } from '@kitenzo/core';
+import { createBundleBuilder, type SectionSelections } from '@kitenzo/core';
 
 import { DEFAULT_CONTENT } from '../src/content';
-import { parseFacetDefs, type ActiveFacets } from '../src/facets';
+import { indexFacets, parseFacetDefs, type ActiveFacets } from '../src/facets';
 import { toViewModel } from '../src/model';
-import { withRequiredVariantIds } from '../src/sdkFixes';
-import { exactSizes, nextCaseSize, planSurprise, sectionRoom, seededRandom, surpriseCandidates, type Candidate } from '../src/surprise';
-import { tierLadder } from '../src/tiers';
+import { nextCaseSize, planSurprise, seededRandom, surpriseCandidates, type SurprisePick } from '../src/surprise';
+import { ladderRungs } from '../src/tiers';
 import { load, withProduct } from './support';
 
-const facetDefs = parseFacetDefs(DEFAULT_CONTENT.facets);
-
-async function setUp() {
-    const { bundle, settings } = await load();
-    const model = toViewModel(withRequiredVariantIds(bundle), { settings });
+async function setUp(change?: Parameters<typeof load>[0]) {
+    const { bundle, settings } = await load(change);
+    const model = toViewModel(bundle, settings);
     const cans = model.sections[0]!;
     const product = (handle: string) => cans.products.find((entry) => entry.handle === handle)!;
-    const candidates = (selections: SectionSelections, activeFacets: ActiveFacets = {}) =>
-        surpriseCandidates({ model, selections, hiddenSectionIds: [], hiddenProducts: [], facetDefs, activeFacets });
-    return { model, cans, product, candidates };
+    const facets = indexFacets(cans.products, parseFacetDefs(DEFAULT_CONTENT.facets));
+    const candidates = (activeFacets: ActiveFacets = {}) => surpriseCandidates(model, facets, activeFacets);
+    /** The size "Surprise me" fills to from a case of `count`, with the SDK's own progress for that case. */
+    const sizeFrom = (count: number, rungs = ladderRungs(bundle).map((rung) => rung.count)) => {
+        const builder = createBundleBuilder(bundle);
+        builder.addItem(cans.id, product('passionfruit-mojito').variants[0]!.id, count);
+        const { progress, isSatisfied } = builder.getState();
+        expect(progress.quantity).toBe(count);
+        return { size: nextCaseSize(progress, model.bundleLimits, rungs), isSatisfied };
+    };
+    /** Whether the rules accept a case of `count`: the SDK's answer. */
+    const accepts = (count: number | null) => count !== null && sizeFrom(count).isSatisfied;
+    return { bundle, model, cans, product, candidates, sizeFrom, accepts };
 }
 
-const quantityOf = (plan: ReturnType<typeof planSurprise>, variantId: string) => plan.picks.filter((pick) => pick.variantId === variantId).reduce((sum, pick) => sum + pick.quantity, 0);
+const total = (plan: SurprisePick[]) => plan.reduce((sum, pick) => sum + pick.quantity, 0);
+const quantityOf = (plan: SurprisePick[], variantId: string) => total(plan.filter((pick) => pick.variantId === variantId));
 
 describe('seededRandom', () => {
     it('is the same sequence for the same seed, and a different one for another', () => {
@@ -38,68 +46,60 @@ describe('seededRandom', () => {
 
 describe('nextCaseSize', () => {
     it('fills to the next stop: the minimum, each discount rung, the maximum', async () => {
-        const { model } = await setUp();
-        const size = (count: number) => nextCaseSize(count, model.bundleLimits, tierLadder(model.bundle.discount, count), exactSizes(model.bundle));
-        expect([0, 4, 6, 7, 11, 12, 23].map(size)).toEqual([6, 6, 12, 12, 12, 24, 24]);
-        expect(size(24)).toBeNull();
+        const { sizeFrom } = await setUp();
+        expect([0, 4, 6, 7, 11, 12, 23].map((count) => sizeFrom(count).size)).toEqual([6, 6, 12, 12, 12, 24, 24]);
+        expect(sizeFrom(24).size).toBeNull();
     });
 
     it('with no tiers, fills to the minimum, then the maximum', () => {
-        expect(nextCaseSize(2, { min: 6, max: 24, isRequired: true }, null, [])).toBe(6);
-        expect(nextCaseSize(6, { min: 6, max: 24, isRequired: true }, null, [])).toBe(24);
-        expect(nextCaseSize(6, { min: 6, max: Number.POSITIVE_INFINITY, isRequired: true }, null, [])).toBeNull();
+        expect(nextCaseSize({ quantity: 2, missing: 4 }, { min: 6, max: 24, isRequired: true }, [])).toBe(6);
+        expect(nextCaseSize({ quantity: 6, missing: 0 }, { min: 6, max: 24, isRequired: true }, [])).toBe(24);
+        expect(nextCaseSize({ quantity: 6, missing: 0 }, { min: 6, max: null, isRequired: true }, [])).toBeNull();
     });
 
     it('with exact sizes ("6, 12 or 24"), only ever fills to one of them', async () => {
-        const { bundle } = await load((fixture) => ({
+        const { model, sizeFrom } = await setUp((fixture) => ({
             ...fixture,
             bundle: {
                 ...fixture.bundle,
-                discount: null,
                 limitRules: [6, 12, 24].map((value) => ({ operation: 'eq' as const, sectionId: null, type: 'total-number-of-products' as const, value: `${value}.00` })),
             },
         }));
-        const exact = exactSizes(bundle);
-        expect(exact).toEqual([6, 12, 24]);
-        expect(nextCaseSize(8, { min: 6, max: 24, isRequired: true }, null, exact)).toBe(12);
-        expect(nextCaseSize(12, { min: 6, max: 24, isRequired: true }, null, exact)).toBe(24);
+        expect(model.bundleLimits.allowedCounts).toEqual([6, 12, 24]);
+        // A rung at 10 is not a size the rules allow, so it is never a stop.
+        expect([8, 12, 24].map((count) => sizeFrom(count, [10]).size)).toEqual([12, 24, null]);
+    });
+
+    it('sold in packs of 6 with a tier at 10, never fills to 10: every size it names is one the rules accept', async () => {
+        const { model, sizeFrom, accepts } = await setUp((fixture) => ({
+            ...fixture,
+            bundle: {
+                ...fixture.bundle,
+                limitRules: [...fixture.bundle.limitRules, { operation: 'eq', sectionId: null, type: 'multiples-of', value: '6.00' }],
+                discount: { ...fixture.bundle.discount!, tiers: [...fixture.bundle.discount!.tiers.slice(0, 1), { customText: null, discount: '8.00', operation: 'gte', type: 'total_products', value: '10.00' }] },
+            },
+        }));
+        expect(model.bundleLimits.multipleOf).toBe(6);
+        expect(ladderRungs(model.bundle).map((rung) => rung.count)).toEqual([6, 10]);
+        // From a whole pack, the rung at 10 is dropped. From a part pack, the SDK's next whole one.
+        expect([0, 6, 7, 10, 12].map((count) => sizeFrom(count).size)).toEqual([6, 24, 12, 12, 24]);
+        for (let count = 0; count < 24; count += 1) expect(accepts(sizeFrom(count).size), `from ${count}`).toBe(true);
     });
 });
 
 describe('surpriseCandidates', () => {
-    it('leaves out the sold-out can and a can at its stock ceiling', async () => {
-        const { cans, product, candidates } = await setUp();
-        const ids = (list: Candidate[]) => list.map((candidate) => candidate.productId);
-        const fresh = candidates({});
-        expect(ids(fresh)).not.toContain(product('watermelon-basil').id);
-        expect(fresh.find((candidate) => candidate.productId === product('spicy-pineapple-marg').id)?.room).toBe(4);
-
-        const spicy = product('spicy-pineapple-marg').variants[0]!.id;
-        expect(candidates({ [cans.id]: [{ variantId: spicy, quantity: 3 }] }).find((candidate) => candidate.variantId === spicy)?.room).toBe(1);
-        expect(ids(candidates({ [cans.id]: [{ variantId: spicy, quantity: 4 }] }))).not.toContain(product('spicy-pineapple-marg').id);
-    });
-
-    it('leaves out an unavailable can even when nothing counts its stock', async () => {
-        // Unavailable in this market, say, with `maxOrderableQuantity: null`: stock says "no limit",
-        // availability says no. Availability wins.
-        const { bundle, settings } = await load((fixture) =>
-            withProduct(fixture, 'pear-cardamom', (entry) => ({ ...entry, variants: entry.variants.map((variant) => ({ ...variant, available: false, maxOrderableQuantity: null })) })),
-        );
-        const model = toViewModel(bundle, { settings });
-        const pear = model.sections[0]!.products.find((entry) => entry.handle === 'pear-cardamom')!;
-        const list = surpriseCandidates({ model, selections: {}, hiddenSectionIds: [], hiddenProducts: [], facetDefs, activeFacets: {} });
-        expect(list.map((candidate) => candidate.productId)).not.toContain(pear.id);
-    });
-
-    it('leaves out a can the conditions engine hides', async () => {
-        const { model, product } = await setUp();
-        const hidden = surpriseCandidates({ model, selections: {}, hiddenSectionIds: [], hiddenProducts: [{ productId: product('pear-cardamom').id, sectionId: null }], facetDefs, activeFacets: {} });
-        expect(hidden.map((candidate) => candidate.productId)).not.toContain(product('pear-cardamom').id);
+    it('offers every can the page shows, and none the conditions engine has taken out of the model', async () => {
+        const { bundle, model, product, candidates } = await setUp();
+        expect(candidates()).toHaveLength(model.sections[0]!.products.length);
+        const { settings } = await load();
+        const pear = product('pear-cardamom').id;
+        const hidden = toViewModel(bundle, settings, { hiddenSectionIds: [], hiddenProducts: [{ productId: pear, sectionId: null }] });
+        expect(surpriseCandidates(hidden, indexFacets([], []), {}).map((candidate) => candidate.productId)).not.toContain(pear);
     });
 
     it('weighs a can by how many active filters it matches', async () => {
         const { product, candidates } = await setUp();
-        const weights = candidates({}, { Flavor_: ['citrus'], Strength_: ['light'] });
+        const weights = candidates({ Flavor_: ['citrus'], Strength_: ['light'] });
         const weight = (handle: string) => weights.find((candidate) => candidate.productId === product(handle).id)!.weight;
         expect(weight('yuzu-elderflower')).toBe(9);
         expect(weight('grapefruit-rosemary')).toBe(5);
@@ -109,69 +109,102 @@ describe('surpriseCandidates', () => {
 
 describe('planSurprise', () => {
     it('is deterministic per seed and fills exactly what was asked', async () => {
-        const { model, candidates } = await setUp();
-        const room = sectionRoom(model, {});
-        const plan = planSurprise(candidates({}), 6, room, 7);
-        expect(planSurprise(candidates({}), 6, room, 7)).toEqual(plan);
-        expect(plan.added).toBe(6);
-        expect(plan.short).toBe(0);
-        expect(plan.picks.reduce((sum, pick) => sum + pick.quantity, 0)).toBe(6);
+        const { bundle, candidates } = await setUp();
+        const plan = planSurprise(bundle, {}, candidates(), 6, 7);
+        expect(planSurprise(bundle, {}, candidates(), 6, 7)).toEqual(plan);
+        expect(planSurprise(bundle, {}, candidates(), 6, 8)).not.toEqual(plan);
+        expect(total(plan)).toBe(6);
+    });
+
+    it('never draws the sold-out can, whatever the seed', async () => {
+        const { bundle, product, candidates } = await setUp();
+        const watermelon = product('watermelon-basil').variants[0]!.id;
+        const loaded = candidates().map((candidate) => ({ ...candidate, weight: candidate.productId === product('watermelon-basil').id ? 1000 : 1 }));
+        for (let seed = 1; seed <= 50; seed += 1) {
+            const plan = planSurprise(bundle, {}, loaded, 12, seed);
+            expect(quantityOf(plan, watermelon)).toBe(0);
+            expect(total(plan)).toBe(12);
+        }
+    });
+
+    it('never draws a can that cannot be bought, even when nothing counts its stock', async () => {
+        // Unavailable in this market, say, with `maxOrderableQuantity: null`: stock says "no limit",
+        // availability says no. Availability wins.
+        const { bundle, product, candidates } = await setUp((fixture) =>
+            withProduct(fixture, 'pear-cardamom', (entry) => ({ ...entry, variants: entry.variants.map((variant) => ({ ...variant, available: false, maxOrderableQuantity: null })) })),
+        );
+        const pear = product('pear-cardamom').variants[0]!.id;
+        for (let seed = 1; seed <= 50; seed += 1) expect(quantityOf(planSurprise(bundle, {}, candidates(), 12, seed), pear)).toBe(0);
     });
 
     it('never puts in more than stock allows, whatever the seed', async () => {
-        const { cans, model, product, candidates } = await setUp();
-        const spicy = product('spicy-pineapple-marg').variants[0]!.id;
-        const selections = { [cans.id]: [{ variantId: spicy, quantity: 3 }] };
-        // Spicy is the only can with weight here, so every draw wants it; only one more fits.
-        const only = candidates(selections).map((candidate) => ({ ...candidate, weight: candidate.variantId === spicy ? 1000 : 1 }));
+        const { bundle, cans, product, candidates } = await setUp();
+        const spicy = product('spicy-pineapple-marg').variants[0]!.id; // stock 4 in the catalogue
+        const selections: SectionSelections = { [cans.id]: [{ variantId: spicy, quantity: 3 }] };
+        // Spicy carries nearly all the weight here, so every draw wants it; only one more fits.
+        const only = candidates().map((candidate) => ({ ...candidate, weight: candidate.productId === product('spicy-pineapple-marg').id ? 1000 : 1 }));
         for (let seed = 1; seed <= 50; seed += 1) {
-            expect(quantityOf(planSurprise(only, 12, sectionRoom(model, selections), seed), spicy)).toBeLessThanOrEqual(1);
+            const plan = planSurprise(bundle, selections, only, 12, seed);
+            expect(quantityOf(plan, spicy)).toBe(1);
+            expect(total(plan)).toBe(12);
         }
     });
 
-    it('reports what it could not place when stock runs out', () => {
-        const scarce: Candidate[] = [
-            { sectionId: 1, variantId: 'a', productId: 'A', room: 2, weight: 1 },
-            { sectionId: 1, variantId: 'b', productId: 'B', room: 1, weight: 1 },
-        ];
-        expect(planSurprise(scarce, 6, { 1: Number.POSITIVE_INFINITY }, 3)).toMatchObject({ added: 3, short: 3 });
-        expect(planSurprise([], 6, { 1: 10 }, 3)).toEqual({ picks: [], added: 0, short: 6 });
+    it('never plans more than the case holds, and plans short when room or stock runs out', async () => {
+        const { bundle, cans, product, candidates } = await setUp();
+        const selections: SectionSelections = { [cans.id]: [{ variantId: product('passionfruit-mojito').variants[0]!.id, quantity: 20 }] };
+        expect(total(planSurprise(bundle, selections, candidates(), 10, 3))).toBe(4);
+        expect(planSurprise(bundle, {}, [], 6, 3)).toEqual([]);
+        const scarce = candidates().filter((candidate) => candidate.productId === product('spicy-pineapple-marg').id);
+        expect(planSurprise(bundle, {}, scarce, 6, 3)).toEqual([{ sectionId: cans.id, variantId: product('spicy-pineapple-marg').variants[0]!.id, quantity: 4 }]);
     });
 
-    it('respects a step\'s own maximum', () => {
-        const pool: Candidate[] = [
-            { sectionId: 1, variantId: 'a', productId: 'A', room: Number.POSITIVE_INFINITY, weight: 1 },
-            { sectionId: 2, variantId: 'b', productId: 'B', room: Number.POSITIVE_INFINITY, weight: 1 },
-        ];
-        const plan = planSurprise(pool, 10, { 1: 2, 2: Number.POSITIVE_INFINITY }, 11);
-        expect(quantityOf(plan, 'a')).toBeLessThanOrEqual(2);
-        expect(plan.added).toBe(10);
+    it('respects a cap on one product ("at most 2 of each")', async () => {
+        const { bundle, candidates } = await setUp((fixture) => ({
+            ...fixture,
+            bundle: { ...fixture.bundle, limitRules: [...fixture.bundle.limitRules, { operation: 'lte', sectionId: null, type: 'amount-of-one-product', value: '2.00' }] },
+        }));
+        for (let seed = 1; seed <= 20; seed += 1) {
+            const plan = planSurprise(bundle, {}, candidates(), 12, seed);
+            expect(total(plan)).toBe(12);
+            expect(Math.max(...plan.map((pick) => pick.quantity))).toBeLessThanOrEqual(2);
+        }
+    });
+
+    it('plans only what the builder then takes, can for can', async () => {
+        const { bundle, cans, product, candidates } = await setUp();
+        const start: SectionSelections = { [cans.id]: [{ variantId: product('spicy-pineapple-marg').variants[0]!.id, quantity: 2 }] };
+        for (let seed = 1; seed <= 20; seed += 1) {
+            const plan = planSurprise(bundle, start, candidates(), 22, seed);
+            const builder = createBundleBuilder(bundle, { initialSelections: start });
+            for (const pick of plan) expect(builder.addItem(pick.sectionId, pick.variantId, pick.quantity)).toBe(pick.quantity);
+            expect(builder.getState().progress.quantity).toBe(24);
+        }
     });
 
     it('leans toward the active filters without excluding the rest', async () => {
-        const { model, product, candidates } = await setUp();
+        const { bundle, product, candidates } = await setUp();
         const active = { Flavor_: ['citrus'] };
         const citrus = new Set(['grapefruit-rosemary', 'cucumber-lime-tonic', 'blood-orange-bitters', 'yuzu-elderflower'].map((handle) => product(handle).variants[0]!.id));
         let matching = 0;
-        let total = 0;
-        let others = 0;
+        let drawn = 0;
         for (let seed = 1; seed <= 200; seed += 1) {
-            const plan = planSurprise(candidates({}, active), 6, sectionRoom(model, {}), seed);
-            for (const pick of plan.picks) {
-                total += pick.quantity;
+            for (const pick of planSurprise(bundle, {}, candidates(active), 6, seed)) {
+                drawn += pick.quantity;
                 if (citrus.has(pick.variantId)) matching += pick.quantity;
-                else others += pick.quantity;
             }
         }
         // 4 citrus cans at weight 5 against 5 others at weight 1: well over half the cans are citrus.
-        expect(matching / total).toBeGreaterThan(0.6);
-        expect(others).toBeGreaterThan(0);
+        expect(matching / drawn).toBeGreaterThan(0.6);
+        expect(drawn - matching).toBeGreaterThan(0);
     });
 
     it('mixes the case rather than stacking one can', async () => {
-        const { model, candidates } = await setUp();
+        const { bundle, candidates } = await setUp();
         let distinct = 0;
-        for (let seed = 1; seed <= 100; seed += 1) distinct += planSurprise(candidates({}), 6, sectionRoom(model, {}), seed).picks.length;
-        expect(distinct / 100).toBeGreaterThan(4);
+        for (let seed = 1; seed <= 100; seed += 1) distinct += planSurprise(bundle, {}, candidates(), 6, seed).length;
+        // Six cans drawn evenly from the nine in stock come out as about 4.6 kinds. Each draw makes
+        // the drawn can less likely, which is what lifts it to 5.
+        expect(distinct / 100).toBeGreaterThan(4.8);
     });
 });

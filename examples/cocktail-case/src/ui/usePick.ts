@@ -6,12 +6,12 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { defaultOptionValues, reachableOptionValues, resolveVariant, selectOptionValue, type BundleVariant, type OptionSelection } from '@kitenzo/react';
+import { defaultOptionValues, isVariantBuyable, reachableOptionValues, resolveVariant, selectOptionValue, type AddBlockedReason, type BundleVariant, type OptionSelection } from '@kitenzo/react';
 
 import { text } from '../content';
 import type { ViewProduct, ViewSection } from '../model';
-import { blockedReason, type Blocked } from '../selection';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
+import { blockedText } from './copy';
 
 export interface OptionControl {
     name: string;
@@ -27,7 +27,8 @@ export interface Pick {
     setVariant: (variantId: string) => void;
     variant: BundleVariant;
     quantity: number;
-    blocked: Blocked | null;
+    /** Why one more of this variant will not go into this step, from the SDK, or null when it will. */
+    blocked: AddBlockedReason | null;
     /** A sentence for the shopper when something is refused or limited, else null. */
     message: string | null;
     add: () => void;
@@ -40,12 +41,13 @@ function matches(variant: BundleVariant, product: ViewProduct['product'], values
 }
 
 export function usePick(product: ViewProduct, section: ViewSection): Pick {
-    const { model, selection, content, locked } = useBuilder();
+    const { content, addItem, updateQuantity, blockedReason } = useBuilder();
+    const { selections, locked } = useSelection();
     const options = product.product.options ?? [];
     const hasOptionData = options.length > 0 && product.variants.every((variant) => (variant.optionValues?.length ?? 0) === options.length);
 
     const [values, setValues] = useState<OptionSelection>(() => (hasOptionData ? defaultOptionValues(product.product) : {}));
-    const [variantId, setVariantId] = useState<string>(() => (product.variants.find((variant) => variant.available) ?? product.variants[0]!).id);
+    const [variantId, setVariantId] = useState<string>(() => (product.variants.find(isVariantBuyable) ?? product.variants[0]!).id);
     const [refusal, setRefusal] = useState<string | null>(null);
     const timer = useRef<number>();
     useEffect(() => () => window.clearTimeout(timer.current), []);
@@ -61,8 +63,8 @@ export function usePick(product: ViewProduct, section: ViewSection): Pick {
         );
     }, [hasOptionData, product, values, variantId]);
 
-    const quantity = (selection.selections[section.id] ?? []).find((pick) => pick.variantId === variant.id)?.quantity ?? 0;
-    const blocked = blockedReason(model, selection.selections, section, variant);
+    const quantity = (selections[section.id] ?? []).find((pick) => pick.variantId === variant.id)?.quantity ?? 0;
+    const blocked = blockedReason(section.id, variant.id);
 
     const refuse = useCallback((message: string) => {
         setRefusal(message);
@@ -70,37 +72,25 @@ export function usePick(product: ViewProduct, section: ViewSection): Pick {
         timer.current = window.setTimeout(() => setRefusal(null), 5000);
     }, []);
 
-    const reasonText = (reason: Blocked): string => {
-        switch (reason) {
-            case 'sold-out':
-                return text(content, 'soldOut');
-            case 'stock':
-                return text(content, 'stockReached');
-            case 'step-full':
-                return text(content, 'stepFull');
-            case 'bundle-full':
-                return text(content, 'bundleFull');
-        }
-    };
-
     const add = useCallback(() => {
         if (locked) return;
         if (blocked) {
-            refuse(reasonText(blocked));
+            refuse(blockedText(content, blocked));
             return;
         }
         setRefusal(null);
-        selection.builder.addItem(section.id, variant.id, 1);
-    }, [locked, blocked, refuse, selection.builder, section.id, variant.id]);
+        addItem(section.id, variant.id, 1);
+    }, [locked, blocked, refuse, content, addItem, section.id, variant.id]);
 
     const remove = useCallback(() => {
         if (locked || quantity === 0) return;
         setRefusal(null);
-        selection.builder.updateQuantity(section.id, variant.id, quantity - 1);
-    }, [locked, quantity, selection.builder, section.id, variant.id]);
+        updateQuantity(section.id, variant.id, quantity - 1);
+    }, [locked, quantity, updateQuantity, section.id, variant.id]);
 
+    // How low is low is the merchant's setting. A buyable variant has stock, so 0 never matches.
     const stock = variant.maxOrderableQuantity;
-    const lowStock = variant.available && stock !== null && stock !== undefined && stock > 0 && stock <= 5;
+    const lowStock = isVariantBuyable(variant) && stock !== null && stock !== undefined && stock <= content.lowStockAt;
     const message = refusal ?? (lowStock ? text(content, 'onlyLeft', { count: stock }) : null);
 
     return {

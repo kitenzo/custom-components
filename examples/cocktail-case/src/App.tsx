@@ -5,14 +5,12 @@
  * always sees a sentence or a loading state inside the widget, never a blank space, and the
  * merchant in the theme editor sees what to fix.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 
-import { KitenzoError, KitenzoProvider, readRecurringSubscriptionId, useBundle, useBundleEdit, useKitenzo, useSettings, type BundleDetail, type ShopSettings } from '@kitenzo/react';
+import { KitenzoError, KitenzoProvider, readRecurringSubscriptionId, useBundle, useBundleEdit, useSettingsState, type BundleDetail } from '@kitenzo/react';
 
 import { keyProblem, type MountConfig } from './config';
 import { text } from './content';
-import { toViewModel } from './model';
-import { withRequiredVariantIds } from './sdkFixes';
 import { isThemeEditor } from './themeEditor';
 import { Builder } from './ui/Builder';
 import { ErrorState, Loading } from './ui/Notice';
@@ -59,8 +57,8 @@ function BundleLoader({ bundleId, config, editor }: { bundleId: number; config: 
     // that id, the bundle carries the subscription, and `useRecurringPlan` turns it into a reorder
     // at the member price. Read once: the URL does not change under a mounted widget.
     const [subscriptionId] = useState(() => readRecurringSubscriptionId());
-    // From the SDK release after 0.9.0, useBundle also runs Kitenzo's A/B tests: it may redirect this shopper to the other
-    // variant's page, keeping isLoading true while it does. Keep rendering the loading state.
+    // useBundle also runs Kitenzo's A/B tests: it may redirect this shopper to the other variant's
+    // page, keeping isLoading true while it does. Keep rendering the loading state.
     const { bundle, isLoading, error } = useBundle(bundleId, { subscriptionId });
 
     if (error) {
@@ -85,48 +83,17 @@ function BundleLoader({ bundleId, config, editor }: { bundleId: number; config: 
         );
     }
     if (isLoading || !bundle) return <Loading />;
-    return <BundleWithEdit loaded={bundle} config={config} editor={editor} subscriptionId={subscriptionId} />;
+    return <BundleWithEdit bundle={bundle} config={config} editor={editor} subscriptionId={subscriptionId} />;
 }
 
-/**
- * The shop's settings, or a failure.
- *
- * The provider fetches them once on mount and stays quiet if that fails, leaving `useSettings()`
- * null forever: a widget that waits for it would spin for good. So after a few seconds without
- * them, ask once more, and report a failure if that fails too.
- */
-function useShopSettings(): { settings: ShopSettings | null; failed: boolean } {
-    const provided = useSettings();
-    const client = useKitenzo();
-    const [fetched, setFetched] = useState<ShopSettings | null>(null);
-    const [failed, setFailed] = useState(false);
-    useEffect(() => {
-        if (provided) return undefined;
-        let cancelled = false;
-        const timer = window.setTimeout(() => {
-            client.getSettings().then(
-                (settings) => !cancelled && setFetched(settings),
-                () => !cancelled && setFailed(true),
-            );
-        }, 4000);
-        return () => {
-            cancelled = true;
-            window.clearTimeout(timer);
-        };
-    }, [provided, client]);
-    return { settings: provided ?? fetched, failed: !provided && !fetched && failed };
-}
-
-function BundleWithEdit({ loaded, config, editor, subscriptionId }: { loaded: BundleDetail; config: MountConfig; editor: boolean; subscriptionId: string | null }) {
-    const bundle = useMemo(() => withRequiredVariantIds(loaded), [loaded]);
+function BundleWithEdit({ bundle, config, editor, subscriptionId }: { bundle: BundleDetail; config: MountConfig; editor: boolean; subscriptionId: string | null }) {
     const edit = useBundleEdit(bundle);
-    const { settings, failed } = useShopSettings();
-    // The model decides what is offered from the shop's settings (sold-out, drafts), so the
-    // builder waits for them rather than rendering once without and then rearranging itself.
-    const model = useMemo(() => (settings ? toViewModel(bundle, { settings }) : null), [bundle, settings]);
-    if (failed) {
+    // What is offered depends on the shop's settings (sold-out, drafts), so the builder waits for
+    // them rather than rendering once without and then rearranging itself.
+    const { settings, error } = useSettingsState();
+    if (error && !settings) {
         return <ErrorState editor={editor} message={text(config.content, 'loadFailed')} detail={<p>The shop's settings could not be loaded from Kitenzo, so prices cannot be shown in the shop's format.</p>} />;
     }
-    if (edit.isLoading || !model || !settings) return <Loading />;
-    return <Builder model={model} settings={settings} config={config} editor={editor} edit={edit} subscriptionId={subscriptionId} />;
+    if (edit.isLoading || !settings) return <Loading />;
+    return <Builder bundle={bundle} settings={settings} config={config} editor={editor} edit={edit} subscriptionId={subscriptionId} />;
 }

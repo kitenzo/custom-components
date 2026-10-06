@@ -11,9 +11,9 @@
  * and this script mounts a widget on every such element. Three things it gets right that a
  * plain "find the element and render into it" does not:
  *
- *   1. Mounted widgets live in a registry on `window`, not in this module. Every section on a page
- *      includes the script, so two sections load two copies of it, and a module-level set would
- *      start empty in the second copy and mount the first section twice.
+ *   1. Mounted widgets live in a registry on `window`, not in this module (`src/registry.ts`).
+ *      Every section on a page includes the script, so two sections load two copies of it, and a
+ *      module-level set would start empty in the second copy and mount the first section twice.
  *   2. It answers the theme editor's `shopify:section:load` / `shopify:section:unload`. The editor
  *      re-renders a section in place without re-running its scripts; without these the preview
  *      goes blank after every settings change.
@@ -23,20 +23,12 @@
  * Imports nothing from dev/: the mock backend and demo catalogue never reach a merchant's theme.
  */
 import { readMountConfig } from './config';
+import { registry } from './registry';
 import './styles.css';
-import { mountWidget, type Mounted } from './widget';
+import { mountWidget } from './widget';
 
 /** The mount attribute. `bun run rename` rewrites it with the rest of the store's names. */
 export const MOUNT_ATTR = 'data-vanilla-core-bundle';
-const GLOBAL = '__KITENZO_VANILLA_CORE__';
-
-interface Registry {
-    roots: Map<HTMLElement, Mounted>;
-    listening: boolean;
-}
-
-const host = window as unknown as Record<string, Registry | undefined>;
-const registry: Registry = (host[GLOBAL] ??= { roots: new Map(), listening: false });
 
 function mount(el: HTMLElement) {
     if (registry.roots.has(el)) return;

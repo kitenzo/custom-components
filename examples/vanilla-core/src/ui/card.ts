@@ -8,14 +8,13 @@
  */
 import { text } from '../content';
 import { h, setAttr, setText, show } from '../dom';
-import type { ViewProduct, ViewSection } from '../model';
+import type { ViewSection } from '../model';
 import type { Ctx } from './context';
 import { image } from './images';
 import { createControls, type Pick } from './pick';
 
 export interface Card {
     el: HTMLElement;
-    product: ViewProduct;
     update: () => void;
 }
 
@@ -52,5 +51,7 @@ export function createCard(ctx: Ctx, pick: Pick, section: ViewSection): Card {
         controls.update();
     };
     update();
-    return { el, product, update };
+    // An option or a refusal changes this card and no other.
+    pick.subscribe(update);
+    return { el, update };
 }

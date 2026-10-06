@@ -8,11 +8,15 @@
  *     the merchant every other string;
  *   - blank or whitespace-only text falls back to the default (a cleared field means "use the
  *     default", not "show nothing"), except where the setting says blank means "hide";
- *   - the defaults below are the same strings as the schema defaults in theme/, and
- *     test/content.test.ts fails if the two drift.
+ *   - a number that is not a whole number of zero or more is made one, so a count never reaches
+ *     the page negative or fractional;
+ *   - the defaults below are the same values as the schema defaults in theme/, and
+ *     test/theme.test.ts fails if the two drift.
  *
  * Copy may carry `{count}`, `{step}`, `{amount}` placeholders, filled by `fill`.
  */
+
+import type { BundleCartMessages } from '@kitenzo/react';
 
 export interface Content {
     /** Blank means "use the bundle's own name". */
@@ -32,6 +36,8 @@ export interface Content {
     soldOut: string;
     onlyLeft: string;
     stockReached: string;
+    variantLimit: string;
+    productLimit: string;
     included: string;
     summaryHeading: string;
     summaryEmpty: string;
@@ -46,9 +52,12 @@ export interface Content {
     editNotice: string;
     editMissing: string;
     notAllowed: string;
+    cartFailed: string;
     retryAdd: string;
     afterAdd: 'cart' | 'stay';
     hidePrices: boolean;
+    /** Stock at or below which a product says how many are left. 0 never says it. */
+    lowStockAt: number;
 }
 
 export const DEFAULT_CONTENT: Content = {
@@ -67,6 +76,8 @@ export const DEFAULT_CONTENT: Content = {
     soldOut: 'Sold out',
     onlyLeft: 'Only {count} left',
     stockReached: 'That is all we have of this one.',
+    variantLimit: 'That is the most of this one a bundle can hold.',
+    productLimit: 'That is the most of this product a bundle can hold.',
     included: 'Included',
     summaryHeading: 'Your bundle',
     summaryEmpty: 'Nothing chosen yet.',
@@ -81,9 +92,11 @@ export const DEFAULT_CONTENT: Content = {
     editNotice: 'You are editing a bundle from your cart. Adding it again replaces the one in your cart.',
     editMissing: 'Some items from your saved bundle are no longer available, so please choose again.',
     notAllowed: 'This combination cannot be bought as it is. Please change your selection.',
+    cartFailed: 'We could not add this to your cart. Please try again.',
     retryAdd: 'Press the button again to finish adding it; you will not be charged twice.',
     afterAdd: 'cart',
     hidePrices: false,
+    lowStockAt: 5,
 };
 
 type TextKey = { [K in keyof Content]: Content[K] extends string ? K : never }[keyof Content];
@@ -113,6 +126,8 @@ export function parseContent(raw: string | undefined): Content {
             if (typeof value === 'string' && value.trim() !== '') (content as unknown as Record<string, unknown>)[key] = value.trim();
         } else if (typeof fallback === 'boolean') {
             if (typeof value === 'boolean') (content as unknown as Record<string, unknown>)[key] = value;
+        } else if (typeof fallback === 'number') {
+            if (typeof value === 'number' && Number.isFinite(value)) (content as unknown as Record<string, unknown>)[key] = Math.max(0, Math.round(value));
         }
     }
     content.afterAdd = input.afterAdd === 'stay' ? 'stay' : 'cart';
@@ -127,4 +142,12 @@ export function fill(template: string, values: Record<string, string | number>):
 /** One string, filled. The one way a component reads copy. */
 export function text(content: Content, key: TextKey, values: Record<string, string | number> = {}): string {
     return fill(content[key], values);
+}
+
+/**
+ * The cart's own sentences, in the merchant's words. The store's reason for refusing a line
+ * ("sold out") is shown as the store sent it, in the storefront's language already.
+ */
+export function cartMessages(content: Content): BundleCartMessages {
+    return { 'configure-failed': content.cartFailed, 'cart-error': content.cartFailed };
 }

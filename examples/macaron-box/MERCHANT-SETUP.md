@@ -7,7 +7,7 @@ What has to be true in Kitenzo before the section can show a bundle. Do these on
 3. **Build the bundle in Kitenzo** as usual: its steps, products, limits, required products and discount. The section reads all of it; nothing about what to sell is set in the theme. For a box:
    - **Sizes:** on the step, one limit per box size, each **Total number of products** **equal to** the size (6, 12, 24). Several "equal to" limits on one step mean "any one of these", and each becomes a box card.
    - **Prices:** a **tiered** discount of type **Set price**, one tier per size, each "total products at least N". Tiers must apply the best match only, not add up (the bundle's discount operator is `max`, not `cumulative`): a box of 24 meets all three tiers, and adding them up would charge 6.50 + 12.00 + 22.00.
-   - **Stock:** track inventory on the products. A flavour with only a few left stops at that many, and "Fill the rest for me" never picks a sold-out flavour or more than you have.
+   - **Stock:** track inventory on the products. A flavour with only a few left stops at that many, and "Fill the rest for me" never picks a sold-out flavour or more than you have. A limit on one product ("at most 2 of each") is kept the same way.
 4. **Set the bundle's page.** In the bundle's settings, set its page to the product page the section is on. Kitenzo's A/B tests and the cart's "Edit" link both send shoppers there.
 5. **Check nothing else discounts these products.** A volume discount or automatic discount on the same products stacks with the bundle's own.
 

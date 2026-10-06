@@ -38,8 +38,13 @@ function render() {
             </tr>`,
         )
         .join('');
+    // On a store each bundle has a page of its own; the dev page chooses its bundle with `?bundle=`.
+    const pageOf = (configured: string) => {
+        const saved = state.saved.find((entry) => String(entry.configuredBundleId) === configured);
+        return saved ? `/?bundle=${saved.bundleId}&` : '/?';
+    };
     const editLinks = [...bundles.values()]
-        .map(({ configured, uid }) => `<li><a href="/?edit=${encodeURIComponent(configured)}&edit_uid=${encodeURIComponent(uid)}">Edit bundle ${escape(configured)}</a></li>`)
+        .map(({ configured, uid }) => `<li><a href="${pageOf(configured)}edit=${encodeURIComponent(configured)}&edit_uid=${encodeURIComponent(uid)}">Edit bundle ${escape(configured)}</a></li>`)
         .join('');
     const bundlesAttribute = state.cart.attributes._bundles;
     root.innerHTML = `

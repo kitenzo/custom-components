@@ -10,8 +10,8 @@ import { useRef } from 'react';
 import { useBundlePrice, type UseBundleCartFlowResult } from '@kitenzo/react';
 
 import { text } from '../content';
-import { countOf } from '../selection';
-import { useBuilder } from './context';
+import { pickedCount } from '../selection';
+import { useBuilder, useSelection } from './context';
 import { CloseIcon } from './Icons';
 import { imageAttrs } from './images';
 
@@ -25,12 +25,14 @@ export interface BuyState {
 }
 
 function PriceBlock({ compact = false }: { compact?: boolean }) {
-    const { model, selection, money, content } = useBuilder();
-    const price = useBundlePrice(model.bundle, selection.selections);
+    const { model, money, content } = useBuilder();
+    const { selections } = useSelection();
+    const price = useBundlePrice(model.bundle, selections, { locale: document.documentElement.lang || undefined });
     if (content.hidePrices || price.discountedPrice === null) return null;
-    const total = Number(price.discountedPrice);
-    const original = price.originalPrice === null ? null : Number(price.originalPrice);
-    const saving = original !== null && original > total ? original - total : 0;
+    // Before the first pick only a flat set price is known: a total, with nothing to compare it to.
+    const total = price.amounts?.discounted ?? Number(price.discountedPrice);
+    const original = price.hasDiscount ? (price.amounts?.original ?? null) : null;
+    const saving = price.hasDiscount ? (price.amounts?.saved ?? 0) : 0;
     return (
         <div className={`kst-price${compact ? ' kst-price--compact' : ''}`}>
             <span className="kst-price__label">{text(content, 'total')}</span>
@@ -89,12 +91,12 @@ function Status({ buy }: { buy: BuyState }) {
 }
 
 export function SummaryRail({ buy }: { buy: BuyState }) {
-    const { model, selection, content, locked } = useBuilder();
+    const { model, content, removeItem } = useBuilder();
+    const { selections, locked } = useSelection();
     const lines = model.sections.flatMap((section) =>
-        (selection.selections[section.id] ?? []).flatMap((pick) => {
-            const product = section.products.find((candidate) => candidate.variants.some((variant) => variant.id === pick.variantId));
-            const variant = product?.variants.find((candidate) => candidate.id === pick.variantId);
-            return product && variant ? [{ section, product, variant, quantity: pick.quantity }] : [];
+        (selections[section.id] ?? []).flatMap((pick) => {
+            const offered = section.byVariantId.get(pick.variantId);
+            return offered ? [{ section, ...offered, quantity: pick.quantity }] : [];
         }),
     );
 
@@ -133,7 +135,7 @@ export function SummaryRail({ buy }: { buy: BuyState }) {
                             aria-disabled={locked || undefined}
                             onClick={() => {
                                 if (locked) return;
-                                selection.builder.removeItem(section.id, variant.id);
+                                removeItem(section.id, variant.id);
                                 headingRef.current?.focus();
                             }}
                         >
@@ -150,11 +152,11 @@ export function SummaryRail({ buy }: { buy: BuyState }) {
 }
 
 export function MobileBar({ buy }: { buy: BuyState }) {
-    const { selection } = useBuilder();
+    const { progress } = useSelection();
     return (
         <div className="kst-mobile-bar" data-testid="cc-mobile-bar">
             <div className="kst-mobile-bar__info">
-                <span className="kst-mobile-bar__count">{countOf(selection.selections)}</span>
+                <span className="kst-mobile-bar__count">{pickedCount(progress)}</span>
                 <PriceBlock compact />
             </div>
             <BuyButton buy={buy} />

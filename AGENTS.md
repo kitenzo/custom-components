@@ -26,12 +26,12 @@ Every project (`starter/`, each `examples/<name>/`) is its own Bun project with 
 
 ```
 src/           the widget: embed.tsx (mount), App.tsx (load), model.ts (what to offer),
-               selection.ts (the builder), money.ts, content.ts (merchant copy), ui/
+               selection.ts (what is still missing), content.ts (merchant copy), ui/
 dev/           never shipped: the mock backend, scenarios, the demo catalogue, the dev page
 theme/         the Liquid section and the merchant's install guide
 test/          unit tests (vitest)
 e2e/           the conformance suite (Playwright) on the BUILT asset, on a hostile theme
-scripts/       rename, snapshot, package-embed
+scripts/       rename, snapshot, screenshots, package-embed
 ```
 
 ## Commands (run inside a project folder)
@@ -46,13 +46,14 @@ bun run verify         # all of the above; must be green before you say you are 
 bun run package:embed  # the install kit zip
 bun run rename -- --slug acme-tea --prefix act --brand "Acme Tea"   # make a copy yours
 bun run snapshot       # refresh dev/mock/demo-store.json from a store's public catalogue
+bun run screenshots    # retake docs/screenshots from the running dev page (Chromium and WebKit)
 ```
 
 Use `bun run test`, never `bun test` (that is Bun's own runner, not vitest). Use `bun x`, never `npx`. No npm, yarn or pnpm lockfiles.
 
 ## Rules you must not break
 
-1. **SDK only.** Selection, validation, pricing and the cart come from the SDK. Gate the buy button on `isSatisfied`, never `isComplete`. Read counts with `getSectionLimits` / `getBundleLimits`. Add to the cart with `useBundleAjaxCart`. If the SDK cannot do something the design needs, do not build a parallel path: leave the feature out and write up the gap.
+1. **SDK only.** Selection, validation, pricing and the cart come from the SDK. Gate the buy button on `isSatisfied`. Decide what is offered with `getBundleOffer`, whether one more fits with `blockedReason`, and what is still missing with `progress`. Format amounts with `useMoney`. Add to the cart with `useBundleAjaxCart`. If the SDK cannot do something the design needs, do not build a parallel path: leave the feature out and write up the gap.
 2. **Invent nothing.** Every rule the widget enforces comes from the bundle, the approved design, or a merchant's explicit request. Nothing is preselected. No count, price, currency symbol, market or route is hardcoded.
 3. **Every word is the merchant's.** Every visible string is a section setting, with the same default in `theme/*.liquid` and `src/content.ts` (a test enforces it).
 4. **Explain every "no".** A disabled control says why. Cart errors are sentences (`shopperMessage`), never a status code or URL. An unpublished bundle reads as unavailable, not as an error. The theme editor (`Shopify.designMode`) tells the merchant what to fix.
@@ -64,7 +65,7 @@ Use `bun run test`, never `bun test` (that is Bun's own runner, not vitest). Use
 ## When you are stuck
 
 - Something behaves oddly on a "real" theme: check [guides/edge-cases.md](guides/edge-cases.md) first. Most problems are on that list, with the fix.
-- The SDK seems wrong: check [guides/known-issues.md](guides/known-issues.md). If it is new, write up what you saw, the smallest reproduction, and what the widget does meanwhile, and tell the human. Patch only data, in `src/sdkFixes.ts`, never engine logic.
+- The SDK seems wrong, or you are unsure whether something is the widget's job: check [guides/working-with-the-sdk.md](guides/working-with-the-sdk.md). If it is not there, write up what you saw, the smallest reproduction, and what the widget does meanwhile, and tell the human. Patch only data, in a `src/sdkFixes.ts` with a test that fails the day the fix is not needed, never engine logic.
 - Types are the truth for the SDK: `node_modules/@kitenzo/core/dist/index.d.ts` and `node_modules/@kitenzo/react/dist/index.d.ts` are thoroughly documented. Read them before guessing.
 
 ## House style

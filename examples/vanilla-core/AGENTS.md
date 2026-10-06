@@ -2,7 +2,7 @@
 
 You are working in a Kitenzo custom component, started from the starter in https://github.com/kitenzo/custom-components. Read this file before doing anything; it is short on purpose. The full rules, with the reason for each, are in [best-practices.md](https://github.com/kitenzo/custom-components/blob/main/guides/best-practices.md). If the repo's `guides/` folder is next to this project, read it there.
 
-> **This example has no React.** It uses `@kitenzo/core` alone. Where the rules below name a React hook (`useBundle`, `useBundleAjaxCart`, `useBundleEdit`), the core equivalent in this project is in `src/load.ts` and `src/cart.ts`; read its README's "What you give up without @kitenzo/react" first.
+> **This example has no React.** It uses `@kitenzo/core` alone. Where the rules below or the guides name a React hook, use core's own: `client.getBundle` with `followABTestRedirect` and `client.recordImpression` for `useBundle`, `loadBundleEdit` for `useBundleEdit` (all in `src/load.ts`), `createBundleBuilder` for `useBundleBuilder`, `createMoneyFormatter` for `useMoney` and `createBundleCartFlow` for `useBundleAjaxCart` (all three in `src/ui/builder.ts`). There is no context or `React.memo`: a change that is one product's alone updates its own card through `subscribe` in `src/ui/pick.ts`, and element ids come from `nextId` in `src/registry.ts`. Read the README's "What you do yourself" first.
 
 ## What this code is
 
@@ -21,13 +21,13 @@ Those three files, zipped by `bun run package:embed`, are the whole deliverable.
 This project is a standalone Bun project with its own `bun.lock`. Never add a workspace.
 
 ```
-src/           the widget: embed.tsx (mount), App.tsx (load), model.ts (what to offer),
-               selection.ts (the builder), money.ts, content.ts (merchant copy), ui/
+src/           the widget: embed.ts and registry.ts (mount), widget.ts and load.ts (load), model.ts
+               (what to offer), selection.ts (what is still owed), content.ts (merchant copy), ui/
 dev/           never shipped: the mock backend, scenarios, the demo catalogue, the dev page
 theme/         the Liquid section and the merchant's install guide
 test/          unit tests (vitest)
 e2e/           the conformance suite (Playwright) on the BUILT asset, on a hostile theme
-scripts/       rename, snapshot, package-embed
+scripts/       rename, snapshot, screenshots, package-embed
 ```
 
 ## Commands
@@ -42,17 +42,18 @@ bun run verify         # all of the above; must be green before you say you are 
 bun run package:embed  # the install kit zip
 bun run rename -- --slug acme-tea --prefix act --brand "Acme Tea"   # make a copy yours
 bun run snapshot       # refresh dev/mock/demo-store.json from a store's public catalogue
+bun run screenshots    # retake docs/screenshots from the running dev page (Chromium and WebKit)
 ```
 
 Use `bun run test`, never `bun test` (that is Bun's own runner, not vitest). Use `bun x`, never `npx`. No npm, yarn or pnpm lockfiles.
 
 ## Rules you must not break
 
-1. **SDK only.** Selection, validation, pricing and the cart come from the SDK. Gate the buy button on `isSatisfied`, never `isComplete`. Read counts with `getSectionLimits` / `getBundleLimits`. Add to the cart with `useBundleAjaxCart`. If the SDK cannot do something the design needs, do not build a parallel path: leave the feature out and write up the gap.
+1. **SDK only.** Selection, validation, pricing and the cart come from the SDK. Gate the buy button on `isSatisfied`. Decide what is offered with `getBundleOffer`, whether one more fits with `blockedReason`, and what is still missing with `progress`. Format amounts with `createMoneyFormatter`. Add to the cart with `createBundleCartFlow`. If the SDK cannot do something the design needs, do not build a parallel path: leave the feature out and write up the gap.
 2. **Invent nothing.** Every rule the widget enforces comes from the bundle, the approved design, or a merchant's explicit request. Nothing is preselected. No count, price, currency symbol, market or route is hardcoded.
 3. **Every word is the merchant's.** Every visible string is a section setting, with the same default in `theme/*.liquid` and `src/content.ts` (a test enforces it).
 4. **Explain every "no".** A disabled control says why. Cart errors are sentences (`shopperMessage`), never a status code or URL. An unpublished bundle reads as unavailable, not as an error. The theme editor (`Shopify.designMode`) tells the merchant what to fix.
-5. **Assume a hostile theme.** Prefix every class. Keep the root-scoped reset. Overlays are native `<dialog>` with `showModal()`. No `position: fixed`. Fonts come from the theme. Two sections on one page, the theme editor's section reload, and the back-forward cache all work (see `src/embed.tsx`).
+5. **Assume a hostile theme.** Prefix every class. Keep the root-scoped reset. Overlays are native `<dialog>` with `showModal()`. No `position: fixed`. Fonts come from the theme. Two sections on one page, the theme editor's section reload, and the back-forward cache all work (see `src/embed.ts`).
 6. **Keep the test contract** (`cc-*` test ids, `data-cc-product`, `data-cc-unavailable`, `data-cc-quantity`; [guides/the-contract.md](https://github.com/kitenzo/custom-components/blob/main/guides/the-contract.md)) and keep `e2e/conformance.spec.ts` passing.
 7. **Never hand-write API data.** Fixtures come from `defineCatalog` over the demo store snapshot, served by the mock backend in the API's exact wire format. Do not edit `dev/mock/*`: it is shared verbatim by every project and CI checks it.
 8. **Prove it.** A new test must fail without your change: break the code, watch it go red, restore it. Then look at the result in a browser at 1440 and 390 wide. Passing tests do not mean the design is right.
@@ -60,8 +61,8 @@ Use `bun run test`, never `bun test` (that is Bun's own runner, not vitest). Use
 ## When you are stuck
 
 - Something behaves oddly on a "real" theme: check [guides/edge-cases.md](https://github.com/kitenzo/custom-components/blob/main/guides/edge-cases.md) first. Most problems are on that list, with the fix.
-- The SDK seems wrong: check [guides/known-issues.md](https://github.com/kitenzo/custom-components/blob/main/guides/known-issues.md). If it is new, write up what you saw, the smallest reproduction, and what the widget does meanwhile, and tell the human. Patch only data, in `src/sdkFixes.ts`, never engine logic.
-- Types are the truth for the SDK: `node_modules/@kitenzo/core/dist/index.d.ts` and `node_modules/@kitenzo/react/dist/index.d.ts` are thoroughly documented. Read them before guessing.
+- The SDK seems wrong, or you are unsure whether something is the widget's job: check [guides/working-with-the-sdk.md](https://github.com/kitenzo/custom-components/blob/main/guides/working-with-the-sdk.md). If it is not there, write up what you saw, the smallest reproduction, and what the widget does meanwhile, and tell the human. Patch only data, in a `src/sdkFixes.ts` with a test that fails the day the fix is not needed, never engine logic.
+- Types are the truth for the SDK: the `.d.ts` files in `node_modules/@kitenzo/core/dist/` are thoroughly documented, and the package's `README.md` beside them explains each part. Read them before guessing.
 
 ## House style
 

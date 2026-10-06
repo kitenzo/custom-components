@@ -1,15 +1,15 @@
 /*
- * The box sizes, one card each, drawn from the bundle's `eq` rules and priced by the SDK (box.ts).
- * Nothing here knows there are three, or that they are 6, 12 and 24.
+ * The box sizes, one card each: the exact counts the bundle's rules allow, priced by the SDK
+ * (box.ts). Nothing here knows there are three, or that they are 6, 12 and 24.
  *
  * A radio group, because exactly one box is chosen at a time. Each card draws its own empty tray
  * in miniature, so the difference between 6 and 24 is something a shopper sees before they read.
  */
-import { useId } from 'react';
+import { memo, useId } from 'react';
 
 import { trayColumns } from '../box';
 import { text } from '../content';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
 import { CheckIcon } from './Icons';
 
 function MiniTray({ size }: { size: number }) {
@@ -22,8 +22,10 @@ function MiniTray({ size }: { size: number }) {
     );
 }
 
-export function SizeChooser() {
-    const { box, money, content, locked } = useBuilder();
+/* Memoised: it takes no props, so only the two contexts draw it again. */
+export const SizeChooser = memo(function SizeChooser() {
+    const { box, money, content } = useBuilder();
+    const { locked, size: chosenSize, choose } = useSelection();
     const titleId = useId();
     if (!box || box.sizes.length === 0) return null;
     const showPrices = !content.hidePrices;
@@ -48,7 +50,7 @@ export function SizeChooser() {
             >
                 {box.sizes.map((size) => {
                     const offer = box.offers.find((candidate) => candidate.size === size);
-                    const chosen = box.size === size;
+                    const chosen = chosenSize === size;
                     const price = showPrices && offer ? money.format(offer.price) : null;
                     const compareAt = showPrices && offer?.compareAt ? money.format(offer.compareAt) : null;
                     const each = showPrices && offer ? money.format(offer.perItem) : null;
@@ -62,7 +64,7 @@ export function SizeChooser() {
                             className={`mcb-size${chosen ? ' mcb-size--chosen' : ''}`}
                             data-mcb-size={size}
                             onClick={() => {
-                                if (!locked && !chosen) box.choose(size);
+                                if (!locked && !chosen) choose(size);
                             }}
                         >
                             <span className="mcb-size__check" aria-hidden="true">
@@ -83,4 +85,4 @@ export function SizeChooser() {
             </div>
         </section>
     );
-}
+});

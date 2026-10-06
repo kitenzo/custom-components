@@ -15,6 +15,7 @@ import type { DiscountTier, LimitRuleType, ComparisonOperator, ProductStatus } f
 import type {
     Fixture,
     PersonalisationField,
+    PersonalisationFieldFee,
     RawBundle,
     RawDiscount,
     RawLimitRule,
@@ -98,6 +99,42 @@ export interface RuleDef {
     value: number;
 }
 
+/**
+ * A fee option, as the merchant creates it in Kitenzo: a name, an amount in the shop's currency,
+ * and a hidden Shopify product Kitenzo keeps at that price. Several fields may share one option.
+ */
+export interface FeeDef {
+    id: number;
+    /** What the shopper reads beside the field, and the title of the fee's cart line. */
+    name: string;
+    amount: number;
+}
+
+/**
+ * One personalisation field, as the merchant sets it up. `key` is frozen when the field is created
+ * and names the order's line property; `label` is what the merchant can reword later. Keep them
+ * different in a catalogue, so a widget that submits under the label is caught.
+ */
+export interface FieldDef {
+    id: string;
+    key: string;
+    label: string;
+    type: PersonalisationField['type'];
+    required?: boolean;
+    /** Text fields only. */
+    placeholder?: string;
+    /** Text fields only. */
+    characterLimit?: number;
+    /** Dropdown fields only. */
+    options?: string[];
+    helpText?: string;
+    /**
+     * Charged once for every unit whose field is filled in. The API sends a field's fee for a
+     * native bundle only, and the mock backend does the same.
+     */
+    fee?: FeeDef;
+}
+
 export interface CatalogDef {
     id: number;
     name: string;
@@ -115,7 +152,8 @@ export interface CatalogDef {
     overrides?: Record<string, ProductOverride>;
     settings?: Partial<RawSettings>;
     applyVariantSurcharges?: boolean;
-    personalisation?: Record<string, PersonalisationField[]>;
+    /** Personalisation fields by product handle (the API keys them by Shopify product id). */
+    personalisation?: Record<string, FieldDef[]>;
     recurringOptions?: RecurringOption[];
 }
 
@@ -189,6 +227,48 @@ function money(value: number): string {
 }
 
 // ----- The conversion ------------------------------------------------------------------------
+
+/** Where the mock keeps the hidden products fees are sold as, clear of any real catalogue's ids. */
+const FEE_PRODUCT_ID_BASE = 4_800_000_000_000;
+const FEE_VARIANT_ID_BASE = 4_900_000_000_000;
+
+/** The Shopify product a fee option is sold as: one per option, whichever fields use it. */
+export function feeProductId(feeOptionId: number): string {
+    return String(FEE_PRODUCT_ID_BASE + feeOptionId);
+}
+
+function toRawFee(option: FeeDef, currency: string): PersonalisationFieldFee {
+    return {
+        feeOptionId: option.id,
+        // A number on the wire, unlike every other variant id the API sends.
+        variantId: FEE_VARIANT_ID_BASE + option.id,
+        amount: money(option.amount),
+        currencyCode: currency,
+        taxable: true,
+        name: option.name,
+    };
+}
+
+/**
+ * A field as the serializer sends it: every key present, with the blanks the admin stores (a
+ * checkbox has no placeholder or limit, only a dropdown has options).
+ */
+function toRawField(field: FieldDef, currency: string): PersonalisationField {
+    const isText = field.type === 'text';
+    return {
+        id: field.id,
+        key: field.key,
+        label: field.label,
+        type: field.type,
+        required: field.required ?? false,
+        placeholder: isText ? field.placeholder ?? '' : '',
+        characterLimit: isText ? field.characterLimit ?? null : null,
+        options: field.type === 'dropdown' ? field.options ?? [] : [],
+        helpText: field.helpText ?? '',
+        feeOptionId: field.fee?.id ?? null,
+        fee: field.fee ? toRawFee(field.fee, currency) : null,
+    };
+}
 
 const PLACEHOLDER_IMAGE = '';
 
@@ -297,6 +377,18 @@ export function defineCatalog(def: CatalogDef, store: StoreProduct[]): Fixture {
     const handles = new Set([...def.sections.flatMap((section) => section.products), ...(def.required ?? []).map((entry) => entry.handle)]);
     const products = [...handles].map((handle) => toRawProduct(find(handle), def.overrides?.[handle]));
 
+    const settings = { ...DEFAULT_SETTINGS, ...def.settings };
+    const personalisation = def.personalisation
+        ? Object.fromEntries(
+              Object.entries(def.personalisation).map(([handle, fields]) => {
+                  if (!handles.has(handle)) {
+                      throw new Error(`Catalogue "${def.name}" personalises "${handle}", which is in none of its steps and is not required.`);
+                  }
+                  return [String(find(handle).id), fields.map((field) => toRawField(field, settings.currency))];
+              }),
+          )
+        : undefined;
+
     const bundle: RawBundle = {
         bundlingOption: 'bundles',
         conditionsEngineEnabled: false,
@@ -320,11 +412,11 @@ export function defineCatalog(def: CatalogDef, store: StoreProduct[]): Fixture {
         type: def.type ?? 'native',
         weightUnit: 'kg',
         ...(def.applyVariantSurcharges ? { applyVariantSurcharges: true } : {}),
-        ...(def.personalisation ? { personalisation: def.personalisation } : {}),
+        ...(personalisation ? { personalisation } : {}),
         ...(def.recurringOptions ? { recurringOptions: def.recurringOptions } : {}),
     };
 
-    return { bundle, products, settings: { ...DEFAULT_SETTINGS, ...def.settings } };
+    return { bundle, products, settings };
 }
 
 /** Every handle a set of catalogue definitions names: what `bun run snapshot` keeps. */

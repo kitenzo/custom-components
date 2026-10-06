@@ -14,7 +14,7 @@ import { text } from '../content';
 import { useBuilder } from './context';
 import { CloseIcon } from './Icons';
 import { imageAttrs } from './images';
-import { OptionPickers, QuantityControl } from './PickControls';
+import { FlavourPrice, OptionPickers, QuantityControl } from './PickControls';
 import { usePick } from './usePick';
 import type { ViewProduct, ViewSection } from '../model';
 
@@ -54,13 +54,10 @@ export function ProductDialog({ open, onClose }: { open: OpenProduct | null; onC
 }
 
 function DialogBody({ product, section, onClose }: { product: ViewProduct; section: ViewSection; onClose: () => void }) {
-    const { content, money, box, idPrefix } = useBuilder();
+    const { content, idPrefix } = useBuilder();
     const pick = usePick(product, section);
     const [index, setIndex] = useState(0);
     const photo = product.photos[index] ?? product.photos[0];
-    // As on the card: a set-price box has no per-macaron price worth showing.
-    const setPriced = box?.section.id === section.id && box.setPriced;
-    const price = content.hidePrices || setPriced ? null : money.format(money.unitPrice(pick.variant));
 
     return (
         <div className="mcb-dialog__inner">
@@ -92,7 +89,7 @@ function DialogBody({ product, section, onClose }: { product: ViewProduct; secti
                 <h3 id={`${idPrefix}-dialog-title`} className="mcb-dialog__title">
                     {product.title}
                 </h3>
-                {price ? <p className="mcb-card__price">{price}</p> : null}
+                <FlavourPrice variant={pick.variant} section={section} />
                 <OptionPickers pick={pick} product={product} />
                 <div className="mcb-card__actions">
                     <QuantityControl pick={pick} product={product} />

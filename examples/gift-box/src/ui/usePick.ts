@@ -5,17 +5,19 @@
  * Shared by the card and the details dialog so the two can never disagree about a product.
  *
  * A step that holds one (the box, the card) behaves like a set of radio buttons: choosing another
- * replaces the one chosen, instead of refusing with "this step is full". It is still two SDK
- * calls (remove, then add), so the engine checks the result exactly as it checks any pick.
+ * replaces the one chosen, instead of refusing with "this step is full". Whether the replacement
+ * can go in is the SDK's to say (`swapBlockedReason`), and the replacing is the SDK's (`swapItem`),
+ * which leaves the old choice where it was if the new one cannot go in.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { defaultOptionValues, reachableOptionValues, resolveVariant, selectOptionValue, type BundleVariant, type OptionSelection } from '@kitenzo/react';
+import { defaultOptionValues, isVariantBuyable, reachableOptionValues, resolveVariant, selectOptionValue, type AddBlockedReason, type BundleVariant, type OptionSelection } from '@kitenzo/react';
 
 import { text } from '../content';
 import type { ViewProduct, ViewSection } from '../model';
-import { blockedReason, type Blocked } from '../selection';
-import { useBuilder } from './context';
+import { choiceFor, isSingleChoice } from '../selection';
+import { useBuilder, useSelection } from './context';
+import { blockedText } from './copy';
 
 export interface OptionControl {
     name: string;
@@ -31,7 +33,11 @@ export interface Pick {
     setVariant: (variantId: string) => void;
     variant: BundleVariant;
     quantity: number;
-    blocked: Blocked | null;
+    /**
+     * Why this variant will not go into this step, from the SDK, or null when it will: as one more
+     * in a step that counts, as the replacement of the step's pick when `swaps`.
+     */
+    blocked: AddBlockedReason | null;
     /** The step holds one and another is chosen: adding this one replaces it. */
     swaps: boolean;
     /** The step holds at most one, so the control is a choose / chosen toggle, not a stepper. */
@@ -48,12 +54,13 @@ function matches(variant: BundleVariant, product: ViewProduct['product'], values
 }
 
 export function usePick(product: ViewProduct, section: ViewSection): Pick {
-    const { model, selection, content, locked } = useBuilder();
+    const { content, addItem, updateQuantity, swapItem, blockedReason, swapBlockedReason } = useBuilder();
+    const { selections, locked } = useSelection();
     const options = product.product.options ?? [];
     const hasOptionData = options.length > 0 && product.variants.every((variant) => (variant.optionValues?.length ?? 0) === options.length);
 
     const [values, setValues] = useState<OptionSelection>(() => (hasOptionData ? defaultOptionValues(product.product) : {}));
-    const [variantId, setVariantId] = useState<string>(() => (product.variants.find((variant) => variant.available) ?? product.variants[0]!).id);
+    const [variantId, setVariantId] = useState<string>(() => (product.variants.find(isVariantBuyable) ?? product.variants[0]!).id);
     const [refusal, setRefusal] = useState<string | null>(null);
     const timer = useRef<number>();
     useEffect(() => () => window.clearTimeout(timer.current), []);
@@ -69,11 +76,8 @@ export function usePick(product: ViewProduct, section: ViewSection): Pick {
         );
     }, [hasOptionData, product, values, variantId]);
 
-    const stepPicks = selection.selections[section.id] ?? [];
-    const quantity = stepPicks.find((pick) => pick.variantId === variant.id)?.quantity ?? 0;
-    const blocked = blockedReason(model, selection.selections, section, variant);
-    const single = section.limits.max === 1;
-    const replaced = single && blocked === 'step-full' ? stepPicks.find((pick) => pick.variantId !== variant.id && pick.quantity > 0) : undefined;
+    const quantity = (selections[section.id] ?? []).find((pick) => pick.variantId === variant.id)?.quantity ?? 0;
+    const { replaces, blocked } = choiceFor(section, selections, variant.id, { blockedReason, swapBlockedReason });
 
     const refuse = useCallback((message: string) => {
         setRefusal(message);
@@ -81,39 +85,31 @@ export function usePick(product: ViewProduct, section: ViewSection): Pick {
         timer.current = window.setTimeout(() => setRefusal(null), 5000);
     }, []);
 
-    const reasonText = (reason: Blocked): string => {
-        switch (reason) {
-            case 'sold-out':
-                return text(content, 'soldOut');
-            case 'stock':
-                return text(content, 'stockReached');
-            case 'step-full':
-                return text(content, 'stepFull');
-            case 'bundle-full':
-                return text(content, 'bundleFull');
-        }
-    };
-
     const add = useCallback(() => {
         if (locked) return;
-        if (blocked && !replaced) {
-            refuse(reasonText(blocked));
+        if (blocked) {
+            refuse(blockedText(content, blocked));
             return;
         }
         setRefusal(null);
-        if (replaced) selection.builder.removeItem(section.id, replaced.variantId);
-        selection.builder.addItem(section.id, variant.id, 1);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [locked, blocked, replaced, refuse, selection.builder, section.id, variant.id]);
+        if (replaces === null) {
+            addItem(section.id, variant.id, 1);
+            return;
+        }
+        // The swap is the SDK's to make and to refuse. A refusal it gave no reason for a moment
+        // ago still leaves the old choice in place, so the shopper is told the step is full.
+        if (!swapItem(section.id, replaces, variant.id)) refuse(blockedText(content, swapBlockedReason(section.id, replaces, variant.id) ?? 'section-full'));
+    }, [locked, blocked, replaces, refuse, content, addItem, swapItem, swapBlockedReason, section.id, variant.id]);
 
     const remove = useCallback(() => {
         if (locked || quantity === 0) return;
         setRefusal(null);
-        selection.builder.updateQuantity(section.id, variant.id, quantity - 1);
-    }, [locked, quantity, selection.builder, section.id, variant.id]);
+        updateQuantity(section.id, variant.id, quantity - 1);
+    }, [locked, quantity, updateQuantity, section.id, variant.id]);
 
+    // How low is low is the merchant's setting. A buyable variant has stock, so 0 never matches.
     const stock = variant.maxOrderableQuantity;
-    const lowStock = variant.available && stock !== null && stock !== undefined && stock > 0 && stock <= 5;
+    const lowStock = isVariantBuyable(variant) && stock !== null && stock !== undefined && stock <= content.lowStockAt;
     const message = refusal ?? (lowStock ? text(content, 'onlyLeft', { count: stock }) : null);
 
     return {
@@ -135,8 +131,8 @@ export function usePick(product: ViewProduct, section: ViewSection): Pick {
         variant,
         quantity,
         blocked,
-        swaps: replaced !== undefined,
-        single,
+        swaps: replaces !== null,
+        single: isSingleChoice(section),
         message,
         add,
         remove,

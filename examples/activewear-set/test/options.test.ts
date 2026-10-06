@@ -1,4 +1,4 @@
-import type { BundleProduct } from '@kitenzo/core';
+import { createMoneyFormatter, type BundleProduct } from '@kitenzo/core';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -10,7 +10,6 @@ import {
     planColourMatch,
     resolve,
     surchargeCause,
-    surchargeOf,
     swatchFor,
     valueSurcharge,
 } from '../src/options';
@@ -105,15 +104,20 @@ describe('the option grid', () => {
 });
 
 describe('surcharges', () => {
-    it('names the value a surcharge belongs to, and only when the bundle applies surcharges', async () => {
-        const { leggings } = await pieces();
+    it('names the value the SDK\'s surcharge belongs to, and only when the bundle applies surcharges', async () => {
+        const { bundle, leggings } = await pieces();
+        const money = createMoneyFormatter(bundle, null);
         const slate = leggings.variants.find((variant) => variant.title === 'M / Slate')!;
-        expect(surchargeOf(slate, true)).toBe(5);
-        expect(surchargeOf(slate, false)).toBe(0);
-        expect(surchargeCause(leggings, slate, true)).toBe('Slate');
+        const moss = leggings.variants.find((variant) => variant.title === 'M / Moss')!;
+        expect(surchargeCause(leggings, slate, money.surcharge)).toBe('Slate');
+        // No single value explains "no surcharge": the size and the colour both carry none.
+        expect(money.surcharge(moss)).toBe(0);
         const colour = colourOf(leggings);
-        expect(valueSurcharge(leggings, colour, 'Slate', true)).toBe(5);
-        expect(valueSurcharge(leggings, colour, 'Moss', true)).toBe(0);
+        expect(valueSurcharge(leggings, colour, 'Slate', money.surcharge)).toBe(5);
+        expect(valueSurcharge(leggings, colour, 'Moss', money.surcharge)).toBe(0);
+
+        const plain = createMoneyFormatter({ ...bundle, applyVariantSurcharges: false }, null);
+        expect(valueSurcharge(leggings, colour, 'Slate', plain.surcharge)).toBe(0);
     });
 });
 

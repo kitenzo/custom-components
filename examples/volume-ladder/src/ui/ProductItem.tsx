@@ -7,19 +7,22 @@
  * class names or copy. Both share `usePick` and the controls, so a row and a card can never
  * disagree about what one more of a product means.
  */
+import { memo } from 'react';
+
 import { text } from '../content';
 import type { ViewProduct, ViewSection } from '../model';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
 import { imageAttrs } from './images';
 import { OptionPickers, QuantityControl } from './PickControls';
 import { usePick } from './usePick';
 
 function useItem(product: ViewProduct, section: ViewSection) {
-    const { money, content, selection } = useBuilder();
+    const { money, content } = useBuilder();
+    const { selections } = useSelection();
     const pick = usePick(product, section);
     const unit = money.unitPrice(pick.variant);
     const price = content.hidePrices ? null : money.format(unit);
-    const inStep = (selection.selections[section.id] ?? [])
+    const inStep = (selections[section.id] ?? [])
         .filter((entry) => product.variants.some((variant) => variant.id === entry.variantId))
         .reduce((total, entry) => total + entry.quantity, 0);
     const attributes = {
@@ -30,7 +33,11 @@ function useItem(product: ViewProduct, section: ViewSection) {
     return { pick, unit, price, inStep, attributes };
 }
 
-export function ProductRow({ product, section }: { product: ViewProduct; section: ViewSection }) {
+/*
+ * Both are memoised on the product and its step, which the model keeps between picks. One is drawn
+ * again by its own state or by a change to either context, never by the Builder alone.
+ */
+export const ProductRow = memo(function ProductRow({ product, section }: { product: ViewProduct; section: ViewSection }) {
     const { content, openDetails } = useBuilder();
     const { pick, unit, price, inStep, attributes } = useItem(product, section);
     const photo = product.photos[0];
@@ -66,9 +73,9 @@ export function ProductRow({ product, section }: { product: ViewProduct; section
             </div>
         </article>
     );
-}
+});
 
-export function ProductCard({ product, section }: { product: ViewProduct; section: ViewSection }) {
+export const ProductCard = memo(function ProductCard({ product, section }: { product: ViewProduct; section: ViewSection }) {
     const { content, openDetails } = useBuilder();
     const { pick, unit, price, inStep, attributes } = useItem(product, section);
     const photo = product.photos[0];
@@ -107,4 +114,4 @@ export function ProductCard({ product, section }: { product: ViewProduct; sectio
             </div>
         </article>
     );
-}
+});

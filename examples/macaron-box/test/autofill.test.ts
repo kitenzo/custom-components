@@ -1,12 +1,25 @@
 import { createBundleBuilder } from '@kitenzo/core';
 import { describe, expect, it } from 'vitest';
 
-import { planFill, seededRandom, type FillCandidate } from '../src/autofill';
+import { planFill, seededRandom } from '../src/autofill';
 import { toViewModel } from '../src/model';
-import { fillCandidates, quantitiesOf } from '../src/selection';
+import type { Fixture } from '../dev/mock/wire';
 import { load } from './support';
 
-const unlimited = (variantId: string, inBox = 0): FillCandidate => ({ variantId, inBox, room: Number.POSITIVE_INFINITY });
+async function setUp(change?: (fixture: Fixture) => Fixture, bundleId?: number) {
+    const { bundle, settings } = await load(change, {}, bundleId);
+    const box = toViewModel(bundle, settings).sections[0]!;
+    const id = (handle: string) => box.products.find((product) => product.handle === handle)!.variants[0]!.id;
+    const handleOf = (variantId: string) => box.byVariantId.get(variantId)!.product.handle;
+    return { bundle, box, id, handleOf, all: [...box.byVariantId.keys()] };
+}
+
+const count = (picks: string[], variantId: string) => picks.filter((pick) => pick === variantId).length;
+
+const atMostTwoOfEach = (fixture: Fixture): Fixture => ({
+    ...fixture,
+    bundle: { ...fixture.bundle, limitRules: [...fixture.bundle.limitRules, { operation: 'lte', sectionId: null, type: 'amount-of-one-product', value: '2.00' }] },
+});
 
 describe('seededRandom', () => {
     it('repeats for a seed and differs between seeds', () => {
@@ -20,66 +33,83 @@ describe('seededRandom', () => {
 });
 
 describe('planFill', () => {
-    it('with a fixed seed, plans the same box every time', () => {
-        const candidates = ['a', 'b', 'c', 'd'].map((id) => unlimited(id));
-        const plan = planFill(candidates, 6, seededRandom(7));
-        expect(plan).toEqual({ picks: ['a', 'b', 'd', 'c', 'c', 'b'], unfilled: 0 });
-        expect(planFill(candidates, 6, seededRandom(7))).toEqual(plan);
+    it('with a fixed seed, plans the same box every time', async () => {
+        const { bundle, box, id, handleOf } = await setUp();
+        const four = ['vanilla-macaron', 'chocolate-macaron', 'pistachio-macaron', 'lemon-macaron'].map(id);
+        const plan = planFill(bundle, {}, box.id, four, 6, seededRandom(7));
+        expect(plan.map(handleOf)).toEqual(['pistachio-macaron', 'chocolate-macaron', 'lemon-macaron', 'vanilla-macaron', 'lemon-macaron', 'vanilla-macaron']);
+        expect(planFill(bundle, {}, box.id, four, 6, seededRandom(7))).toEqual(plan);
+        expect(planFill(bundle, {}, box.id, four, 6, seededRandom(8))).not.toEqual(plan);
     });
 
-    it('fills only the empty slots and spreads them, fewest-in-the-box first', () => {
-        const plan = planFill([unlimited('a', 3), unlimited('b', 0), unlimited('c', 1)], 3, seededRandom(1));
-        expect(plan.picks).toHaveLength(3);
-        // b (none in the box) first; then b and c tie at 1; never a, which already has 3.
-        expect(plan.picks[0]).toBe('b');
-        expect(plan.picks).not.toContain('a');
+    it('fills only the empty slots and spreads them, fewest-in-the-box first', async () => {
+        const { bundle, box, id } = await setUp();
+        const [a, b, c] = ['vanilla-macaron', 'chocolate-macaron', 'pistachio-macaron'].map(id) as [string, string, string];
+        const selections = { [box.id]: [{ variantId: a, quantity: 3 }, { variantId: c, quantity: 1 }] };
+        const plan = planFill(bundle, selections, box.id, [a, b, c], 3, seededRandom(1));
+        // b (none in the box) first; then b and c tie at 1 and get one each; never a, which already has 3.
+        expect(plan[0]).toBe(b);
+        expect([...plan].sort()).toEqual([b, b, c].sort());
     });
 
-    it('skips sold-out and capped flavours, and never takes one past its stock', () => {
-        const plan = planFill(
-            [
-                { variantId: 'sold-out', inBox: 0, room: 0 },
-                { variantId: 'capped', inBox: 4, room: 0 },
-                { variantId: 'two-left', inBox: 0, room: 2 },
-                unlimited('plenty'),
-            ],
-            8,
-            seededRandom(3),
-        );
-        expect(plan.picks).not.toContain('sold-out');
-        expect(plan.picks).not.toContain('capped');
-        expect(plan.picks.filter((id) => id === 'two-left')).toHaveLength(2);
-        expect(plan.picks.filter((id) => id === 'plenty')).toHaveLength(6);
+    it('plans only what the builder takes: nothing sold out, nothing past its stock', async () => {
+        const { bundle, box, id } = await setUp();
+        const lavender = id('lavender-macaron'); // sold out
+        const rose = id('rose-macaron'); // stock 4
+        const vanilla = id('vanilla-macaron');
+        const selections = { [box.id]: [{ variantId: rose, quantity: 2 }] };
+        const plan = planFill(bundle, selections, box.id, [lavender, rose, vanilla], 8, seededRandom(3));
+        expect(plan).toHaveLength(8);
+        expect(count(plan, lavender)).toBe(0);
+        expect(count(plan, rose)).toBe(2);
+        expect(count(plan, vanilla)).toBe(6);
     });
 
-    it('says how many slots it could not fill when stock runs out first', () => {
-        expect(planFill([{ variantId: 'a', inBox: 0, room: 2 }], 5, seededRandom(1))).toEqual({ picks: ['a', 'a'], unfilled: 3 });
-        expect(planFill([], 5, seededRandom(1))).toEqual({ picks: [], unfilled: 5 });
+    it('keeps to a rule it knows nothing about: "at most 2 of each flavour"', async () => {
+        const { bundle, box, all } = await setUp(atMostTwoOfEach);
+        const plan = planFill(bundle, {}, box.id, all, 24, seededRandom(5));
+        // Nine flavours can be bought, two of each, so six slots stay empty.
+        expect(plan).toHaveLength(18);
+        expect(Math.max(...all.map((variantId) => count(plan, variantId)))).toBe(2);
     });
 
-    it('stops at the iteration cap however much is asked for', () => {
-        expect(planFill([unlimited('a')], 1_000_000, seededRandom(1), 50).picks).toHaveLength(50);
+    it('comes up short, and stops, when nothing more will go in', async () => {
+        const { bundle, box, id } = await setUp();
+        const rose = id('rose-macaron');
+        expect(planFill(bundle, {}, box.id, [rose], 6, seededRandom(1))).toEqual([rose, rose, rose, rose]);
+        expect(planFill(bundle, {}, box.id, [], 5, seededRandom(1))).toEqual([]);
+        // The largest box is the most the step takes, however much is asked for.
+        expect(planFill(bundle, {}, box.id, [id('vanilla-macaron')], 1_000_000, seededRandom(1))).toHaveLength(24);
     });
 
-    it('plans a box of 12 the builder accepts: no lavender, rose within its 4, the SDK satisfied', async () => {
-        const { bundle, settings } = await load();
-        const model = toViewModel(bundle, { settings });
-        const box = model.sections[0]!;
-        const id = (handle: string) => box.products.find((product) => product.handle === handle)!.variants[0]!.id;
-        const builder = createBundleBuilder(model.bundle);
-        builder.addItem(box.id, id('rose-macaron'), 3);
+    it('stops at the chosen box, which the builder knows nothing of: 7 for a box of 12 holding 5', async () => {
+        const { bundle, box, id, all } = await setUp();
+        const selections = { [box.id]: [{ variantId: id('vanilla-macaron'), quantity: 5 }] };
+        expect(planFill(bundle, selections, box.id, all, 7, seededRandom(11))).toHaveLength(7);
+    });
+
+    it.each([
+        ['the demo box', undefined],
+        ['a box of at most 2 of each flavour', atMostTwoOfEach],
+    ])('plans only macarons the shopper\'s own builder takes, one by one: %s', async (_name, change) => {
+        const { bundle, box, id, all } = await setUp(change);
+        const builder = createBundleBuilder(bundle);
+        builder.addItem(box.id, id('rose-macaron'), 2);
         builder.addItem(box.id, id('vanilla-macaron'), 2);
+        const before = builder.getState().selections;
 
-        const plan = planFill(fillCandidates(box, builder.getState().selections), 12 - 5, seededRandom(2001));
-        for (const variantId of plan.picks) builder.addItem(box.id, variantId, 1);
+        const plan = planFill(bundle, before, box.id, all, 12 - 4, seededRandom(2001));
+        expect(plan).toHaveLength(8);
+        // Planning leaves the selection it was given alone.
+        expect(builder.getState().selections).toBe(before);
+        expect(plan.map((variantId) => builder.addItem(box.id, variantId, 1))).toEqual(plan.map(() => 1));
 
-        const totals = quantitiesOf(builder.getState().selections);
-        expect(plan.unfilled).toBe(0);
-        expect(totals.get(id('lavender-macaron'))).toBeUndefined();
-        expect(totals.get(id('rose-macaron')) ?? 0).toBeLessThanOrEqual(4);
+        const quantity = (handle: string) => builder.getState().selections[box.id]!.find((pick) => pick.variantId === id(handle))?.quantity ?? 0;
+        expect(quantity('lavender-macaron')).toBe(0);
+        expect(quantity('rose-macaron')).toBeLessThanOrEqual(4);
         // What was there before the fill is still there.
-        expect(totals.get(id('vanilla-macaron'))).toBeGreaterThanOrEqual(2);
-        expect([...totals.values()].reduce((sum, value) => sum + value, 0)).toBe(12);
+        expect(quantity('vanilla-macaron')).toBeGreaterThanOrEqual(2);
+        expect(builder.getSectionQuantity(box.id)).toBe(12);
         expect(builder.getState().isSatisfied).toBe(true);
     });
 });

@@ -47,12 +47,6 @@ export const InfoIcon = () => (
     </svg>
 );
 
-export const ChevronIcon = () => (
-    <svg {...common}>
-        <path d="M6 4l4 4-4 4" />
-    </svg>
-);
-
 export const PenIcon = () => (
     <svg {...common}>
         <path d="M10.5 2.75l2.75 2.75L6 12.75H3.25V10z" />

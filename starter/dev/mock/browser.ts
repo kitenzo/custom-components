@@ -15,7 +15,8 @@ const STORAGE_KEY = 'kitenzo-mock-backend';
 function loadState(): BackendState {
     try {
         const raw = sessionStorage.getItem(STORAGE_KEY);
-        return raw ? (JSON.parse(raw) as BackendState) : emptyState();
+        // Over an empty state: whatever is in storage, every key the backend reads is there.
+        return raw ? { ...emptyState(), ...(JSON.parse(raw) as Partial<BackendState>) } : emptyState();
     } catch {
         return emptyState();
     }

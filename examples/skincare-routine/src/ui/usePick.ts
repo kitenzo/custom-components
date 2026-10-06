@@ -12,12 +12,13 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { defaultOptionValues, reachableOptionValues, resolveVariant, selectOptionValue, type BundleVariant, type OptionSelection } from '@kitenzo/react';
+import { defaultOptionValues, isVariantBuyable, reachableOptionValues, resolveVariant, selectOptionValue, type AddBlockedReason, type BundleVariant, type OptionSelection } from '@kitenzo/react';
 
 import { text } from '../content';
 import type { ViewProduct, ViewSection } from '../model';
-import { blockedReason, isSingleChoice, swapInStep, withoutStep, type Blocked } from '../selection';
-import { useBuilder } from './context';
+import { isSingleChoice } from '../selection';
+import { useBuilder, useSelection } from './context';
+import { blockedText } from './copy';
 
 export interface OptionControl {
     name: string;
@@ -35,7 +36,11 @@ export interface Pick {
     setVariant: (variantId: string) => void;
     variant: BundleVariant;
     quantity: number;
-    blocked: Blocked | null;
+    /**
+     * Why this variant will not go into this step, from the SDK, or null when it will: as one more
+     * in a step that counts, as the replacement of the step's pick in a one-pick step.
+     */
+    blocked: AddBlockedReason | null;
     /** A sentence for the shopper when something is refused or limited, else null. */
     message: string | null;
     add: () => void;
@@ -52,18 +57,19 @@ function valuesOf(variant: BundleVariant, product: ViewProduct['product']): Opti
 }
 
 export function usePick(product: ViewProduct, section: ViewSection): Pick {
-    const { model, selection, content, locked, onPicked } = useBuilder();
+    const { content, onPicked, addItem, updateQuantity, swapItem, blockedReason, swapBlockedReason } = useBuilder();
+    const { selections, locked } = useSelection();
     const options = product.product.options ?? [];
     const hasOptionData = options.length > 0 && product.variants.every((variant) => (variant.optionValues?.length ?? 0) === options.length);
     const single = isSingleChoice(section);
-    const inStep = selection.selections[section.id] ?? [];
+    const inStep = selections[section.id] ?? [];
     // The variant of this product the step holds, if any (a one-pick step holds at most one).
     const chosenVariant = single ? product.variants.find((variant) => inStep.some((pick) => pick.variantId === variant.id)) : undefined;
 
     const [browsed, setBrowsed] = useState<OptionSelection>(() =>
         hasOptionData ? (chosenVariant ? valuesOf(chosenVariant, product.product) : defaultOptionValues(product.product)) : {},
     );
-    const [browsedId, setBrowsedId] = useState<string>(() => (chosenVariant ?? product.variants.find((variant) => variant.available) ?? product.variants[0]!).id);
+    const [browsedId, setBrowsedId] = useState<string>(() => (chosenVariant ?? product.variants.find(isVariantBuyable) ?? product.variants[0]!).id);
     const [refusal, setRefusal] = useState<string | null>(null);
     const timer = useRef<number>();
     useEffect(() => () => window.clearTimeout(timer.current), []);
@@ -78,9 +84,12 @@ export function usePick(product: ViewProduct, section: ViewSection): Pick {
         : (resolveVariant(product.product, values) ?? product.variants.find((candidate) => matches(candidate, product.product, values)) ?? product.variants[0]!);
 
     const quantity = inStep.find((pick) => pick.variantId === variant.id)?.quantity ?? 0;
-    // A swap empties the step first, so it is checked against the step without its current pick.
-    const against = single ? withoutStep(selection.selections, section.id) : selection.selections;
-    const blocked = blockedReason(model, against, section, variant);
+    // In a one-pick step that holds a pick, choosing is a swap: the pick that leaves makes the room.
+    // So the question is the swap's (`swapBlockedReason`), not one more's: `blockedReason` would
+    // call the step full, and under "one per product" refuse another size of the chosen product.
+    const held = single ? inStep[0] : undefined;
+    const blockedFor = (target: BundleVariant) => (held ? swapBlockedReason(section.id, held.variantId, target.id) : blockedReason(section.id, target.id));
+    const blocked = blockedFor(variant);
 
     const refuse = useCallback((message: string) => {
         setRefusal(message);
@@ -88,51 +97,40 @@ export function usePick(product: ViewProduct, section: ViewSection): Pick {
         timer.current = window.setTimeout(() => setRefusal(null), 5000);
     }, []);
 
-    const reasonText = (reason: Blocked): string => {
-        switch (reason) {
-            case 'sold-out':
-                return text(content, 'soldOut');
-            case 'stock':
-                return text(content, 'stockReached');
-            case 'step-full':
-                return text(content, 'stepFull');
-            case 'bundle-full':
-                return text(content, 'bundleFull');
-        }
-    };
-
     const add = () => {
         if (locked) return;
         if (single && quantity > 0) return; // already the step's pick
         if (blocked) {
-            refuse(reasonText(blocked));
+            refuse(blockedText(content, blocked));
             return;
         }
         setRefusal(null);
-        if (single) swapInStep(selection.builder, selection.selections, section.id, variant.id);
-        else selection.builder.addItem(section.id, variant.id, 1);
+        // A step that holds a pick is full: adding the new one beside it would be refused.
+        if (held) swapItem(section.id, held.variantId, variant.id);
+        else addItem(section.id, variant.id, 1);
         onPicked(section);
     };
 
     const remove = () => {
         if (locked || quantity === 0) return;
         setRefusal(null);
-        selection.builder.updateQuantity(section.id, variant.id, quantity - 1);
+        updateQuantity(section.id, variant.id, quantity - 1);
     };
 
     /** A chosen product's size changed: swap the line to the new variant, if it can be bought. */
     const swapChosenTo = (target: BundleVariant | null | undefined) => {
         if (!chosenVariant || !target || target.id === chosenVariant.id) return;
-        const reason = blockedReason(model, withoutStep(selection.selections, section.id), section, target);
+        const reason = blockedFor(target);
         if (reason) {
-            refuse(reasonText(reason));
+            refuse(blockedText(content, reason));
             return;
         }
-        swapInStep(selection.builder, selection.selections, section.id, target.id);
+        swapItem(section.id, chosenVariant.id, target.id);
     };
 
+    // How low is low is the merchant's setting. A buyable variant has stock, so 0 never matches.
     const stock = variant.maxOrderableQuantity;
-    const lowStock = variant.available && stock !== null && stock !== undefined && stock > 0 && stock <= 5;
+    const lowStock = isVariantBuyable(variant) && stock !== null && stock !== undefined && stock <= content.lowStockAt;
     const message = refusal ?? (lowStock ? text(content, 'onlyLeft', { count: stock }) : null);
 
     return {

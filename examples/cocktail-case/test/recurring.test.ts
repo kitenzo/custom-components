@@ -1,11 +1,10 @@
-import { recurringCartAttributes, validateRecurringChoice, type RecurringChoice } from '@kitenzo/core';
+import { createMoneyFormatter, recurringCartAttributes, validateRecurringChoice, type RecurringChoice } from '@kitenzo/core';
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_CONTENT, parseContent } from '../src/content';
-import { frequencyText, lineLabels, planDiscount, planProblem, reorderExpired } from '../src/recurring';
+import { frequencyText, lineLabels, planDiscount, planMessages } from '../src/recurring';
 import { load } from './support';
 
-const pounds = (amount: number) => `£${amount.toFixed(2)}`;
 const club = (email: string, frequency = 4): RecurringChoice => ({ type: 'new', optionId: 71, frequency, unit: 'weeks', email });
 
 describe('frequencyText', () => {
@@ -31,10 +30,11 @@ describe('frequencyText', () => {
     });
 });
 
-describe('planProblem', () => {
-    it('turns the SDK\'s validation into the theme\'s sentences, by error type', async () => {
+describe('planMessages', () => {
+    it('words every reason the SDK refuses a plan in the theme\'s sentences, by code', async () => {
         const { bundle } = await load();
-        const problem = (choice: RecurringChoice | null) => planProblem(DEFAULT_CONTENT, validateRecurringChoice(bundle, choice), choice);
+        const messages = planMessages(DEFAULT_CONTENT);
+        const problem = (choice: RecurringChoice | null) => validateRecurringChoice(bundle, choice, { messages })[0]?.message ?? null;
         expect(problem(null)).toBeNull();
         expect(problem(club('sam@example.com'))).toBeNull();
         expect(problem(club('  '))).toBe(DEFAULT_CONTENT.emailMissing);
@@ -43,22 +43,21 @@ describe('planProblem', () => {
         expect(problem({ type: 'new', optionId: 999, frequency: 4, unit: 'weeks', email: 'sam@example.com' })).toBe(DEFAULT_CONTENT.planGone);
         expect(problem({ type: 'reorder', subscriptionId: 'sub_gone' })).toBe(DEFAULT_CONTENT.planGone);
     });
-});
 
-describe('planDiscount', () => {
-    it('describes the plan\'s saving, or nothing when it has none', () => {
-        expect(planDiscount(DEFAULT_CONTENT, 'percentage', 10, pounds)).toBe('10% off');
-        expect(planDiscount(DEFAULT_CONTENT, 'fixed', 3, pounds)).toBe('£3.00 off');
-        expect(planDiscount(DEFAULT_CONTENT, '', null, pounds)).toBeNull();
-        expect(planDiscount(DEFAULT_CONTENT, 'percentage', 0, pounds)).toBeNull();
+    it('carries the merchant\'s own wording, not the default', async () => {
+        const { bundle } = await load();
+        const messages = planMessages(parseContent(JSON.stringify({ emailMissing: 'Votre courriel, s\'il vous plaît.' })));
+        expect(validateRecurringChoice(bundle, club(''), { messages })[0]?.message).toBe('Votre courriel, s\'il vous plaît.');
     });
 });
 
-describe('reorderExpired', () => {
-    it('is true only for a reorder link the bundle came back without', async () => {
-        const { bundle } = await load();
-        expect(reorderExpired(null, bundle)).toBe(false);
-        expect(reorderExpired('sub_gone', bundle)).toBe(true);
-        expect(reorderExpired('sub_1', { ...bundle, recurringSubscription: { id: 'sub_1', email: 'a@b.co', frequency: 4, unit: 'weeks', discountType: 'percentage', discountValue: 10, applyDiscountToInitialOrder: true } })).toBe(false);
+describe('planDiscount', () => {
+    it('describes the plan\'s saving, or nothing when it has none', async () => {
+        const { bundle, settings } = await load();
+        const money = createMoneyFormatter(bundle, settings);
+        expect(planDiscount(DEFAULT_CONTENT, 'percentage', 10, money)).toBe('10% off');
+        expect(planDiscount(DEFAULT_CONTENT, 'fixed', 3, money)).toBe('£3.00 off');
+        expect(planDiscount(DEFAULT_CONTENT, '', null, money)).toBeNull();
+        expect(planDiscount(DEFAULT_CONTENT, 'percentage', 0, money)).toBeNull();
     });
 });

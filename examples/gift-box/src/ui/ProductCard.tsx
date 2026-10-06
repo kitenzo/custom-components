@@ -7,17 +7,19 @@
  * many of it are in this step). The suites find and drive products through these, never through
  * class names or copy.
  */
+import { memo } from 'react';
+
 import { text } from '../content';
 import type { ViewProduct, ViewSection } from '../model';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
 import { PenIcon } from './Icons';
 import { OptionPickers, QuantityControl } from './PickControls';
 import { ProductArt } from './ProductArt';
 import { usePick } from './usePick';
 
 function useInStep(product: ViewProduct, section: ViewSection): number {
-    const { selection } = useBuilder();
-    return (selection.selections[section.id] ?? [])
+    const { selections } = useSelection();
+    return (selections[section.id] ?? [])
         .filter((entry) => product.variants.some((variant) => variant.id === entry.variantId))
         .reduce((total, entry) => total + entry.quantity, 0);
 }
@@ -33,7 +35,12 @@ export function FieldsTag({ product }: { product: ViewProduct }) {
     );
 }
 
-export function ProductCard({ product, section }: { product: ViewProduct; section: ViewSection }) {
+/*
+ * Memoised on the product and its step, both kept by the model between picks. A card is drawn
+ * again by its own state or by a change to the builder's or the selection's context, never by the
+ * Builder alone, and never by what the shopper types.
+ */
+export const ProductCard = memo(function ProductCard({ product, section }: { product: ViewProduct; section: ViewSection }) {
     const { money, content, openDetails } = useBuilder();
     const pick = usePick(product, section);
     const price = content.hidePrices ? null : money.format(money.unitPrice(pick.variant));
@@ -74,10 +81,10 @@ export function ProductCard({ product, section }: { product: ViewProduct; sectio
             </div>
         </article>
     );
-}
+});
 
 /** The only product in its step, given the width of the step: drawing, options as buttons, choose. */
-export function FeaturedProduct({ product, section }: { product: ViewProduct; section: ViewSection }) {
+export const FeaturedProduct = memo(function FeaturedProduct({ product, section }: { product: ViewProduct; section: ViewSection }) {
     const { money, content, openDetails } = useBuilder();
     const pick = usePick(product, section);
     const price = content.hidePrices ? null : money.format(money.unitPrice(pick.variant));
@@ -116,4 +123,4 @@ export function FeaturedProduct({ product, section }: { product: ViewProduct; se
             </div>
         </article>
     );
-}
+});

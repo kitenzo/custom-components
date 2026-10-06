@@ -10,7 +10,7 @@
 import { useBundlePrice, type UseBundleCartFlowResult } from '@kitenzo/react';
 
 import { text } from '../content';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
 
 export interface BuyState {
     canAdd: boolean;
@@ -22,12 +22,14 @@ export interface BuyState {
 }
 
 function PriceBlock() {
-    const { model, selection, money, content } = useBuilder();
-    const price = useBundlePrice(model.bundle, selection.selections);
+    const { model, money, content } = useBuilder();
+    const { selections } = useSelection();
+    const price = useBundlePrice(model.bundle, selections, { locale: document.documentElement.lang || undefined });
     if (content.hidePrices || price.discountedPrice === null) return null;
-    const total = Number(price.discountedPrice);
-    const original = price.originalPrice === null ? null : Number(price.originalPrice);
-    const saving = original !== null && original > total ? original - total : 0;
+    // Before the first pick only a flat set price is known: a total, with nothing to compare it to.
+    const total = price.amounts?.discounted ?? Number(price.discountedPrice);
+    const original = price.hasDiscount ? (price.amounts?.original ?? null) : null;
+    const saving = price.hasDiscount ? (price.amounts?.saved ?? 0) : 0;
     return (
         <div className="vol-price">
             <span className="vol-price__label">{text(content, 'total')}</span>

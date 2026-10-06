@@ -6,12 +6,19 @@
  * disagree about which variant is chosen. The option grid is core's (`defaultOptionValues`,
  * `resolveVariant`, `reachableOptionValues`, `selectOptionValue`); this file only keeps the
  * shopper's current answer and draws the controls.
+ *
+ * Two kinds of change reach a picker. The selection changing is everyone's business, and the
+ * builder re-renders every region for it. An option, a variant or a refusal is this wine's alone:
+ * the Pick tells whoever drew it (`subscribe`: its card, and the dialog while it is open on it),
+ * and the other wines on the shelf are left as they are.
  */
 import {
     defaultOptionValues,
+    isVariantBuyable,
     reachableOptionValues,
     resolveVariant,
     selectOptionValue,
+    type AddBlockedReason,
     type BundleVariant,
     type OptionSelection,
 } from '@kitenzo/core';
@@ -19,16 +26,24 @@ import {
 import { text } from '../content';
 import { h, replaceKeepingFocus, setAttr, setText } from '../dom';
 import type { ViewProduct, ViewSection } from '../model';
-import { blockedReason, type Blocked } from '../selection';
+import { nextId } from '../registry';
 import type { Ctx } from './context';
+import { blockedText } from './copy';
 import { minusIcon, plusIcon } from './icons';
+
+interface OptionRow {
+    name: string;
+    value: string;
+    values: { value: string; reachable: boolean }[];
+}
 
 export interface Pick {
     product: ViewProduct;
     section: ViewSection;
     variant: () => BundleVariant;
     quantity: () => number;
-    blocked: () => Blocked | null;
+    /** Why one more of this variant will not go into this step, from the SDK, or null when it will. */
+    blocked: () => AddBlockedReason | null;
     /** A sentence for the shopper when something was refused or is limited, else ''. */
     message: () => string;
     add: () => void;
@@ -36,9 +51,11 @@ export interface Pick {
     setOption: (name: string, value: string) => void;
     setVariant: (variantId: string) => void;
     /** The option axes worth a dropdown: more than one value. */
-    options: () => { name: string; value: string; values: { value: string; reachable: boolean }[] }[];
+    options: () => OptionRow[];
     /** For a product with variants but no option data (an older API): one choice per variant. */
     variantChoices: BundleVariant[] | null;
+    /** Be told when this wine's own state changes: an option, a variant, a refusal. Returns the way to stop. */
+    subscribe: (listener: () => void) => () => void;
     dispose: () => void;
 }
 
@@ -51,78 +68,89 @@ export function createPick(ctx: Ctx, product: ViewProduct, section: ViewSection)
     const options = product.product.options ?? [];
     const hasOptionData = options.length > 0 && product.variants.every((variant) => (variant.optionValues?.length ?? 0) === options.length);
     let values: OptionSelection = hasOptionData ? defaultOptionValues(product.product) : {};
-    let variantId = (product.variants.find((variant) => variant.available) ?? product.variants[0]!).id;
     let refusal: string | null = null;
     let timer: number | undefined;
+    const listeners = new Set<() => void>();
+    const changed = () => listeners.forEach((listener) => listener());
 
-    const variant = (): BundleVariant => {
-        if (!hasOptionData) return product.variants.find((candidate) => candidate.id === variantId) ?? product.variants[0]!;
-        // `resolveVariant` only resolves to something buyable. When the chosen combination is sold
-        // out, show that variant anyway, so the card can say "Sold out" rather than jump elsewhere.
-        return resolveVariant(product.product, values) ?? product.variants.find((candidate) => matches(candidate, product.product, values)) ?? product.variants[0]!;
-    };
-    const quantity = () => (ctx.state().selections[section.id] ?? []).find((pick) => pick.variantId === variant().id)?.quantity ?? 0;
-    const blocked = () => blockedReason(ctx.model, ctx.state().selections, section, variant());
+    // `resolveVariant` only resolves to something buyable. When the chosen combination is sold
+    // out, show that variant anyway, so the card can say "Sold out" rather than jump elsewhere.
+    const resolve = (): BundleVariant =>
+        resolveVariant(product.product, values) ?? product.variants.find((candidate) => matches(candidate, product.product, values)) ?? product.variants[0]!;
+    const optionRows = (): OptionRow[] =>
+        hasOptionData
+            ? options
+                  .filter((option) => option.values.length > 1)
+                  .map((option) => {
+                      const reachable = new Set(reachableOptionValues(product.product, values, option.name));
+                      return {
+                          name: option.name,
+                          value: values[option.name] ?? '',
+                          values: option.values.map((value) => ({ value, reachable: reachable.has(value) })),
+                      };
+                  })
+            : [];
+
+    // Both follow from the shopper's option values alone, so they are worked out when those
+    // change and read, not worked out again, by every update in between.
+    let variant: BundleVariant = hasOptionData ? resolve() : (product.variants.find(isVariantBuyable) ?? product.variants[0]!);
+    let rows = optionRows();
+
+    const quantity = () => (ctx.state().selections[section.id] ?? []).find((pick) => pick.variantId === variant.id)?.quantity ?? 0;
+    const blocked = () => ctx.builder.blockedReason(section.id, variant.id);
 
     const say = (message: string | null) => {
         refusal = message;
         window.clearTimeout(timer);
         if (message) timer = window.setTimeout(() => say(null), 5000);
-        ctx.render();
+        changed();
     };
-
-    const reasonText = (reason: Blocked): string =>
-        text(ctx.content, ({ 'sold-out': 'soldOut', stock: 'stockReached', 'step-full': 'stepFull', 'bundle-full': 'bundleFull' } as const)[reason]);
 
     return {
         product,
         section,
-        variant,
+        variant: () => variant,
         quantity,
         blocked,
         variantChoices: !hasOptionData && product.variants.length > 1 ? product.variants : null,
         message: () => {
             if (refusal) return refusal;
-            const current = variant();
-            const stock = current.maxOrderableQuantity;
-            return current.available && stock !== null && stock !== undefined && stock > 0 && stock <= 5 ? text(ctx.content, 'onlyLeft', { count: stock }) : '';
+            const stock = variant.maxOrderableQuantity;
+            return isVariantBuyable(variant) && stock !== null && stock !== undefined && stock <= ctx.content.lowStockAt ? text(ctx.content, 'onlyLeft', { count: stock }) : '';
         },
         add: () => {
             if (ctx.locked()) return;
             const reason = blocked();
-            if (reason) return say(reasonText(reason));
+            if (reason) return say(blockedText(ctx.content, reason));
             refusal = null;
             // The engine's own method. It re-validates, notifies, and the widget re-renders from that.
-            ctx.builder.addItem(section.id, variant().id, 1);
+            ctx.builder.addItem(section.id, variant.id, 1);
         },
         remove: () => {
             const current = quantity();
             if (ctx.locked() || current === 0) return;
             refusal = null;
-            ctx.builder.updateQuantity(section.id, variant().id, current - 1);
+            ctx.builder.updateQuantity(section.id, variant.id, current - 1);
         },
         setOption: (name, value) => {
             values = selectOptionValue(product.product, values, name, value);
-            ctx.render();
+            variant = resolve();
+            rows = optionRows();
+            changed();
         },
         setVariant: (id) => {
-            variantId = id;
-            ctx.render();
+            variant = product.variants.find((candidate) => candidate.id === id) ?? variant;
+            changed();
         },
-        options: () =>
-            hasOptionData
-                ? options
-                      .filter((option) => option.values.length > 1)
-                      .map((option) => {
-                          const reachable = new Set(reachableOptionValues(product.product, values, option.name));
-                          return {
-                              name: option.name,
-                              value: values[option.name] ?? '',
-                              values: option.values.map((value) => ({ value, reachable: reachable.has(value) })),
-                          };
-                      })
-                : [],
-        dispose: () => window.clearTimeout(timer),
+        options: () => rows,
+        subscribe: (listener) => {
+            listeners.add(listener);
+            return () => void listeners.delete(listener);
+        },
+        dispose: () => {
+            window.clearTimeout(timer);
+            listeners.clear();
+        },
     };
 }
 
@@ -130,8 +158,6 @@ export interface Controls {
     el: HTMLElement;
     update: () => void;
 }
-
-let uid = 0;
 
 /**
  * A product's option dropdowns, its add / quantity control and its message line, for a card or
@@ -148,7 +174,8 @@ let uid = 0;
  */
 export function createControls(ctx: Ctx, pick: Pick): Controls {
     const { content } = ctx;
-    const id = `vnc-pick-${(uid += 1)}`;
+    // The card and the dialog each draw this wine's controls, so each asks for a number of its own.
+    const id = `vnc-pick-${nextId()}`;
 
     const selects = pick.options().map((option) => {
         const select = h('select', { class: 'vnc-select', id: `${id}-${option.name}`, onchange: (event) => pick.setOption(option.name, (event.target as HTMLSelectElement).value) });
@@ -156,7 +183,7 @@ export function createControls(ctx: Ctx, pick: Pick): Controls {
         return { name: option.name, select, label: h('label', { class: 'vnc-option', for: select.id }, h('span', { class: 'vnc-option__label' }, option.name), select) };
     });
     const variantSelect = pick.variantChoices
-        ? h('select', { class: 'vnc-select', onchange: (event) => pick.setVariant((event.target as HTMLSelectElement).value) }, ...pick.variantChoices.map((variant) => h('option', { value: variant.id, disabled: !variant.available }, variant.title)))
+        ? h('select', { class: 'vnc-select', onchange: (event) => pick.setVariant((event.target as HTMLSelectElement).value) }, ...pick.variantChoices.map((variant) => h('option', { value: variant.id, disabled: !isVariantBuyable(variant) }, variant.title)))
         : null;
 
     const add = h('button', { type: 'button', class: 'vnc-button vnc-button--secondary vnc-add', 'data-testid': 'cc-pick', onclick: pick.add });
@@ -183,7 +210,7 @@ export function createControls(ctx: Ctx, pick: Pick): Controls {
         const variant = pick.variant();
         const quantity = pick.quantity();
         const blocked = pick.blocked();
-        const soldOut = blocked === 'sold-out';
+        const soldOut = blocked === 'sold-out' || blocked === 'not-offered';
         const refusing = blocked !== null && !soldOut;
         const name = variant.title === 'Default Title' ? pick.product.title : `${pick.product.title}, ${variant.title}`;
 

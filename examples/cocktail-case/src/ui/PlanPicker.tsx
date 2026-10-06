@@ -4,27 +4,28 @@
  * Never Shopify selling plans, and never "we will charge you every 4 weeks": a Recurring bundles
  * subscription is a reminder email with a reorder link, and the copy says exactly that. The email
  * field is required for a new subscription (the reminders go to it) and is checked by the SDK
- * (`plan.errors`) before anything is sent; the theme's sentence for the failure is shown once the
- * shopper has tried to add or has left the field.
+ * (`plan.errors`, worded by the theme through `planMessages`) before anything is sent; the
+ * sentence for the failure is shown once the shopper has tried to add or has left the field.
  *
  * Each tile shows what the case costs on that plan, priced by `useBundlePrice` with that plan's
  * choice, so the comparison is the SDK's arithmetic, not ours.
  */
 import { useId } from 'react';
 
-import { useBundlePrice, type RecurringChoice, type RecurringOption } from '@kitenzo/react';
+import { useBundlePrice, type RecurringChoice, type RecurringOption, type UseRecurringPlanResult } from '@kitenzo/react';
 
 import { text } from '../content';
-import { frequencyText, planDiscount, planProblem } from '../recurring';
-import { countOf } from '../selection';
-import { useBuilder } from './context';
+import { frequencyText, planDiscount } from '../recurring';
+import { pickedCount } from '../selection';
+import { useBuilder, useSelection } from './context';
 import { BellIcon } from './Icons';
 
 function TilePrice({ choice }: { choice: RecurringChoice | null }) {
-    const { model, selection, money, content } = useBuilder();
-    const price = useBundlePrice(model.bundle, selection.selections, { recurring: choice });
-    if (content.hidePrices || price.discountedPrice === null || countOf(selection.selections) === 0) return null;
-    return <span className="ckc-plan__price">{money.format(Number(price.discountedPrice))}</span>;
+    const { model, content } = useBuilder();
+    const { selections, progress } = useSelection();
+    const price = useBundlePrice(model.bundle, selections, { recurring: choice, locale: document.documentElement.lang || undefined });
+    if (content.hidePrices || price.formattedDiscountedPrice === null || pickedCount(progress) === 0) return null;
+    return <span className="ckc-plan__price">{price.formattedDiscountedPrice}</span>;
 }
 
 /** The choice a plan's tile prices at: its first cadence, before any email is typed. */
@@ -33,11 +34,16 @@ function previewChoice(option: RecurringOption): RecurringChoice | null {
     return first ? { type: 'new', optionId: option.id, frequency: first.frequency, unit: first.unit, email: '' } : null;
 }
 
-export function PlanPicker({ touched, onTouch }: { touched: boolean; onTouch: () => void }) {
-    const { plan, content, money, locked } = useBuilder();
+/*
+ * `plan` is a prop, not context: it is a new value on every letter typed into the email field,
+ * and nothing outside the case rail reads it.
+ */
+export function PlanPicker({ plan, touched, onTouch }: { plan: UseRecurringPlanResult; touched: boolean; onTouch: () => void }) {
+    const { content, money } = useBuilder();
+    const { locked } = useSelection();
     const id = useId();
     if (plan.subscription) {
-        const saving = planDiscount(content, plan.subscription.discountType, plan.subscription.discountValue, money.format);
+        const saving = planDiscount(content, plan.subscription.discountType, plan.subscription.discountValue, money);
         return (
             <div className="ckc-plan ckc-plan--reorder" data-testid="ckc-plan">
                 <p className="ckc-plan__reorder">
@@ -50,7 +56,7 @@ export function PlanPicker({ touched, onTouch }: { touched: boolean; onTouch: ()
     }
     if (!plan.hasOptions) return null;
 
-    const problem = planProblem(content, plan.errors, plan.choice);
+    const problem = plan.errors[0]?.message ?? null;
     const showProblem = touched && problem !== null;
     const name = `${id}-plan`;
 
@@ -68,7 +74,7 @@ export function PlanPicker({ touched, onTouch }: { touched: boolean; onTouch: ()
                 </label>
                 {plan.options.map((option) => {
                     const on = plan.selectedOption?.id === option.id;
-                    const saving = planDiscount(content, option.discountType, option.discountValue, money.format);
+                    const saving = planDiscount(content, option.discountType, option.discountValue, money);
                     return (
                         <label key={option.id} className={`ckc-plan__option ckc-plan__option--club${on ? ' ckc-plan__option--on' : ''}`}>
                             <input type="radio" className="ckc-radio" name={name} checked={on} onChange={() => plan.selectOption(option.id)} data-ckc-plan={option.id} />

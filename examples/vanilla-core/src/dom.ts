@@ -28,7 +28,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs = 
     return el;
 }
 
-export function append(el: Element, children: Child[]): void {
+function append(el: Element, children: Child[]): void {
     for (const child of children) {
         if (child === null || child === undefined || child === false) continue;
         el.append(typeof child === 'string' || typeof child === 'number' ? document.createTextNode(String(child)) : child);

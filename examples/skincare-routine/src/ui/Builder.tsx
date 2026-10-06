@@ -7,26 +7,25 @@
  * with no seed; a basket Edit mounts it with the saved bundle and never shows the quiz, because
  * the shopper already has a routine and came back to change it. Retaking the quiz unmounts it,
  * and the next result is a new builder: answers never rewrite a selection after the fact.
+ *
+ * The quiz has no builder, so what it reads and plans from is the bundle's whole offer. The
+ * routine draws its own model, from its builder's conditions.
  */
 import { useMemo, useState } from 'react';
 
-import type { BundleEditTarget, SavedBundleItem, SectionSelections, ShopSettings } from '@kitenzo/react';
+import type { BundleDetail, SectionSelections, ShopSettings, UseBundleEditResult } from '@kitenzo/react';
 
 import type { MountConfig } from '../config';
-import type { ViewModel } from '../model';
+import { toViewModel } from '../model';
 import { planRoutine, quizFrom, type QuizAnswer, type RoutinePlan } from '../quiz';
 import { Quiz } from './Quiz';
 import { Routine } from './Routine';
 
-export interface EditState {
-    isEditing: boolean;
-    selections: SectionSelections | null;
-    missing: SavedBundleItem[];
-    replace: BundleEditTarget | null;
-}
+export type EditState = Pick<UseBundleEditResult, 'isEditing' | 'selections' | 'missing' | 'replace'>;
 
 interface BuilderProps {
-    model: ViewModel;
+    bundle: BundleDetail;
+    /** Loaded before the builder renders: they decide what is offered. */
     settings: ShopSettings;
     config: MountConfig;
     editor: boolean;
@@ -49,7 +48,8 @@ export type Stage =
           view: 'review' | 'wizard';
       };
 
-export function Builder({ model, settings, config, editor, edit }: BuilderProps) {
+export function Builder({ bundle, settings, config, editor, edit }: BuilderProps) {
+    const offer = useMemo(() => toViewModel(bundle, settings), [bundle, settings]);
     const questions = useMemo(() => quizFrom(config.content), [config.content]);
     const [stage, setStage] = useState<Stage>(() =>
         // A basket Edit that restored its routine opens it in the wizard. One whose saved bundle is
@@ -63,18 +63,18 @@ export function Builder({ model, settings, config, editor, edit }: BuilderProps)
 
     const finish = (chosen: Chosen) => {
         const answers = questions.flatMap((question) => question.answers.filter((answer) => answer.id === chosen[question.id]));
-        const plan = planRoutine(model, answers);
+        const plan = planRoutine(offer, answers);
         setStage((current) => ({ kind: 'routine', key: nextKey(current), seed: plan.selections, plan, answers, chosen, view: 'review' }));
     };
     const skip = () => setStage((current) => ({ kind: 'routine', key: nextKey(current), seed: null, plan: null, answers: [], chosen: {}, view: 'wizard' }));
 
     if (stage.kind === 'quiz') {
-        return <Quiz model={model} content={config.content} editor={editor} questions={questions} initial={stage.chosen} onFinish={finish} onSkip={skip} />;
+        return <Quiz model={offer} content={config.content} editor={editor} questions={questions} initial={stage.chosen} onFinish={finish} onSkip={skip} />;
     }
     return (
         <Routine
             key={stage.key}
-            model={model}
+            bundle={bundle}
             settings={settings}
             config={config}
             editor={editor}

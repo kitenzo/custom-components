@@ -11,8 +11,7 @@
 import { trayColumns, type Placed } from '../box';
 import { text } from '../content';
 import type { ViewProduct } from '../model';
-import { countOf } from '../selection';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
 import { CloseIcon, SparkleIcon } from './Icons';
 import { imageAttrs } from './images';
 
@@ -24,18 +23,14 @@ interface Slot {
 }
 
 function useSlots(): { filled: Slot[]; slots: number | null; count: number } {
-    const { box, selection } = useBuilder();
+    const { box } = useBuilder();
+    const { order, progress, slots } = useSelection();
     if (!box) return { filled: [], slots: null, count: 0 };
-    const filled = selection.order
-        .get()
+    const filled = order
         .map((entry, orderIndex) => ({ entry, orderIndex }))
         .filter(({ entry }) => entry.sectionId === box.section.id)
-        .map(({ entry, orderIndex }) => ({
-            orderIndex,
-            entry,
-            product: box.section.products.find((product) => product.variants.some((variant) => variant.id === entry.variantId)),
-        }));
-    return { filled, slots: box.slots, count: countOf(selection.selections, box.section.id) };
+        .map(({ entry, orderIndex }) => ({ orderIndex, entry, product: box.section.byVariantId.get(entry.variantId)?.product }));
+    return { filled, slots, count: progress.sections[box.section.id]?.quantity ?? 0 };
 }
 
 function Macaron({ product, size }: { product: ViewProduct | undefined; size: number }) {
@@ -51,11 +46,12 @@ function Macaron({ product, size }: { product: ViewProduct | undefined; size: nu
 }
 
 export function Tray({ id }: { id: string }) {
-    const { box, content, selection, locked, idPrefix } = useBuilder();
+    const { box, content, idPrefix } = useBuilder();
+    const { locked, size, removeAt, fillRest, fillNote } = useSelection();
     const { filled, slots, count } = useSlots();
     if (!box) return null;
 
-    if (box.sizes.length > 0 && box.size === null) {
+    if (box.sizes.length > 0 && size === null) {
         return (
             <div className="mcb-tray mcb-tray--unchosen" id={id}>
                 <p className="mcb-tray__prompt">{text(content, 'chooseSize')}</p>
@@ -101,7 +97,7 @@ export function Tray({ id }: { id: string }) {
                                 aria-disabled={locked || undefined}
                                 onClick={() => {
                                     if (locked) return;
-                                    selection.order.removeAt(slot.orderIndex);
+                                    removeAt(slot.orderIndex);
                                     // The pressed slot re-renders as another macaron or an empty
                                     // well. Keep a keyboard user where they were: on the macaron
                                     // that moved into this slot, else on the box's heading.
@@ -129,16 +125,16 @@ export function Tray({ id }: { id: string }) {
                     data-testid="mcb-fill"
                     aria-disabled={locked || undefined}
                     onClick={() => {
-                        if (!locked) box.fillRest();
+                        if (!locked) fillRest();
                     }}
                 >
                     <SparkleIcon />
                     {text(content, 'fillRest')}
                 </button>
             ) : null}
-            {box.fillNote ? (
+            {fillNote ? (
                 <p className="mcb-tray__note" role="status">
-                    {box.fillNote}
+                    {fillNote}
                 </p>
             ) : null}
         </div>

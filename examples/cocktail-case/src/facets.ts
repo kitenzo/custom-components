@@ -16,7 +16,8 @@
  *   - a product already in the case is never hidden by a filter. Filtering is a way to find the
  *     next can, not a way to lose sight of the ones you chose (and their - buttons).
  *
- * Pure functions only: the UI holds the active state and renders what these return.
+ * Pure functions only: the UI holds the active state and renders what these return. A product's
+ * tags are read once (`indexFacets`); every question after that is a lookup.
  */
 
 export interface FacetDef {
@@ -29,11 +30,14 @@ export interface FacetDef {
 /** Selected values per facet prefix. A facet with no entry (or an empty one) does not filter. */
 export type ActiveFacets = Record<string, string[]>;
 
-export interface FacetValue {
+interface TagValue {
     /** Lowercased, the identity of the chip. */
     key: string;
     /** The tag's remainder as first written, underscores read as spaces: `Fruity`. */
     label: string;
+}
+
+export interface FacetValue extends TagValue {
     count: number;
     active: boolean;
 }
@@ -47,6 +51,16 @@ export interface FacetGroup {
 export interface Taggable {
     id: string;
     tags: string[];
+}
+
+/**
+ * The configured facets and every product's values in each, by product id then facet prefix.
+ * Built once for the products on the page, so a pick or a pressed chip reads no tag again.
+ */
+export interface FacetIndex {
+    /** Empty when the merchant turned filters off. */
+    defs: FacetDef[];
+    byProduct: ReadonlyMap<string, Record<string, TagValue[]>>;
 }
 
 /**
@@ -67,9 +81,9 @@ export function parseFacetDefs(raw: string): FacetDef[] {
     return defs;
 }
 
-function valuesOf(tags: string[], def: FacetDef): { key: string; label: string }[] {
+function valuesOf(tags: string[], def: FacetDef): TagValue[] {
     const prefix = def.prefix.toLowerCase();
-    const values: { key: string; label: string }[] = [];
+    const values: TagValue[] = [];
     for (const tag of tags) {
         if (!tag.toLowerCase().startsWith(prefix)) continue;
         const label = tag.slice(def.prefix.length).replace(/_/g, ' ').trim();
@@ -80,59 +94,53 @@ function valuesOf(tags: string[], def: FacetDef): { key: string; label: string }
     return values;
 }
 
+export function indexFacets(products: Taggable[], defs: FacetDef[]): FacetIndex {
+    return { defs, byProduct: new Map(products.map((product) => [product.id, Object.fromEntries(defs.map((def) => [def.prefix, valuesOf(product.tags, def)]))])) };
+}
+
+function own(facets: FacetIndex, productId: string, def: FacetDef): TagValue[] {
+    return facets.byProduct.get(productId)?.[def.prefix] ?? [];
+}
+
 function selected(active: ActiveFacets, def: FacetDef): string[] {
     return active[def.prefix] ?? [];
 }
 
 /** Whether one facet lets this product through: no selection, or any selected value matches. */
-function passes(tags: string[], def: FacetDef, active: ActiveFacets): boolean {
+function passes(facets: FacetIndex, productId: string, def: FacetDef, active: ActiveFacets): boolean {
     const wanted = selected(active, def);
-    if (wanted.length === 0) return true;
-    const own = valuesOf(tags, def).map((value) => value.key);
-    return wanted.some((key) => own.includes(key));
-}
-
-/** OR within a facet, AND across facets. */
-export function matchesFacets(tags: string[], defs: FacetDef[], active: ActiveFacets): boolean {
-    return defs.every((def) => passes(tags, def, active));
+    return wanted.length === 0 || own(facets, productId, def).some((value) => wanted.includes(value.key));
 }
 
 /** How many filtering facets this product satisfies. "Surprise me" leans toward the higher. */
-export function facetsMatched(tags: string[], defs: FacetDef[], active: ActiveFacets): number {
-    return defs.filter((def) => selected(active, def).length > 0 && passes(tags, def, active)).length;
+export function facetsMatched(productId: string, facets: FacetIndex, active: ActiveFacets): number {
+    return facets.defs.filter((def) => selected(active, def).length > 0 && passes(facets, productId, def, active)).length;
 }
 
-export function isFiltering(defs: FacetDef[], active: ActiveFacets): boolean {
-    return defs.some((def) => selected(active, def).length > 0);
+export function isFiltering(facets: FacetIndex, active: ActiveFacets): boolean {
+    return facets.defs.some((def) => selected(active, def).length > 0);
 }
 
 /**
  * The chips to draw, with their counts. A facet no product carries is left out, and so is a
  * facet with a single value: a filter with one option filters nothing.
  */
-export function facetGroups(products: Taggable[], defs: FacetDef[], active: ActiveFacets): FacetGroup[] {
-    return defs.flatMap<FacetGroup>((def) => {
-        const seen: { key: string; label: string }[] = [];
-        for (const product of products) {
-            for (const value of valuesOf(product.tags, def)) if (!seen.some((entry) => entry.key === value.key)) seen.push(value);
-        }
-        if (seen.length < 2) return [];
+export function facetGroups(products: { id: string }[], facets: FacetIndex, active: ActiveFacets): FacetGroup[] {
+    return facets.defs.flatMap<FacetGroup>((def) => {
         // Counted against every OTHER facet's selection: within a facet the chips are
         // alternatives, so this facet's own selection must not shrink its own counts.
-        const others = defs.filter((other) => other !== def);
-        const pool = products.filter((product) => others.every((other) => passes(product.tags, other, active)));
+        const others = facets.defs.filter((other) => other !== def);
+        const seen = new Map<string, FacetValue>();
         const chosen = selected(active, def);
-        return [
-            {
-                prefix: def.prefix,
-                label: def.label,
-                values: seen.map((value) => ({
-                    ...value,
-                    count: pool.filter((product) => valuesOf(product.tags, def).some((own) => own.key === value.key)).length,
-                    active: chosen.includes(value.key),
-                })),
-            },
-        ];
+        for (const product of products) {
+            const counted = others.every((other) => passes(facets, product.id, other, active));
+            for (const value of own(facets, product.id, def)) {
+                const chip = seen.get(value.key) ?? { ...value, count: 0, active: chosen.includes(value.key) };
+                if (counted) chip.count += 1;
+                seen.set(value.key, chip);
+            }
+        }
+        return seen.size < 2 ? [] : [{ prefix: def.prefix, label: def.label, values: [...seen.values()] }];
     });
 }
 
@@ -144,9 +152,9 @@ export function toggleFacet(active: ActiveFacets, prefix: string, key: string): 
     return next.length > 0 ? { ...rest, [prefix]: next } : rest;
 }
 
-export interface Filtered<T> {
+interface Filtered<T> {
     product: T;
-    /** Passes every facet. False for a product shown only because it is in the case. */
+    /** Passes every facet (OR within a facet, AND across facets). False for a product shown only because it is in the case. */
     matches: boolean;
     inCase: boolean;
 }
@@ -155,15 +163,15 @@ export interface Filtered<T> {
  * What the grid shows, in the merchant's order: every product that passes the filters, and every
  * product in the case whether it passes or not.
  */
-export function applyFacets<T extends Taggable>(products: T[], defs: FacetDef[], active: ActiveFacets, inCase: ReadonlySet<string>): Filtered<T>[] {
+export function applyFacets<T extends { id: string }>(products: T[], facets: FacetIndex, active: ActiveFacets, inCase: ReadonlySet<string>): Filtered<T>[] {
     return products.flatMap((product) => {
-        const matches = matchesFacets(product.tags, defs, active);
+        const matches = facets.defs.every((def) => passes(facets, product.id, def, active));
         const chosen = inCase.has(product.id);
         return matches || chosen ? [{ product, matches, inCase: chosen }] : [];
     });
 }
 
 /** The labels of a product's values in each facet, for the small tags on a card. */
-export function facetLabelsOf(tags: string[], defs: FacetDef[]): string[] {
-    return defs.flatMap((def) => valuesOf(tags, def).map((value) => value.label));
+export function facetLabelsOf(productId: string, facets: FacetIndex): string[] {
+    return facets.defs.flatMap((def) => own(facets, productId, def).map((value) => value.label));
 }

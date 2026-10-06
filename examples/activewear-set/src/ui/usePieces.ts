@@ -1,72 +1,90 @@
 /*
- * Every piece's option choice (its size and colour), held once for the whole set.
+ * Every piece's choice (its size and colour), held once for the whole set.
  *
  * Held above the cards because three things change it: the card, the details dialog, and
- * "Match colours", which changes all three pieces at once. Each piece's choice is seeded when the
- * builder is created, from the variant a basket Edit restored or from the product's first buyable
- * colour, never from an effect after the first paint.
+ * "Match colours", which changes all three pieces at once.
  *
- * A piece already in the set follows its choice: change its colour and the set now holds that
- * colour. That is a swap through the SDK's builder (remove the old variant, add the new), asked
- * first whether the new one can go in.
+ * A piece in the set shows the variant the set holds, read from the selection on every render
+ * (../pieces.ts), so a card can never show a colour the set does not hold. The state here is only
+ * what the shopper last chose for a piece that is not in the set. It also remembers a piece's
+ * choice after it leaves the set: it is seeded from a basket Edit when the builder is created
+ * (never from an effect after the first paint) and follows every change the builder accepted.
  */
 import { useCallback, useMemo, useState } from 'react';
 
-import type { OptionSelection } from '@kitenzo/react';
+import type { BundleVariant, OptionSelection, SectionSelections, UseBundleBuilderResult } from '@kitenzo/react';
 
 import type { ViewModel, ViewProduct, ViewSection } from '../model';
-import { initialValues, parseNameList, resolve } from '../options';
-import { pickOf, swapBlocked, type Blocked, type Selection } from '../selection';
-
-export type ApplyOutcome = { kind: 'none' } | { kind: 'swapped'; title: string } | { kind: 'blocked'; reason: Blocked };
+import { initialValues, resolve } from '../options';
+import { changePiece, pickedVariant, shownValues, shownVariant, type ChangeOutcome } from '../pieces';
 
 export interface Pieces {
-    swatchNames: string[];
+    /** The option values a piece shows. */
     valuesOf: (section: ViewSection, product: ViewProduct) => OptionSelection;
-    /** Set a piece's choice and, if it is in the set, swap the set to match. */
-    apply: (section: ViewSection, product: ViewProduct, next: OptionSelection) => ApplyOutcome;
+    /** The variant shown for a product with no option data, whose choice is a variant. */
+    variantOf: (section: ViewSection, product: ViewProduct) => BundleVariant;
+    /** Set a piece's option values and, if it is in the set, swap the set to match. */
+    apply: (section: ViewSection, product: ViewProduct, next: OptionSelection) => ChangeOutcome;
+    /** The same for a product with no option data. */
+    applyVariant: (section: ViewSection, product: ViewProduct, variantId: string) => ChangeOutcome;
+}
+
+/** What the shopper last chose on a card: option values, or a variant for a product without option data. */
+interface Browsed {
+    values?: OptionSelection;
+    variantId?: string;
 }
 
 export const pieceKey = (section: ViewSection, product: ViewProduct) => `${section.id}:${product.id}`;
 
-export function usePieces(model: ViewModel, selection: Selection, swatchOptions: string, locked: boolean): Pieces {
-    const swatchNames = useMemo(() => parseNameList(swatchOptions), [swatchOptions]);
-    const seedFor = useCallback(
-        (section: ViewSection, product: ViewProduct) => {
-            const pick = pickOf(selection.builder.getState().selections, section.id, product);
-            const chosen = pick ? product.variants.find((variant) => variant.id === pick.variantId) : undefined;
-            return initialValues(product.product, swatchNames, chosen);
-        },
-        [selection.builder, swatchNames],
-    );
-
-    const [values, setValues] = useState<Record<string, OptionSelection>>(() => {
-        const seeded: Record<string, OptionSelection> = {};
-        for (const section of model.sections) for (const product of section.products) seeded[pieceKey(section, product)] = seedFor(section, product);
+export function usePieces(
+    model: ViewModel,
+    selections: SectionSelections,
+    { swapItem, swapBlockedReason }: Pick<UseBundleBuilderResult, 'swapItem' | 'swapBlockedReason'>,
+    swatchNames: string[],
+    locked: boolean,
+): Pieces {
+    const [browsed, setBrowsed] = useState<Record<string, Browsed>>(() => {
+        const seeded: Record<string, Browsed> = {};
+        for (const section of model.sections) {
+            for (const product of section.products) {
+                const picked = pickedVariant(selections, section, product);
+                if (picked) seeded[pieceKey(section, product)] = { values: initialValues(product.product, swatchNames, picked), variantId: picked.id };
+            }
+        }
         return seeded;
     });
 
-    const valuesOf = useCallback((section: ViewSection, product: ViewProduct) => values[pieceKey(section, product)] ?? seedFor(section, product), [values, seedFor]);
-
-    const apply = useCallback(
-        (section: ViewSection, product: ViewProduct, next: OptionSelection): ApplyOutcome => {
-            if (locked) return { kind: 'none' };
-            setValues((current) => ({ ...current, [pieceKey(section, product)]: next }));
-            // Read the builder live, not this render's snapshot: "Match colours" applies three
-            // pieces in one handler, and each swap has to see the one before it.
-            const selections = selection.builder.getState().selections;
-            const pick = pickOf(selections, section.id, product);
-            if (!pick) return { kind: 'none' };
-            const { variant } = resolve(product.product, next);
-            if (!variant || variant.id === pick.variantId) return { kind: 'none' };
-            const reason = swapBlocked(model, selections, section, pick.variantId, variant);
-            if (reason) return { kind: 'blocked', reason };
-            selection.builder.removeItem(section.id, pick.variantId);
-            selection.builder.addItem(section.id, variant.id, pick.quantity);
-            return { kind: 'swapped', title: variant.title };
-        },
-        [locked, model, selection.builder],
+    const valuesOf = useCallback(
+        (section: ViewSection, product: ViewProduct) => shownValues(product.product, swatchNames, pickedVariant(selections, section, product), browsed[pieceKey(section, product)]?.values),
+        [selections, browsed, swatchNames],
+    );
+    const variantOf = useCallback(
+        (section: ViewSection, product: ViewProduct) => shownVariant(product.product, pickedVariant(selections, section, product), browsed[pieceKey(section, product)]?.variantId),
+        [selections, browsed],
     );
 
-    return useMemo(() => ({ swatchNames, valuesOf, apply }), [swatchNames, valuesOf, apply]);
+    // "Match colours" changes several pieces in one handler, before the next render. Each piece is
+    // its own pick in its own step, so the selection as rendered still names the pick to replace,
+    // and the builder judges each swap against the swaps before it.
+    const change = useCallback(
+        (section: ViewSection, product: ViewProduct, target: BundleVariant | null, choice: Browsed): ChangeOutcome => {
+            if (locked) return { kind: 'none' };
+            const outcome = changePiece({ swapItem, swapBlockedReason }, section.id, pickedVariant(selections, section, product), target);
+            // A refused change is not remembered: the piece stays what the set holds.
+            if (outcome.kind !== 'blocked') setBrowsed((current) => ({ ...current, [pieceKey(section, product)]: { ...current[pieceKey(section, product)], ...choice } }));
+            return outcome;
+        },
+        [locked, selections, swapItem, swapBlockedReason],
+    );
+
+    return useMemo<Pieces>(
+        () => ({
+            valuesOf,
+            variantOf,
+            apply: (section, product, next) => change(section, product, resolve(product.product, next).variant, { values: next }),
+            applyVariant: (section, product, variantId) => change(section, product, product.variants.find((variant) => variant.id === variantId) ?? null, { variantId }),
+        }),
+        [valuesOf, variantOf, change],
+    );
 }

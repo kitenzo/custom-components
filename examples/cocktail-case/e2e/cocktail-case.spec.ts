@@ -102,7 +102,7 @@ test.describe('discount ladder', () => {
 });
 
 test.describe('rules other than a count', () => {
-    test('a case of 7 when the merchant sells 6, 12 or 24 is refused in the merchant\'s words, and Surprise me fills to 12', async ({ page }) => {
+    test('a case of 7 when the merchant sells 6, 12 or 24 is asked for the 5 that reach 12, and Surprise me fills to 12', async ({ page }) => {
         const fixtures = loadFixtures().map((fixture) => ({
             ...fixture,
             bundle: {
@@ -113,14 +113,47 @@ test.describe('rules other than a count', () => {
         const backend = createMockBackend({ fixtures });
         await openWidget(page, { backend });
         await pick(page, 'passionfruit-mojito', 7);
-        // Nothing is missing by count (7 is inside 6 to 24), so the SDK's isSatisfied is the only judge.
+        // 7 is inside 6 to 24 and still not a size the merchant sells: the SDK counts to the next one.
         await expect(widget(page)).toHaveAttribute('data-complete', 'false');
         await expect(buyButton(page)).toHaveAttribute('aria-disabled', 'true');
-        await expect(status(page)).toHaveText('This combination cannot be bought as it is. Please change your selection.');
+        await expect(status(page)).toHaveText('Add 5 more to complete your case');
         await expect(surprise(page)).toContainText('Fill to 12');
         await surprise(page).click();
         await expect(widget(page)).toHaveAttribute('data-qa-count', '12');
         await expect(widget(page)).toHaveAttribute('data-complete', 'true');
+    });
+
+    test('"at least 2 of each" with a single can of one drink is refused in the merchant\'s words', async ({ page }) => {
+        const fixtures = loadFixtures().map((fixture) => ({
+            ...fixture,
+            bundle: { ...fixture.bundle, limitRules: [...fixture.bundle.limitRules, { operation: 'gte' as const, sectionId: null, type: 'amount-of-one-product' as const, value: '2.00' }] },
+        }));
+        const backend = createMockBackend({ fixtures });
+        await openWidget(page, { backend });
+        await pick(page, 'passionfruit-mojito', 5);
+        await pick(page, 'pear-cardamom', 1);
+        // Nothing is missing by count (6 of 6 to 24), so the SDK's isSatisfied is the only judge.
+        await expect(widget(page)).toHaveAttribute('data-complete', 'false');
+        await expect(buyButton(page)).toHaveAttribute('aria-disabled', 'true');
+        await expect(status(page)).toHaveText('This combination cannot be bought as it is. Please change your selection.');
+        await pick(page, 'pear-cardamom', 1);
+        await expect(widget(page)).toHaveAttribute('data-complete', 'true');
+    });
+
+    test('"at most 2 of each" stops the third can of a drink, and says why in the merchant\'s words', async ({ page }) => {
+        const fixtures = loadFixtures().map((fixture) => ({
+            ...fixture,
+            bundle: { ...fixture.bundle, limitRules: [...fixture.bundle.limitRules, { operation: 'lte' as const, sectionId: null, type: 'amount-of-one-product' as const, value: '2.00' }] },
+        }));
+        const backend = createMockBackend({ fixtures });
+        await openWidget(page, { backend });
+        const card = product(page, 'passionfruit-mojito');
+        await pick(page, 'passionfruit-mojito', 2);
+        // The control stays focusable and explains itself, as every refusal does.
+        await expect(card.getByTestId('cc-pick')).toHaveAttribute('aria-disabled', 'true');
+        await card.getByTestId('cc-pick').click({ force: true });
+        await expect(card).toHaveAttribute('data-cc-quantity', '2');
+        await expect(card.locator('[role="status"]')).toHaveText('That is the most of this drink a case can hold.');
     });
 });
 

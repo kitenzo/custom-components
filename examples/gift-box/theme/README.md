@@ -33,9 +33,9 @@ A draft bundle's product does not appear anywhere you can pick it. In the theme 
 
 ## Personalisation
 
-The fields shoppers fill in (their labels, help text, character limits, and whether they are required) come from the bundle's personalisation in Kitenzo, not from the theme. Change them there and the section follows. The section's **Personalisation** settings are only the words around the fields: the heading, "Required", the character counter, and the buy button's "Add the engraving" message.
+The fields shoppers fill in (their labels, help text, character limits, and whether they are required) come from the bundle's personalisation in Kitenzo, not from the theme. Change them there and the section follows. The section's **Personalisation** settings are only the words around the fields: the heading, "Required", the character counter, how a fee is announced, and the buy button's "Add the engraving" message.
 
-Text, dropdown and checkbox fields are supported. A field that asks for an image upload, or that carries a fee, is not: an optional one is left out, and a required one keeps the bundle off sale. The theme editor names the field when that happens.
+Text, dropdown and checkbox fields are supported, with or without a fee. A field that asks for an image upload is not: an optional one is left out, and a required one keeps the bundle off sale. The theme editor names the field when that happens.
 
 ## If something looks wrong
 

@@ -8,12 +8,16 @@
  *     the merchant every other string;
  *   - blank or whitespace-only text falls back to the default (a cleared field means "use the
  *     default", not "show nothing"), except where the setting says blank means "hide";
- *   - the defaults below are the same strings as the schema defaults in theme/, and
+ *   - a number that is not a whole number of zero or more is made one, so a count never reaches
+ *     the page negative or fractional;
+ *   - the defaults below are the same values as the schema defaults in theme/, and
  *     test/theme.test.ts fails if the two drift.
  *
  * Copy may carry `{count}`, `{step}`, `{amount}`, `{value}`, `{option}`, `{choice}` placeholders,
  * filled by `fill`.
  */
+
+import type { BundleCartMessages } from '@kitenzo/react';
 
 export interface Content {
     /** Blank means "use the bundle's own name". */
@@ -31,6 +35,8 @@ export interface Content {
     soldOut: string;
     onlyLeft: string;
     stockReached: string;
+    variantLimit: string;
+    productLimit: string;
     included: string;
     summaryHeading: string;
     summaryNotChosen: string;
@@ -59,6 +65,7 @@ export interface Content {
     /** "Onyx: #1c1c1c", one per line: the colour each swatch is painted. */
     swatchColours: string;
     notAllowed: string;
+    cartFailed: string;
     retryAdd: string;
     unavailable: string;
     loadFailed: string;
@@ -66,6 +73,8 @@ export interface Content {
     editMissing: string;
     afterAdd: 'cart' | 'stay';
     hidePrices: boolean;
+    /** Stock at or below which a piece says how many are left. 0 never says it. */
+    lowStockAt: number;
 }
 
 export const DEFAULT_CONTENT: Content = {
@@ -82,6 +91,8 @@ export const DEFAULT_CONTENT: Content = {
     soldOut: 'Sold out',
     onlyLeft: 'Only {count} left',
     stockReached: 'That is all we have of this one.',
+    variantLimit: 'That is the most of this one a set can hold.',
+    productLimit: 'That is the most of this piece a set can hold.',
     included: 'Included',
     summaryHeading: 'Your set',
     summaryNotChosen: 'Not chosen yet',
@@ -108,6 +119,7 @@ export const DEFAULT_CONTENT: Content = {
     swatchOptions: 'Colour, Color',
     swatchColours: 'Onyx: #1d1d1f\nBone: #e4dccd\nMoss: #5b6447\nSlate: #5f6872',
     notAllowed: 'This combination cannot be bought as it is. Please change your selection.',
+    cartFailed: 'We could not add this to your cart. Please try again.',
     retryAdd: 'Press the button again to finish adding it; you will not be charged twice.',
     unavailable: 'This set is not available right now.',
     loadFailed: 'We could not load this set. Please refresh the page to try again.',
@@ -115,6 +127,7 @@ export const DEFAULT_CONTENT: Content = {
     editMissing: 'Some pieces from your saved set are no longer available, so please choose again.',
     afterAdd: 'cart',
     hidePrices: false,
+    lowStockAt: 5,
 };
 
 type TextKey = { [K in keyof Content]: Content[K] extends string ? K : never }[keyof Content];
@@ -144,6 +157,8 @@ export function parseContent(raw: string | undefined): Content {
             if (typeof value === 'string' && value.trim() !== '') (content as unknown as Record<string, unknown>)[key] = value.trim();
         } else if (typeof fallback === 'boolean') {
             if (typeof value === 'boolean') (content as unknown as Record<string, unknown>)[key] = value;
+        } else if (typeof fallback === 'number') {
+            if (typeof value === 'number' && Number.isFinite(value)) (content as unknown as Record<string, unknown>)[key] = Math.max(0, Math.round(value));
         }
     }
     content.afterAdd = input.afterAdd === 'stay' ? 'stay' : 'cart';
@@ -158,4 +173,12 @@ export function fill(template: string, values: Record<string, string | number>):
 /** One string, filled. The one way a component reads copy. */
 export function text(content: Content, key: TextKey, values: Record<string, string | number> = {}): string {
     return fill(content[key], values);
+}
+
+/**
+ * The cart's own sentences, in the merchant's words. The store's reason for refusing a line
+ * ("sold out") is shown as the store sent it, in the storefront's language already.
+ */
+export function cartMessages(content: Content): BundleCartMessages {
+    return { 'configure-failed': content.cartFailed, 'cart-error': content.cartFailed };
 }

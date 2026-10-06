@@ -50,7 +50,7 @@ Anything the bundle can describe, in any design:
 - **Subscribe and save**, through Kitenzo Recurring bundles.
 - **Every market.** Prices in the shopper's currency, matching checkout to the penny.
 - **The cart's "Edit".** A shopper editing a bundle from the cart lands back in your widget with it rebuilt, and saving replaces it.
-- **Kitenzo's A/B tests** (coming in the next SDK release): test your custom component against Kitenzo's own builder, or against another design, with nothing extra to build as long as you load bundles through `useBundle` and add them through the cart hook.
+- **Kitenzo's A/B tests**: test your custom component against Kitenzo's own builder, or against another design, with nothing extra to build as long as you load bundles through `useBundle` and add them through the cart hook.
 
 ## How it works, briefly
 
@@ -72,9 +72,9 @@ You do not have to write the code yourself. Point Claude Code, Codex, Cursor or 
 
 ## Status and support
 
-- SDK: [`@kitenzo/react`](https://www.npmjs.com/package/@kitenzo/react) and [`@kitenzo/core`](https://www.npmjs.com/package/@kitenzo/core), 0.9.
+- SDK: [`@kitenzo/react`](https://www.npmjs.com/package/@kitenzo/react) and [`@kitenzo/core`](https://www.npmjs.com/package/@kitenzo/core), 0.10.
 - API and SDK reference: https://headless.kitenzo.com
 - Questions and access: support@kitenzo.com
-- Known SDK issues this repo works around: [guides/known-issues.md](guides/known-issues.md)
+- Where the SDK ends and the widget begins: [guides/working-with-the-sdk.md](guides/working-with-the-sdk.md)
 
 MIT licensed. The product data in the examples is the Kitenzo demo store's.

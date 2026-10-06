@@ -1,16 +1,16 @@
 /*
- * The ladder is read off the bundle's tiers and priced by the SDK. These pin down both halves:
- * which rungs a discount becomes (and which it cannot), where a count stands on them, and that a
- * rung's price is the engine's, not the widget's arithmetic.
+ * The widget's half of the ladder: which rungs are rows, the notes for the merchant, which product
+ * a row is priced for, and when that price can be called the price of each product. The rungs and
+ * the prices themselves are the SDK's (test/sdk-contract.test.ts holds what is taken on trust).
  */
-import type { BundleDetail, DiscountTier } from '@kitenzo/core';
+import { createMoneyFormatter, getBundlePrice, getDiscountLadder, type BundleDetail, type DiscountTier } from '@kitenzo/core';
 import { describe, expect, it } from 'vitest';
 
-import { ladderProgress, referencePick, rungSelection, tierLadder } from '../src/ladder';
+import { candidatesOf, hasOtherTiers, ladderNotes, ladderRungs, referencePick, rungSelection } from '../src/ladder';
 import { toViewModel } from '../src/model';
-import { priceOf } from '../src/money';
-import { withRequiredVariantIds } from '../src/sdkFixes';
-import { load } from './support';
+import { load, soldOut, withProduct } from './support';
+
+type Change = NonNullable<Parameters<typeof load>[0]>;
 
 const tier = (operation: DiscountTier['operation'], value: number, discount: number, type: DiscountTier['type'] = 'total_products'): DiscountTier => ({
     type,
@@ -24,137 +24,143 @@ function withDiscount(bundle: BundleDetail, discount: Partial<NonNullable<Bundle
     return { ...bundle, discount: { type: 'percentage', value: null, flatOrTiered: 'tiered', operator: 'max', tiers: [], ...discount } };
 }
 
-describe('tierLadder', () => {
-    it('reads the rungs from the bundle: 2, 3, 4 and 6 pouches at 10, 15, 20 and 25%', async () => {
+const withMaximum =
+    (maximum: number): Change =>
+    (fixture) => ({
+        ...fixture,
+        bundle: { ...fixture.bundle, limitRules: [...fixture.bundle.limitRules, { operation: 'lte', sectionId: null, type: 'total-number-of-products', value: maximum.toFixed(2) }] },
+    });
+
+/** The demo bundle applying surcharges, with one on a single flavour. */
+const withSurcharge =
+    (handle: string, surcharge: string): Change =>
+    (fixture) => ({
+        ...withProduct(fixture, handle, (product) => ({ ...product, variants: product.variants.map((variant) => ({ ...variant, surcharge })) })),
+        bundle: { ...fixture.bundle, applyVariantSurcharges: true },
+    });
+
+/** What Ladder.tsx asks: the product a row is priced for, and whether prices differ. */
+async function reference(change?: Change) {
+    const { bundle, settings } = await load(change);
+    const model = toViewModel(bundle, settings);
+    const candidates = candidatesOf(model.sections, createMoneyFormatter(bundle, settings));
+    const variantOf = (handle: string) => model.sections[0]!.products.find((product) => product.handle === handle)!.variants[0]!.id;
+    return { bundle, settings, model, candidates, variantOf, ...referencePick(candidates) };
+}
+
+describe('ladderRungs', () => {
+    it('are one row per tier, in order, whatever order the merchant typed them in', async () => {
         const { bundle } = await load();
-        const { rungs, notes } = tierLadder(bundle);
-        expect(rungs.map((rung) => [rung.count, rung.percent])).toEqual([
+        expect(ladderRungs(bundle).map((rung) => [rung.count, rung.discount])).toEqual([
             [2, 10],
             [3, 15],
             [4, 20],
             [6, 25],
         ]);
-        expect(notes).toEqual([]);
+        expect(ladderRungs(withDiscount(bundle, { tiers: [tier('gte', 10, 30), tier('gte', 5, 12)] })).map((rung) => rung.count)).toEqual([5, 10]);
     });
 
-    it('follows the merchant: different tiers, typed out of order, are a different ladder', async () => {
+    it('leave out the count just past an "exactly 6" tier: a rung of the ladder, but not a row', async () => {
         const { bundle } = await load();
-        const changed = withDiscount(bundle, { tiers: [tier('gte', 10, 30), tier('gte', 5, 12)] });
-        expect(tierLadder(changed).rungs.map((rung) => [rung.count, rung.percent])).toEqual([
-            [5, 12],
-            [10, 30],
-        ]);
+        const changed = withDiscount(bundle, { tiers: [tier('gte', 2, 10), tier('eq', 6, 25)] });
+        expect(getDiscountLadder(changed).map((rung) => rung.count)).toEqual([2, 6, 7]);
+        expect(ladderRungs(changed).map((rung) => rung.count)).toEqual([2, 6]);
+    });
+});
+
+describe('ladderNotes', () => {
+    it('say nothing when every tier is a row', async () => {
+        const { bundle } = await load();
+        expect(ladderNotes(bundle, ladderRungs(bundle))).toEqual([]);
     });
 
-    it('turns "more than 2" into 3, and keeps "exactly 6" exact', async () => {
-        const { bundle } = await load();
-        const { rungs } = tierLadder(withDiscount(bundle, { tiers: [tier('gt', 2, 10), tier('eq', 6, 25)] }));
-        expect(rungs.map((rung) => [rung.count, rung.exact])).toEqual([
-            [3, false],
-            [6, true],
-        ]);
-    });
-
-    it('leaves out what a ladder of counts cannot promise, and tells the merchant why', async () => {
-        const { bundle } = await load();
-        const { rungs, notes } = tierLadder(
-            withDiscount(bundle, { tiers: [tier('gte', 2, 10), tier('gte', 50, 5, 'total_price'), tier('lte', 1, 5), tier('gte', 8, 30)] }),
-            6,
-        );
+    it('tell the merchant about each tier the ladder leaves out', async () => {
+        const { bundle } = await load(withMaximum(6));
+        const changed = withDiscount(bundle, { tiers: [tier('gte', 2, 10), tier('gte', 50, 5, 'total_price'), tier('gte', 3, 5, 'bulk_buy'), tier('gte', 8, 30)] });
+        const rungs = ladderRungs(changed);
         expect(rungs.map((rung) => rung.count)).toEqual([2]);
+        const notes = ladderNotes(changed, rungs);
         expect(notes).toHaveLength(3);
-        expect(notes.join(' ')).toMatch(/value/);
-        expect(notes.join(' ')).toMatch(/maximum of 6/);
+        expect(notes[0]).toMatch(/bundle's value/);
+        expect(notes[1]).toMatch(/one product's quantity/);
+        expect(notes[2]).toMatch(/at least 8 products is not on the ladder/);
     });
 
-    it('has no rungs for a flat discount, and says so; none and silent for no discount', async () => {
+    it('say the ladder is hidden for a flat discount, and nothing for no discount', async () => {
         const { bundle } = await load();
-        const flat = tierLadder({ ...bundle, discount: { type: 'percentage', value: '10.00', flatOrTiered: 'flat', operator: 'max', tiers: [] } });
-        expect(flat.rungs).toEqual([]);
-        expect(flat.notes).toHaveLength(1);
-        expect(tierLadder({ ...bundle, discount: null } as unknown as BundleDetail)).toEqual({ rungs: [], notes: [] });
-    });
-
-    it('does not claim a percentage for cumulative tiers or money-off tiers: those show the SDK\'s amount', async () => {
-        const { bundle } = await load();
-        expect(tierLadder(withDiscount(bundle, { operator: 'cumulative', tiers: [tier('gte', 2, 10)] })).rungs[0]!.percent).toBeNull();
-        expect(tierLadder(withDiscount(bundle, { type: 'fixed', tiers: [tier('gte', 2, 5)] })).rungs[0]!.percent).toBeNull();
+        const flat: BundleDetail = { ...bundle, discount: { type: 'percentage', value: '10.00', flatOrTiered: 'flat', operator: 'max', tiers: [] } };
+        expect(ladderNotes(flat, ladderRungs(flat))).toEqual([expect.stringMatching(/ladder is hidden/)]);
+        expect(ladderNotes({ ...bundle, discount: null } as unknown as BundleDetail, [])).toEqual([]);
     });
 });
 
-describe('ladderProgress', () => {
-    it('says where a count stands: the rung it earns, the next one, and how many more', async () => {
-        const { bundle } = await load();
-        const { rungs } = tierLadder(bundle);
-        const at = (count: number) => {
-            const progress = ladderProgress(rungs, count);
-            return [progress.current?.count ?? null, progress.next?.count ?? null, progress.needed];
-        };
-        expect(at(0)).toEqual([null, 2, 2]);
-        expect(at(1)).toEqual([null, 2, 1]);
-        expect(at(2)).toEqual([2, 3, 1]);
-        expect(at(3)).toEqual([3, 4, 1]);
-        // The gap: there is no tier at 5, so 4 needs two more and 5 earns nothing new.
-        expect(at(4)).toEqual([4, 6, 2]);
-        expect(at(5)).toEqual([4, 6, 1]);
-        expect(at(6)).toEqual([6, null, 0]);
-        expect(at(9)).toEqual([6, null, 0]);
-        expect(ladderProgress(rungs, 3).fraction).toBeCloseTo(0.5);
-        expect(ladderProgress(rungs, 12).fraction).toBe(1);
-    });
-
-    it('highlights the tier checkout honours, even when a merchant\'s tiers do not climb', async () => {
-        const { bundle } = await load();
-        const { rungs } = tierLadder(withDiscount(bundle, { tiers: [tier('gte', 2, 20), tier('gte', 4, 10)] }));
-        expect(ladderProgress(rungs, 5).current?.count).toBe(2);
-    });
-
-    it('an exact tier is earned at its count only', async () => {
-        const { bundle } = await load();
-        const { rungs } = tierLadder(withDiscount(bundle, { tiers: [tier('gte', 2, 10), tier('eq', 6, 25)] }));
-        expect(ladderProgress(rungs, 6).current?.count).toBe(6);
-        expect(ladderProgress(rungs, 7).current?.count).toBe(2);
-    });
-});
-
-describe('rung prices', () => {
-    it('quote the cheapest product, and know when prices differ', () => {
+describe('the product a row is priced for', () => {
+    it('is the cheapest, and prices do not vary, when every flavour costs the same', async () => {
+        const { candidates, pick, variesInPrice, variantOf, model } = await reference();
+        expect(candidates.map((candidate) => candidate.price)).toEqual([9.99, 9.99, 9.99, 9.99]);
+        expect(pick).toEqual({ sectionId: model.sections[0]!.id, variantId: variantOf('chocolate-whey-protein') });
+        expect(variesInPrice).toBe(false);
         expect(referencePick([])).toEqual({ pick: null, variesInPrice: false });
-        const same = referencePick([
-            { sectionId: 1, variantId: 'a', unitPrice: 9.99 },
-            { sectionId: 1, variantId: 'b', unitPrice: 9.99 },
-        ]);
-        expect(same).toEqual({ pick: { sectionId: 1, variantId: 'a' }, variesInPrice: false });
-        const mixed = referencePick([
-            { sectionId: 1, variantId: 'a', unitPrice: 12 },
-            { sectionId: 2, variantId: 'b', unitPrice: 9.5 },
-        ]);
-        expect(mixed).toEqual({ pick: { sectionId: 2, variantId: 'b' }, variesInPrice: true });
     });
 
-    it('are the engine\'s price for that many: each rung saves exactly its tier', async () => {
-        const { bundle, settings } = await load();
-        const model = toViewModel(withRequiredVariantIds(bundle), { settings });
-        const section = model.sections[0]!;
-        const pick = { sectionId: section.id, variantId: section.products[0]!.variants[0]!.id };
-        const savings = model.ladder.rungs.map((rung) => {
-            const price = priceOf(model.bundle, rungSelection(pick, rung.count));
+    it('is never a flavour the shopper cannot buy', async () => {
+        const { candidates, pick, variantOf } = await reference((fixture) => withProduct(fixture, 'chocolate-whey-protein', soldOut));
+        expect(candidates).toHaveLength(3);
+        expect(pick?.variantId).toBe(variantOf('vanilla-whey-protein'));
+    });
+
+    it('goes by what a pouch really costs: a cheaper flavour is the reference, and prices vary', async () => {
+        const { pick, variesInPrice, variantOf } = await reference((fixture) =>
+            withProduct(fixture, 'vanilla-whey-protein', (product) => ({ ...product, variants: product.variants.map((variant) => ({ ...variant, price: '7.50' })) })),
+        );
+        expect(pick?.variantId).toBe(variantOf('vanilla-whey-protein'));
+        expect(variesInPrice).toBe(true);
+    });
+
+    it('counts a variant\'s surcharge: same price, one flavour dearer, so prices vary and the reference is not that flavour', async () => {
+        const { bundle, settings, candidates, pick, variesInPrice, variantOf } = await reference(withSurcharge('chocolate-whey-protein', '2.00'));
+        expect(candidates.map((candidate) => candidate.price)).toEqual([11.99, 9.99, 9.99, 9.99]);
+        expect(variesInPrice).toBe(true);
+        expect(pick?.variantId).toBe(variantOf('vanilla-whey-protein'));
+        // Why it matters: the SDK adds the surcharge on top of the discount, so two of the dearer
+        // flavour do not cost what two of the reference do.
+        const two = (handle: string) => getBundlePrice(bundle, rungSelection({ sectionId: pick!.sectionId, variantId: variantOf(handle) }, 2), { settings }).amounts!.discounted;
+        expect(two('chocolate-whey-protein')).toBeGreaterThan(two('vanilla-whey-protein'));
+    });
+});
+
+describe('hasOtherTiers', () => {
+    it('is false for tiers on the number of products, a flat discount and no discount', async () => {
+        const { bundle } = await load();
+        expect(hasOtherTiers(bundle)).toBe(false);
+        expect(hasOtherTiers({ ...bundle, discount: { type: 'percentage', value: '10.00', flatOrTiered: 'flat', operator: 'max', tiers: [tier('gte', 2, 30, 'bulk_buy')] } })).toBe(false);
+        expect(hasOtherTiers({ ...bundle, discount: null } as unknown as BundleDetail)).toBe(false);
+    });
+
+    it('is true for a tier on one product\'s quantity or on the bundle\'s value, which a row of one product can reach and a mix cannot', async () => {
+        const { bundle, settings, pick, variantOf } = await reference();
+        const bulk = withDiscount(bundle, { tiers: [tier('gte', 2, 10), tier('gte', 2, 30, 'bulk_buy')] });
+        expect(hasOtherTiers(bulk)).toBe(true);
+        expect(hasOtherTiers(withDiscount(bundle, { tiers: [tier('gte', 2, 10), tier('gte', 50, 30, 'total_price')] }))).toBe(true);
+
+        // Why it matters: two of one flavour are quoted at the bulk tier, two flavours are not.
+        const saved = (selections: Parameters<typeof getBundlePrice>[1]) => {
+            const { original, discounted } = getBundlePrice(bulk, selections, { settings }).amounts!;
+            return Math.round((1 - discounted / original) * 100);
+        };
+        expect(saved(rungSelection(pick!, 2))).toBe(30);
+        expect(saved({ [pick!.sectionId]: [{ variantId: variantOf('chocolate-whey-protein'), quantity: 1 }, { variantId: variantOf('vanilla-whey-protein'), quantity: 1 }] })).toBe(10);
+    });
+});
+
+describe('rungSelection', () => {
+    it('is that many of the reference product, which the engine prices at exactly the row\'s tier', async () => {
+        const { bundle, settings, pick } = await reference();
+        expect(rungSelection(pick!, 4)).toEqual({ [pick!.sectionId]: [{ variantId: pick!.variantId, quantity: 4 }] });
+        const savings = ladderRungs(bundle).map((rung) => {
+            const price = getBundlePrice(bundle, rungSelection(pick!, rung.count), { settings }).amounts!;
             return Math.round((1 - price.discounted / price.original) * 100);
         });
         expect(savings).toEqual([10, 15, 20, 25]);
-        // One below the first tier: full price.
-        const one = priceOf(model.bundle, rungSelection(pick, 1));
-        expect(one.discounted).toBe(one.original);
-    });
-
-    it('are in the shopper\'s currency in a market, with its decimals', async () => {
-        const { bundle } = await load(undefined, { market: { countryCode: 'JP', currency: 'JPY', rate: 190, decimals: 0 } }, 'JP');
-        const section = bundle.sections[0]!;
-        const pick = { sectionId: section.id, variantId: section.products[0]!.variants[0]!.id };
-        const price = priceOf(bundle, rungSelection(pick, 2));
-        // 9.99 is ¥1898 in this market; two at 10% off.
-        expect(price.original).toBeCloseTo(3796, 0);
-        expect(price.discounted).toBeLessThan(price.original);
-        expect(price.discounted).toBeGreaterThan(3000);
     });
 });

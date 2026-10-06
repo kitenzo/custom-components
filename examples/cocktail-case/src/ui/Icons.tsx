@@ -47,12 +47,6 @@ export const InfoIcon = () => (
     </svg>
 );
 
-export const ChevronIcon = () => (
-    <svg {...common}>
-        <path d="M6 4l4 4-4 4" />
-    </svg>
-);
-
 /** "Surprise me": two four-point sparkles. */
 export const SparkleIcon = () => (
     <svg {...common} width={18} height={18} viewBox="0 0 18 18">

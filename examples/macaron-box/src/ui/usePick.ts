@@ -6,13 +6,14 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { defaultOptionValues, reachableOptionValues, resolveVariant, selectOptionValue, type BundleVariant, type OptionSelection } from '@kitenzo/react';
+import { defaultOptionValues, isVariantBuyable, reachableOptionValues, resolveVariant, selectOptionValue, type BundleVariant, type OptionSelection } from '@kitenzo/react';
 
 import { text } from '../content';
 import type { ViewProduct, ViewSection } from '../model';
 import { sizeFor } from '../box';
-import { blockedReason, countOf, type Blocked } from '../selection';
-import { useBuilder } from './context';
+import { blockedInBox, type Blocked } from '../selection';
+import { useBuilder, useSelection } from './context';
+import { blockedText } from './copy';
 
 export interface OptionControl {
     name: string;
@@ -28,6 +29,7 @@ export interface Pick {
     setVariant: (variantId: string) => void;
     variant: BundleVariant;
     quantity: number;
+    /** Why one more of this variant will not go into this step, or null when it will. */
     blocked: Blocked | null;
     /** A sentence for the shopper when something is refused or limited, else null. */
     message: string | null;
@@ -41,13 +43,14 @@ function matches(variant: BundleVariant, product: ViewProduct['product'], values
 }
 
 export function usePick(product: ViewProduct, section: ViewSection): Pick {
-    const { model, selection, content, locked, box } = useBuilder();
+    const { content, box, addItem, updateQuantity, blockedReason } = useBuilder();
+    const { selections, progress, locked, size, choose } = useSelection();
     const inBox = box !== null && box.section.id === section.id;
     const options = product.product.options ?? [];
     const hasOptionData = options.length > 0 && product.variants.every((variant) => (variant.optionValues?.length ?? 0) === options.length);
 
     const [values, setValues] = useState<OptionSelection>(() => (hasOptionData ? defaultOptionValues(product.product) : {}));
-    const [variantId, setVariantId] = useState<string>(() => (product.variants.find((variant) => variant.available) ?? product.variants[0]!).id);
+    const [variantId, setVariantId] = useState<string>(() => (product.variants.find(isVariantBuyable) ?? product.variants[0]!).id);
     const [refusal, setRefusal] = useState<string | null>(null);
     const timer = useRef<number>();
     useEffect(() => () => window.clearTimeout(timer.current), []);
@@ -63,11 +66,10 @@ export function usePick(product: ViewProduct, section: ViewSection): Pick {
         );
     }, [hasOptionData, product, values, variantId]);
 
-    const quantity = (selection.selections[section.id] ?? []).find((pick) => pick.variantId === variant.id)?.quantity ?? 0;
-    // The biggest box is the step's own limit: "choose a bigger box" would be advice nobody can
-    // take there, so the step's "full" speaks instead.
-    const capacity = inBox && box.size !== null && box.size < Math.max(...box.sizes) ? box.size : null;
-    const blocked = blockedReason(model, selection.selections, section, variant, capacity);
+    const quantity = (selections[section.id] ?? []).find((pick) => pick.variantId === variant.id)?.quantity ?? 0;
+    const inStep = progress.sections[section.id]?.quantity ?? 0;
+    const reason = blockedReason(section.id, variant.id);
+    const blocked = inBox ? blockedInBox(reason, inStep, size) : reason;
 
     const refuse = useCallback((message: string) => {
         setRefusal(message);
@@ -75,45 +77,28 @@ export function usePick(product: ViewProduct, section: ViewSection): Pick {
         timer.current = window.setTimeout(() => setRefusal(null), 5000);
     }, []);
 
-    const reasonText = (reason: Blocked): string => {
-        switch (reason) {
-            case 'sold-out':
-                return text(content, 'soldOut');
-            case 'stock':
-                return text(content, 'stockReached');
-            case 'box-full':
-                return text(content, 'boxFull', { size: box?.size ?? '' });
-            case 'step-full':
-                return text(content, 'stepFull');
-            case 'bundle-full':
-                return text(content, 'bundleFull');
-        }
-    };
-
     const add = useCallback(() => {
         if (locked) return;
         if (blocked) {
-            refuse(reasonText(blocked));
+            refuse(blockedText(content, blocked, size));
             return;
         }
         setRefusal(null);
         // A first pick before any size is chosen chooses the smallest box that holds it, so a
         // shopper who starts with a flavour is never told to go back and pick a box first.
-        if (inBox && box.size === null && box.sizes.length > 0) {
-            box.choose(sizeFor(box.sizes, countOf(selection.selections, section.id) + 1)!);
-        }
-        selection.builder.addItem(section.id, variant.id, 1);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [locked, blocked, refuse, selection.builder, selection.selections, section.id, variant.id, inBox, box]);
+        if (inBox && size === null && box.sizes.length > 0) choose(sizeFor(box.sizes, inStep + 1)!);
+        addItem(section.id, variant.id, 1);
+    }, [locked, blocked, refuse, content, size, inBox, box, choose, inStep, addItem, section.id, variant.id]);
 
     const remove = useCallback(() => {
         if (locked || quantity === 0) return;
         setRefusal(null);
-        selection.builder.updateQuantity(section.id, variant.id, quantity - 1);
-    }, [locked, quantity, selection.builder, section.id, variant.id]);
+        updateQuantity(section.id, variant.id, quantity - 1);
+    }, [locked, quantity, updateQuantity, section.id, variant.id]);
 
+    // How low is low is the merchant's setting. A buyable variant has stock, so 0 never matches.
     const stock = variant.maxOrderableQuantity;
-    const lowStock = variant.available && stock !== null && stock !== undefined && stock > 0 && stock <= 5;
+    const lowStock = isVariantBuyable(variant) && stock !== null && stock !== undefined && stock <= content.lowStockAt;
     const message = refusal ?? (lowStock ? text(content, 'onlyLeft', { count: stock }) : null);
 
     return {

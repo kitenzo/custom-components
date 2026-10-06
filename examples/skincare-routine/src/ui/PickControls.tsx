@@ -8,22 +8,24 @@
  */
 import { useEffect, useId, useRef } from 'react';
 
+import { isVariantBuyable } from '@kitenzo/react';
+
 import { text } from '../content';
 import type { ViewProduct, ViewSection } from '../model';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
 import { CheckIcon, MinusIcon, PlusIcon } from './Icons';
 import type { Pick } from './usePick';
 
 export function OptionPickers({ pick, product }: { pick: Pick; product: ViewProduct }) {
     const id = useId();
-    const { locked } = useBuilder();
+    const { locked } = useSelection();
     if (pick.variantChoices) {
         return (
             <label className="skr-option">
                 <span className="skr-option__label">{product.product.options?.[0]?.name ?? 'Option'}</span>
                 <select className="skr-select" value={pick.variant.id} disabled={locked} onChange={(event) => pick.setVariant(event.target.value)}>
                     {pick.variantChoices.map((variant) => (
-                        <option key={variant.id} value={variant.id} disabled={!variant.available}>
+                        <option key={variant.id} value={variant.id} disabled={!isVariantBuyable(variant)}>
                             {variant.title}
                         </option>
                     ))}
@@ -56,9 +58,10 @@ export function OptionPickers({ pick, product }: { pick: Pick; product: ViewProd
     );
 }
 
-export function QuantityControl({ pick, product }: { pick: Pick; product: ViewProduct }) {
-    const { content, locked } = useBuilder();
-    const soldOut = pick.blocked === 'sold-out';
+function QuantityControl({ pick, product }: { pick: Pick; product: ViewProduct }) {
+    const { content } = useBuilder();
+    const { locked } = useSelection();
+    const soldOut = pick.blocked === 'sold-out' || pick.blocked === 'not-offered';
     const refusing = pick.blocked !== null && !soldOut;
     const name = pick.variant.title === 'Default Title' ? product.title : `${product.title}, ${pick.variant.title}`;
 
@@ -124,9 +127,10 @@ function nameOf(pick: Pick, product: ViewProduct): string {
     return pick.variant.title === 'Default Title' ? product.title : `${product.title}, ${pick.variant.title}`;
 }
 
-export function ChooseControl({ pick, product, section }: { pick: Pick; product: ViewProduct; section: ViewSection }) {
-    const { content, locked } = useBuilder();
-    const soldOut = pick.blocked === 'sold-out';
+function ChooseControl({ pick, product, section }: { pick: Pick; product: ViewProduct; section: ViewSection }) {
+    const { content } = useBuilder();
+    const { locked } = useSelection();
+    const soldOut = pick.blocked === 'sold-out' || pick.blocked === 'not-offered';
     const chosen = pick.quantity > 0;
     const optional = section.limits.min === 0;
     if (chosen) {
