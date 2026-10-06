@@ -23,7 +23,24 @@ import type {
 
 /** Not exported by the SDK on its own; read off the bundle type so it can never drift. */
 export type PersonalisationField = NonNullable<BundleDetail['personalisation']>[string][number];
+export type PersonalisationFieldFee = NonNullable<PersonalisationField['fee']>;
 export type { RecurringOption };
+
+/**
+ * What `GET /bundles/:id` adds for a bundle in a running A/B test. Every key is absent when no
+ * test applies to the request, so a shop without one gets the same bytes as ever.
+ */
+export interface ABTestFields {
+    /** The shopper is part of the test's measured traffic. Never sent as `false`. */
+    abTestRouted?: true;
+    abTestVisitorId?: string;
+    /** The bundle that was asked for, sent beside `abTestRouted`. */
+    abTestBundleId?: number;
+    abTestId?: number;
+    /** The page of the shopper's variant, root-relative, when that is not this bundle. */
+    abTestRedirectTo?: string;
+    abTestRedirectBundleId?: number;
+}
 
 export interface RawLimitRule {
     operation: ComparisonOperator;
@@ -149,7 +166,11 @@ export type RawSettings = Required<
     >
 >;
 
-/** One bundle as the API would serve it: the bundle, its products and the shop it belongs to. */
+/**
+ * One bundle as the API would serve it: the bundle, its products and the shop it belongs to. The
+ * A/B fields depend on who is asking, so the backend adds them to its answer; they are never part
+ * of a fixture.
+ */
 export interface Fixture {
     bundle: RawBundle;
     products: RawProduct[];

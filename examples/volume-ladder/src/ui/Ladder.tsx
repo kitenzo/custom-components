@@ -2,25 +2,24 @@
  * The ladder: one row per discount tier, the tier the shopper is on highlighted, and a progress
  * line saying what the next one takes.
  *
- * The rows are the bundle's tiers (ladder.ts), and every amount on them is the SDK's price for
- * that many of the cheapest product (money.ts `priceOf`), in the shopper's currency. A rung is
+ * The rows and the shopper's place on them are the SDK's (`getDiscountLadder`,
+ * `getDiscountLadderProgress`), and every amount is the SDK's price for that many of the cheapest
+ * product (`getBundlePrice` on ladder.ts `rungSelection`), in the shopper's currency. A rung is
  * information, not a control: it is a list item, never a button that looks like a radio, because
  * tapping "4 pouches" cannot choose four flavours for the shopper.
  */
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
+
+import { getBundlePrice, getDiscountLadderProgress, getDiscountTierText, useSettings, type DiscountLadderProgress, type DiscountRung } from '@kitenzo/react';
 
 import { text, type Content } from '../content';
-import { ladderProgress, referencePick, rungSelection, type Candidate, type Progress, type Rung } from '../ladder';
-import type { ViewModel } from '../model';
-import { priceOf, type Money } from '../money';
-import { visibleProducts } from '../model';
-import type { Selection } from '../selection';
-import { countOf } from '../selection';
-import { useBuilder } from './context';
+import { candidatesOf, hasOtherTiers, ladderRungs, referencePick, rungSelection } from '../ladder';
+import { pickedCount } from '../selection';
+import { useBuilder, useSelection } from './context';
 import { CheckIcon } from './Icons';
 
 export interface PricedRung {
-    rung: Rung;
+    rung: DiscountRung;
     /** "15%" or a money amount: what this rung saves, in words the shopper reads. Null if unknown. */
     discount: string | null;
     /** The price of one product at this rung, display currency. Null when it is not one number. */
@@ -28,8 +27,12 @@ export interface PricedRung {
 }
 
 export interface LadderView {
-    rungs: PricedRung[];
-    progress: Progress;
+    /** One per tier (`ladderRungs`). */
+    rows: PricedRung[];
+    /** The count of the row whose discount is in force, or null below the first. */
+    inForce: number | null;
+    /** 0 to 1, for the bar: how far up the ladder the bundle is. */
+    fraction: number;
     /** The progress line, or '' when the bundle has no ladder. */
     message: string;
 }
@@ -39,49 +42,85 @@ function percentText(percent: number): string {
     return new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 }).format(percent / 100);
 }
 
-function progressMessage(content: Content, progress: Progress, count: number, discountOf: (rung: Rung) => string | null): string {
-    const { next, current, needed } = progress;
+/** The widget's own progress line, for a tier the merchant gave no sentence of their own. */
+function progressMessage(content: Content, progress: DiscountLadderProgress, picked: number, discountOf: (rung: DiscountRung) => string | null): string {
+    const { next } = progress;
     if (next) {
         const discount = discountOf(next);
         if (!discount) return '';
-        return count === 0 ? text(content, 'progressStart', { count: next.count, discount }) : text(content, 'progressNext', { count: needed, discount });
+        return text(content, picked === 0 ? 'progressStart' : 'progressNext', { count: progress.missing, discount });
     }
-    const discount = current ? discountOf(current) : null;
+    const discount = progress.current ? discountOf(progress.current) : null;
     return discount ? text(content, 'progressTop', { discount }) : '';
 }
 
-/** Everything the ladder draws, recomputed when the selection, the market or the stock changes. */
-export function useLadderView(model: ViewModel, selection: Selection, money: Money, content: Content): LadderView {
-    const count = countOf(selection.selections);
-    const hidden = selection.conditions.hiddenProducts;
-    const priced = useMemo(() => {
-        const candidates: Candidate[] = model.sections.flatMap((section) =>
-            visibleProducts(section, hidden)
-                .filter((product) => !product.soldOut)
-                .flatMap((product) => product.variants.filter((variant) => variant.available))
-                .map((variant) => ({ sectionId: section.id, variantId: variant.id, unitPrice: money.unitPrice(variant) })),
-        );
-        const { pick, variesInPrice } = referencePick(candidates);
-        return model.ladder.rungs.map<PricedRung>((rung) => {
-            const price = pick ? priceOf(model.bundle, rungSelection(pick, rung.count)) : null;
-            const saving = price ? price.original - price.discounted : 0;
-            const discount = rung.percent !== null ? percentText(rung.percent) : saving > 0 ? money.format(saving) : null;
-            // "£7.99 each" only when it is true of every product; with mixed prices it would be a guess.
-            const each = price && !variesInPrice ? price.discounted / rung.count : null;
-            return { rung, discount, each };
-        });
-    }, [model, hidden, money]);
-
-    const progress = ladderProgress(model.ladder.rungs, count);
-    const discountOf = (rung: Rung) => priced.find((entry) => entry.rung === rung)?.discount ?? null;
-    return { rungs: priced, progress, message: progressMessage(content, progress, count, discountOf) };
+/**
+ * The row to highlight: the rung the count stands on. Past the end of an "exactly N" tier the
+ * count stands on a rung that is no row, and the row to highlight is the one whose discount
+ * applies again.
+ */
+function rowInForce(rows: PricedRung[], current: DiscountRung | null): number | null {
+    if (!current) return null;
+    if (current.tier) return current.count;
+    const again = rows.filter(({ rung }) => !rung.exact && rung.count < current.count && rung.discount === current.discount).pop();
+    return again?.rung.count ?? null;
 }
 
-export function Ladder({ view }: { view: LadderView }) {
+/** Everything the ladder draws, recomputed when the selection, the market or the stock changes. */
+function useLadderView(): LadderView {
+    const { model, money, content } = useBuilder();
+    const { selections, progress } = useSelection();
+    const { bundle, sections } = model;
+    const settings = useSettings();
+    // The page's language, as for the total, so a rung's saving is written the way the total is.
+    const locale = document.documentElement.lang || undefined;
+    // A rung's count is the bundle's, included products and all: the shopper picks the rest.
+    const { requiredQuantity } = progress;
+
+    const priceOf = useMemo(() => {
+        const { pick, variesInPrice } = referencePick(candidatesOf(sections, money));
+        // "£7.99 each" only when it is true of every product in any mix; with mixed prices, a tier
+        // that does not go by the count, or a product included on top, it would be a guess.
+        const exactEach = !variesInPrice && !hasOtherTiers(bundle) && requiredQuantity === 0;
+        return (rung: DiscountRung): PricedRung => {
+            const picks = rung.count - requiredQuantity;
+            // The SDK's price for a selection the shopper has not made: the one call the total is made of.
+            const price = pick && picks > 0 ? getBundlePrice(bundle, rungSelection(pick, picks), { settings, locale }) : null;
+            const saving = price?.amounts?.saved ?? 0;
+            // A bundle's minimum spend can hold a tier back, so a row claims only what its price shows.
+            const saves = !price || saving > 0;
+            const discount = !saves ? null : rung.discountType === 'percentage' ? percentText(rung.discount) : saving > 0 ? (price?.formattedSavedAmount ?? null) : null;
+            const each = price?.amounts && exactEach ? price.amounts.discounted / rung.count : null;
+            return { rung, discount, each };
+        };
+    }, [bundle, sections, money, settings, locale, requiredQuantity]);
+    const rows = useMemo(() => ladderRungs(bundle).map(priceOf), [bundle, priceOf]);
+
+    // The count the engine sees: the shopper's picks and the products every bundle includes.
+    const place = getDiscountLadderProgress(bundle, progress.quantity);
+    const top = rows[rows.length - 1]?.rung;
+    // The count can stand on a rung that is no row (just past an "exactly N" tier), priced the same way.
+    const discountOf = (rung: DiscountRung) => (rows.find((row) => row.rung.count === rung.count) ?? priceOf(rung)).discount;
+    // The merchant's own "reach the next tier" sentence, written on the tier in Kitenzo, comes first.
+    const message = getDiscountTierText(bundle, selections, { money }) ?? progressMessage(content, place, pickedCount(progress), discountOf);
+    return {
+        rows,
+        inForce: rowInForce(rows, place.current),
+        fraction: top ? Math.min(1, Math.max(0, progress.quantity / top.count)) : 0,
+        message,
+    };
+}
+
+/*
+ * Memoised, with no props: the ladder is drawn again by a pick or a change to what is offered,
+ * never by the Builder alone.
+ */
+export const Ladder = memo(function Ladder() {
     const { content, money, layout, idPrefix } = useBuilder();
-    if (view.rungs.length === 0) return null;
-    const top = view.rungs[view.rungs.length - 1]!.rung;
-    const { current } = view.progress;
+    const view = useLadderView();
+    if (view.rows.length === 0) return null;
+    const top = view.rows[view.rows.length - 1]!.rung;
+    const { inForce } = view;
 
     return (
         <section className={`vol-ladder vol-ladder--${layout}`} aria-labelledby={`${idPrefix}-ladder-heading`}>
@@ -89,9 +128,9 @@ export function Ladder({ view }: { view: LadderView }) {
                 {text(content, 'ladderHeading')}
             </h3>
             <ol className="vol-ladder__rungs">
-                {view.rungs.map(({ rung, discount, each }) => {
-                    const isCurrent = current === rung;
-                    const reached = current !== null && !isCurrent && (rung.exact ? false : rung.count < current.count);
+                {view.rows.map(({ rung, discount, each }) => {
+                    const isCurrent = inForce === rung.count;
+                    const reached = inForce !== null && !rung.exact && rung.count < inForce;
                     const state = isCurrent ? 'current' : reached ? 'reached' : 'ahead';
                     const amount = each !== null && !content.hidePrices ? money.format(each) : null;
                     return (
@@ -101,15 +140,15 @@ export function Ladder({ view }: { view: LadderView }) {
                             </span>
                             <span className="vol-rung__count">
                                 {text(content, rung.count === 1 ? 'tierRowOne' : 'tierRow', { count: rung.count })}
-                                {rung === top && view.rungs.length > 1 ? <span className="vol-rung__badge">{text(content, 'tierBest')}</span> : null}
+                                {rung === top && view.rows.length > 1 ? <span className="vol-rung__badge">{text(content, 'tierBest')}</span> : null}
                             </span>
                             {amount ? (
                                 <span className="vol-rung__each" data-vol-amount="">
                                     {text(content, 'tierEach', { amount })}
                                 </span>
                             ) : null}
-                            {discount && !(content.hidePrices && rung.percent === null) ? (
-                                <span className="vol-rung__save" data-vol-amount={rung.percent === null ? '' : undefined}>
+                            {discount && !(content.hidePrices && rung.discountType !== 'percentage') ? (
+                                <span className="vol-rung__save" data-vol-amount={rung.discountType === 'percentage' ? undefined : ''}>
                                     {text(content, 'tierSave', { discount })}
                                 </span>
                             ) : null}
@@ -119,12 +158,12 @@ export function Ladder({ view }: { view: LadderView }) {
             </ol>
             <div className="vol-progress">
                 <span className="vol-progress__track" aria-hidden="true">
-                    <span className="vol-progress__fill" style={{ transform: `scaleX(${view.progress.fraction})` }} />
-                    {view.rungs.map(({ rung }) => (
+                    <span className="vol-progress__fill" style={{ transform: `scaleX(${view.fraction})` }} />
+                    {view.rows.map(({ rung }) => (
                         <span
                             key={rung.count}
                             className="vol-progress__tick"
-                            data-reached={view.progress.fraction * top.count >= rung.count || undefined}
+                            data-reached={view.fraction * top.count >= rung.count || undefined}
                             style={{ left: `${(rung.count / top.count) * 100}%` }}
                         />
                     ))}
@@ -135,4 +174,4 @@ export function Ladder({ view }: { view: LadderView }) {
             </div>
         </section>
     );
-}
+});

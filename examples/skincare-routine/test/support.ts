@@ -49,8 +49,8 @@ export function soldOut(product: Fixture['products'][number]): Fixture['products
 
 /**
  * Take a product out of its step and make it a required product carried in every bundle. The
- * routine bundle has no required product of its own, and the SDK fix and the model's required
- * product rules still have to be proved against one.
+ * routine bundle has no required product of its own, and the model's required product rules
+ * still have to be proved against one.
  */
 export function asRequired(fixture: Fixture, handle: string): Fixture {
     const product = fixture.products.find((entry) => entry.handle === handle)!;

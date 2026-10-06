@@ -2,7 +2,7 @@
 
 This kit adds a Kitenzo bundle builder to your Shopify theme, drawn as a case the shopper fills (a mixed case of 6 wines, for example). It is three files and takes about ten minutes. You need Kitenzo installed, a published bundle, and a Kitenzo headless API key (see MERCHANT-SETUP.md).
 
-It is built without a framework, so it adds about 26 kB of JavaScript to the page, roughly a third of a React-based section. Nothing else about it differs: the same Kitenzo engine decides what can be chosen and what it costs, and the same Cart Transform applies the discount at checkout.
+It is built without a framework, so it adds about 36 kB of JavaScript to the page, under half of a React-based section. Nothing else about it differs: the same Kitenzo engine decides what can be chosen and what it costs, and the same Cart Transform applies the discount at checkout.
 
 ## 1. Upload the files
 
@@ -27,7 +27,7 @@ In Shopify admin, open the bundle's product (Kitenzo created it when you made th
 
 ## Words and colours
 
-Every word the section shows is a setting, under **Content**, **Buttons**, **Steps**, **Products**, **Summary** and **Messages**. The defaults are written for a case of bottles ("Add the case to cart", "4 of 6 bottles"); change them if you sell something else. **Case count** is the line under the case picture: `{count}` is how many are in, `{size}` how many it holds. **Colours** sets the buttons' colour and the text on them. Fonts are your theme's own.
+Every word the section shows is a setting, under **Content**, **Buttons**, **Steps**, **Products**, **Summary** and **Messages**. The defaults are written for a case of bottles ("Add the case to cart", "4 of 6 bottles"); change them if you sell something else. **Case count** is the line under the case picture: `{count}` is how many are in, `{size}` how many it holds. **Low stock from**, under **Products**, is the stock level from which a product says "Only 3 left": 5 unless you change it, and 0 to never say it. **Colours** sets the buttons' colour and the text on them. Fonts are your theme's own.
 
 ## Adding another bundle later
 

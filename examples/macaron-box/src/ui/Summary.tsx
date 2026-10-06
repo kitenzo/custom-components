@@ -9,7 +9,7 @@
 import { useBundlePrice, type UseBundleCartFlowResult } from '@kitenzo/react';
 
 import { text } from '../content';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
 import { CloseIcon } from './Icons';
 import { imageAttrs } from './images';
 import { Tray, TrayStrip } from './Tray';
@@ -32,11 +32,12 @@ export interface BuyState {
  * the same SDK price, computed for that size in box.ts.
  */
 function PriceBlock({ buy, compact = false }: { buy: BuyState; compact?: boolean }) {
-    const { model, selection, money, content, box } = useBuilder();
-    const price = useBundlePrice(model.bundle, selection.selections);
+    const { model, money, content, box } = useBuilder();
+    const { selections, size } = useSelection();
+    const price = useBundlePrice(model.bundle, selections, { locale: document.documentElement.lang || undefined });
     if (content.hidePrices) return null;
 
-    const offer = box?.size != null ? box.offers.find((candidate) => candidate.size === box.size) : undefined;
+    const offer = size !== null ? box?.offers.find((candidate) => candidate.size === size) : undefined;
     if (!buy.complete && box && box.sizes.length > 0) {
         if (!offer) return null;
         return (
@@ -51,9 +52,9 @@ function PriceBlock({ buy, compact = false }: { buy: BuyState; compact?: boolean
     }
 
     if (price.discountedPrice === null) return null;
-    const total = Number(price.discountedPrice);
-    const original = price.originalPrice === null ? null : Number(price.originalPrice);
-    const saving = original !== null && original > total ? original - total : 0;
+    const total = price.amounts?.discounted ?? Number(price.discountedPrice);
+    const original = price.hasDiscount ? (price.amounts?.original ?? null) : null;
+    const saving = price.hasDiscount ? (price.amounts?.saved ?? 0) : 0;
     return (
         <div className={`mcb-price${compact ? ' mcb-price--compact' : ''}`}>
             <span className="mcb-price__label">{text(content, 'total')}</span>
@@ -113,14 +114,14 @@ function Status({ buy }: { buy: BuyState }) {
 
 /** Required products and picks from any step that is not the box: listed, as the starter lists them. */
 function OtherLines() {
-    const { model, selection, content, locked, box, idPrefix } = useBuilder();
+    const { model, content, box, idPrefix, removeItem } = useBuilder();
+    const { selections, locked } = useSelection();
     const lines = model.sections
         .filter((section) => section.id !== box?.section.id)
         .flatMap((section) =>
-            (selection.selections[section.id] ?? []).flatMap((pick) => {
-                const product = section.products.find((candidate) => candidate.variants.some((variant) => variant.id === pick.variantId));
-                const variant = product?.variants.find((candidate) => candidate.id === pick.variantId);
-                return product && variant ? [{ section, product, variant, quantity: pick.quantity }] : [];
+            (selections[section.id] ?? []).flatMap((pick) => {
+                const offered = section.byVariantId.get(pick.variantId);
+                return offered ? [{ section, ...offered, quantity: pick.quantity }] : [];
             }),
         );
     if (lines.length === 0 && model.required.length === 0) return null;
@@ -151,7 +152,7 @@ function OtherLines() {
                         aria-disabled={locked || undefined}
                         onClick={() => {
                             if (locked) return;
-                            selection.builder.removeItem(section.id, variant.id);
+                            removeItem(section.id, variant.id);
                             // The pressed button is gone; focus the box's heading, not the page top.
                             document.getElementById(`${idPrefix}-summary-heading`)?.focus();
                         }}
@@ -165,9 +166,9 @@ function OtherLines() {
 }
 
 function TrayHeader() {
-    const { box, content, selection, idPrefix } = useBuilder();
-    const count = box ? (selection.selections[box.section.id] ?? []).reduce((total, pick) => total + pick.quantity, 0) : 0;
-    const slots = box?.slots ?? null;
+    const { box, content, idPrefix } = useBuilder();
+    const { progress, size, slots } = useSelection();
+    const count = box ? (progress.sections[box.section.id]?.quantity ?? 0) : 0;
     return (
         <header className="mcb-summary__header">
             <div>
@@ -176,7 +177,7 @@ function TrayHeader() {
                 <h3 className="mcb-eyebrow mcb-summary__heading" id={`${idPrefix}-summary-heading`} tabIndex={-1}>
                     {text(content, 'summaryHeading')}
                 </h3>
-                {box?.size != null ? <p className="mcb-summary__title">{text(content, 'sizeOption', { count: box.size })}</p> : null}
+                {size !== null ? <p className="mcb-summary__title">{text(content, 'sizeOption', { count: size })}</p> : null}
             </div>
             {slots !== null ? (
                 <span className="mcb-summary__count" data-testid="mcb-tray-count">
@@ -193,10 +194,11 @@ function TrayHeader() {
 }
 
 export function SummaryRail({ buy, trayId }: { buy: BuyState; trayId: string }) {
-    const { content, box, selection } = useBuilder();
+    const { content, box } = useBuilder();
+    const { selections, size } = useSelection();
     // The hint for an empty box. Not while no size is chosen: the tray asks for one instead.
-    const waitingForSize = box !== null && box.sizes.length > 0 && box.size === null;
-    const nothing = !waitingForSize && Object.values(selection.selections).every((picks) => picks.length === 0);
+    const waitingForSize = box !== null && box.sizes.length > 0 && size === null;
+    const nothing = !waitingForSize && Object.values(selections).every((picks) => picks.length === 0);
     return (
         <aside className="mcb-summary" aria-label={text(content, 'summaryHeading')}>
             <TrayHeader />

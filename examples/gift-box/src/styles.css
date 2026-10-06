@@ -187,11 +187,6 @@
     font-size: 15px;
 }
 
-.gft-notice__strong {
-    color: var(--gft-ink);
-    font-weight: 600;
-}
-
 .gft-layout {
     display: grid;
     gap: 40px;
@@ -837,9 +832,10 @@
 
 .gft-field__head {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
-    gap: 12px;
+    gap: 2px 12px;
 }
 
 .gft-field__label {
@@ -856,6 +852,15 @@
 
 .gft-field__badge--required {
     color: var(--gft-accent);
+}
+
+/* Kept whole: in a narrow column it drops to a line of its own, not into two words. */
+.gft-field__fee {
+    margin-left: auto;
+    white-space: nowrap;
+    color: var(--gft-ink-soft);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
 }
 
 /* 16px or more, or iOS zooms the page in when the field takes focus. */
@@ -1113,6 +1118,17 @@
 
 .gft-price__label {
     color: var(--gft-ink-soft);
+}
+
+/* The fee's name and its amount, as one row above the total. */
+.gft-price__fee {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--gft-ink-soft);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
 }
 
 .gft-price__amounts {

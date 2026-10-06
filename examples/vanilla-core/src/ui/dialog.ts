@@ -7,10 +7,12 @@
  * piece of UI a framework would not have helped with anyway.
  *
  * The body is built when the dialog opens and updated by the same render as everything else, from
- * the same Pick as the card, so a stock change shows up while it is open.
+ * the same Pick as the card, so a stock change shows up while it is open. While it is open it also
+ * listens to that Pick, for the changes that are the wine's alone (an option, a refusal).
  */
 import { text } from '../content';
 import { h, setAttr } from '../dom';
+import { nextId } from '../registry';
 import type { Ctx } from './context';
 import { closeIcon } from './icons';
 import { image } from './images';
@@ -23,12 +25,10 @@ export interface Dialog {
     close: () => void;
 }
 
-let dialogs = 0;
-
 export function createDialog(ctx: Ctx): Dialog {
     const { content, money } = ctx;
     // Two sections on one page means two dialogs: each needs its own title id.
-    const titleId = `vnc-dialog-title-${(dialogs += 1)}`;
+    const titleId = `vnc-dialog-title-${nextId()}`;
     const el = h('dialog', {
         class: 'vnc-dialog',
         'data-testid': 'cc-dialog',
@@ -39,9 +39,12 @@ export function createDialog(ctx: Ctx): Dialog {
         },
     });
     let update = () => {};
+    let stopListening = () => {};
     el.addEventListener('close', () => {
         el.replaceChildren();
+        stopListening();
         update = () => {};
+        stopListening = () => {};
     });
 
     const open = (pick: Pick) => {
@@ -85,6 +88,8 @@ export function createDialog(ctx: Ctx): Dialog {
             if (price) price.textContent = money.format(money.unitPrice(pick.variant()));
             controls.update();
         };
+        stopListening();
+        stopListening = pick.subscribe(() => update());
         if (!el.open) el.showModal();
     };
 

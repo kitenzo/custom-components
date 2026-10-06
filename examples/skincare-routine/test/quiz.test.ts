@@ -4,15 +4,13 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONTENT, parseContent } from '../src/content';
 import { toViewModel } from '../src/model';
 import { matchProduct, parseTags, planRoutine, quizFrom, tagAsWords, type QuizAnswer } from '../src/quiz';
-import { withRequiredVariantIds } from '../src/sdkFixes';
-import { clampSeed } from '../src/selection';
 import { splitTitle } from '../src/ui/names';
 import { load, soldOut, withProduct } from './support';
 import type { Fixture } from '../dev/mock/wire';
 
 async function modelOf(change?: (fixture: Fixture) => Fixture) {
     const { bundle, settings } = await load(change);
-    return toViewModel(withRequiredVariantIds(bundle), { settings });
+    return toViewModel(bundle, settings);
 }
 
 const questions = quizFrom(DEFAULT_CONTENT);
@@ -172,13 +170,32 @@ describe('planRoutine', () => {
         expect(picked(model, plan)[0]).toBe('pha-zinc-exfoliating-cleanser 75ml');
     });
 
-    it('produces a seed the SDK accepts as it is', async () => {
+    it('produces a seed the SDK takes whole, and can sell', async () => {
         const model = await modelOf();
         const plan = planRoutine(model, answers('Combination', 'Breakouts', 'Evenings'));
-        expect(clampSeed(model, plan.selections)).toEqual(plan.selections);
-        const builder = createBundleBuilder(model.bundle);
-        for (const [sectionId, picks] of Object.entries(plan.selections)) for (const pick of picks) builder.addItem(Number(sectionId), pick.variantId, pick.quantity);
-        expect(builder.getState().isSatisfied).toBe(true);
+        const state = createBundleBuilder(model.bundle, { initialSelections: plan.selections }).getState();
+        expect(state.selections).toEqual(plan.selections);
+        expect(state.isSatisfied).toBe(true);
+    });
+
+    it('never recommends more than the stock has: the next product takes the place', async () => {
+        // "Dry" ranks the oil balm first in Cleanse. With none left to order, it is not in the routine.
+        const model = await modelOf((fixture) =>
+            withProduct(fixture, 'squalane-camellia-cleansing-oil-balm', (product) => ({ ...product, variants: product.variants.map((entry) => ({ ...entry, maxOrderableQuantity: 0 })) })),
+        );
+        const plan = planRoutine(model, answers('Dry'));
+        expect(picked(model, plan)[0]).toBe('ceramide-oat-cream-cleanser 150ml');
+    });
+
+    it('recommends only what a rule leaves room for: a bundle-wide maximum of 2 is a routine of 2', async () => {
+        const model = await modelOf((fixture) => ({
+            ...fixture,
+            bundle: { ...fixture.bundle, limitRules: [...fixture.bundle.limitRules, { operation: 'lte', sectionId: null, type: 'total-number-of-products', value: '2.00' }] },
+        }));
+        const plan = planRoutine(model, answers('Dry', 'Dullness and uneven tone', 'Mornings'));
+        // Every pick the plan names is in its selection: the card never says "Recommended" of a product the routine left out.
+        expect(plan.picks.map((pick) => pick.sectionId)).toEqual([21, 22]);
+        expect(Object.keys(plan.selections)).toEqual(['21', '22']);
     });
 });
 

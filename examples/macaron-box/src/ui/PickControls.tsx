@@ -1,5 +1,6 @@
 /*
- * A product's option dropdowns and its add / quantity control, shared by the card and the dialog.
+ * A product's price line, option dropdowns and add / quantity control, shared by the card and
+ * the dialog.
  *
  * Unreachable option values are disabled, not hidden: a shopper needs to see that a size exists
  * before they can work out what to change to reach it. A control that refuses an action stays
@@ -8,22 +9,49 @@
  */
 import { useEffect, useId, useRef } from 'react';
 
+import { isVariantBuyable, type BundleVariant } from '@kitenzo/react';
+
 import { text } from '../content';
-import type { ViewProduct } from '../model';
-import { useBuilder } from './context';
+import type { ViewProduct, ViewSection } from '../model';
+import { useBuilder, useSelection } from './context';
 import { MinusIcon, PlusIcon } from './Icons';
 import type { Pick } from './usePick';
 
+/**
+ * What a flavour says about money, on its card and in its details alike: its price, only what it
+ * adds to a box sold at a set price, or nothing (box.ts, `flavourPricing`).
+ */
+export function FlavourPrice({ variant, section }: { variant: BundleVariant; section: ViewSection }) {
+    const { money, content, box } = useBuilder();
+    if (content.hidePrices) return null;
+    const pricing = box?.section.id === section.id ? box.flavourPricing : 'price';
+    if (pricing === 'price') {
+        const price = money.unitPrice(variant);
+        return (
+            <p className="mcb-card__price" data-price-value={price.toFixed(2)}>
+                {money.format(price)}
+            </p>
+        );
+    }
+    const extra = money.surcharge(variant);
+    if (pricing === 'none' || extra <= 0) return null;
+    return (
+        <p className="mcb-card__price" data-mcb-surcharge={extra.toFixed(2)}>
+            {text(content, 'surchargeNote', { amount: money.format(extra) })}
+        </p>
+    );
+}
+
 export function OptionPickers({ pick, product }: { pick: Pick; product: ViewProduct }) {
     const id = useId();
-    const { locked } = useBuilder();
+    const { locked } = useSelection();
     if (pick.variantChoices) {
         return (
             <label className="mcb-option">
                 <span className="mcb-option__label">{product.product.options?.[0]?.name ?? 'Option'}</span>
                 <select className="mcb-select" value={pick.variant.id} disabled={locked} onChange={(event) => pick.setVariant(event.target.value)}>
                     {pick.variantChoices.map((variant) => (
-                        <option key={variant.id} value={variant.id} disabled={!variant.available}>
+                        <option key={variant.id} value={variant.id} disabled={!isVariantBuyable(variant)}>
                             {variant.title}
                         </option>
                     ))}
@@ -57,8 +85,9 @@ export function OptionPickers({ pick, product }: { pick: Pick; product: ViewProd
 }
 
 export function QuantityControl({ pick, product }: { pick: Pick; product: ViewProduct }) {
-    const { content, locked } = useBuilder();
-    const soldOut = pick.blocked === 'sold-out';
+    const { content } = useBuilder();
+    const { locked } = useSelection();
+    const soldOut = pick.blocked === 'sold-out' || pick.blocked === 'not-offered';
     const refusing = pick.blocked !== null && !soldOut;
     const name = pick.variant.title === 'Default Title' ? product.title : `${product.title}, ${pick.variant.title}`;
 

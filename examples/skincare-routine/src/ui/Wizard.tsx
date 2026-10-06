@@ -3,25 +3,29 @@
  *
  * Step pills stay stuck to the top of the widget so the shopper always knows where they are and
  * can go back. A pill ahead of an unfinished step is not a shortcut past it: pressing it says
- * what is still needed, like Continue does. The step's own counts come from its limit rules
- * (`getSectionLimits`, through the model); the wizard never decides a step is done on its own.
+ * what is still needed, like Continue does. Whether a step has what it needs is the SDK's answer,
+ * read from the step's limit rules: `isSectionValid` for the step on screen, `progress` for the
+ * pills of the others. The wizard never decides a step is done on its own. Which steps and
+ * products are on screen is the SDK's too: the model already leaves out what a condition hides.
  */
 import { forwardRef } from 'react';
 
 import { text } from '../content';
-import { visibleProducts, type ViewSection } from '../model';
-import { countOf, isSingleChoice, isStepMet } from '../selection';
-import { useBuilder } from './context';
+import type { ViewSection } from '../model';
+import { isSingleChoice, isStepDone } from '../selection';
+import { useBuilder, useSelection } from './context';
 import { ArrowIcon, BackIcon, CheckIcon } from './Icons';
 import { ProductCard } from './ProductCard';
 
 interface WizardProps {
-    sections: ViewSection[];
+    /** Where the step on screen sits among the model's steps. */
     index: number;
     heading: string;
     intro: string;
     /** Why Continue will not move on yet, or ''. */
     status: string;
+    /** The SDK's answer for the step on screen: its own count is acceptable. */
+    canContinue: boolean;
     /** Whether a step can be opened yet: every step before it has what it needs. */
     reachable: (index: number) => boolean;
     onStep: (sectionId: number) => void;
@@ -31,32 +35,33 @@ interface WizardProps {
 
 function rangeText(section: ViewSection): string {
     const { min, max } = section.limits;
-    if (max === Number.POSITIVE_INFINITY) return `${min}+`;
+    if (max === null) return `${min}+`;
     return min === max ? String(min) : `${min}–${max}`;
 }
 
 /** The step's count, for steps that take more than one product. A one-pick step needs none. */
 function Counter({ section }: { section: ViewSection }) {
-    const { selection, content } = useBuilder();
+    const { content } = useBuilder();
+    const { progress } = useSelection();
     if (isSingleChoice(section)) return null;
-    const count = countOf(selection.selections, section.id);
+    const count = progress.sections[section.id]?.quantity ?? 0;
     const optional = section.limits.min === 0;
     const label =
         optional && count === 0
             ? text(content, 'stepOptional')
-            : optional && section.limits.max === Number.POSITIVE_INFINITY
+            : optional && section.limits.max === null
               ? text(content, 'stepCount', { count })
               : text(content, 'stepCountRange', { count, range: optional ? `0–${section.limits.max}` : rangeText(section) });
     return <span className="skr-panel__counter">{label}</span>;
 }
 
-export const Wizard = forwardRef<HTMLHeadingElement, WizardProps>(function Wizard({ sections, index, heading, intro, status, reachable, onStep, onBack, onContinue }, headingRef) {
-    const { selection, content, idPrefix } = useBuilder();
+export const Wizard = forwardRef<HTMLHeadingElement, WizardProps>(function Wizard({ index, heading, intro, status, canContinue, reachable, onStep, onBack, onContinue }, headingRef) {
+    const { model, content, idPrefix } = useBuilder();
+    const { progress } = useSelection();
+    const { sections } = model;
     const section = sections[index];
     if (!section) return null;
-    const products = visibleProducts(section, selection.conditions.hiddenProducts);
     const last = index === sections.length - 1;
-    const met = isStepMet(section, selection.selections);
 
     return (
         <div className="skr-wizard" data-testid="cc-wizard" data-step={section.id}>
@@ -67,7 +72,7 @@ export const Wizard = forwardRef<HTMLHeadingElement, WizardProps>(function Wizar
             <nav className="skr-pills" aria-label={heading}>
                 <ol className="skr-pills__list">
                     {sections.map((entry, position) => {
-                        const done = isStepMet(entry, selection.selections) && countOf(selection.selections, entry.id) > 0;
+                        const done = isStepDone(entry, progress);
                         const current = position === index;
                         return (
                             <li key={entry.id}>
@@ -101,7 +106,7 @@ export const Wizard = forwardRef<HTMLHeadingElement, WizardProps>(function Wizar
                     <Counter section={section} />
                 </div>
                 <div className="skr-grid">
-                    {products.map((product) => (
+                    {section.products.map((product) => (
                         <ProductCard key={product.id} product={product} section={section} />
                     ))}
                 </div>
@@ -121,7 +126,7 @@ export const Wizard = forwardRef<HTMLHeadingElement, WizardProps>(function Wizar
                         type="button"
                         className="skr-button skr-button--primary skr-nav__next"
                         data-testid="cc-wizard-next"
-                        aria-disabled={!met || undefined}
+                        aria-disabled={!canContinue || undefined}
                         onClick={onContinue}
                     >
                         {text(content, last ? 'wizardReview' : 'wizardContinue')}

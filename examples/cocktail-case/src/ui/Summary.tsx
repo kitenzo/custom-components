@@ -8,12 +8,11 @@
  */
 import { useRef, type RefObject } from 'react';
 
-import { useBundlePrice, type UseBundleCartFlowResult } from '@kitenzo/react';
+import { useBundlePrice, type RecurringChoice, type UseBundleCartFlowResult, type UseRecurringPlanResult } from '@kitenzo/react';
 
 import { text } from '../content';
 import type { ViewProduct } from '../model';
-import { countOf } from '../selection';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
 import { CanIcon } from './Icons';
 import { imageAttrs } from './images';
 import { LadderMeter, SurpriseButton } from './Ladder';
@@ -26,6 +25,11 @@ export interface BuyState {
     statusIsError: boolean;
     onAdd: () => void;
     cart: UseBundleCartFlowResult;
+    /**
+     * Buy once, the club, or a reorder. Handed down rather than shared in context: it is a new
+     * value on every letter typed into the email field, and only the case rail reads it.
+     */
+    plan: UseRecurringPlanResult;
     /** The button's words: one-time, joining the club, or reordering. */
     label: string;
     /** The shopper has tried to add, or left the email field: plan problems may show. */
@@ -33,14 +37,16 @@ export interface BuyState {
     touchPlan: () => void;
 }
 
-function PriceBlock({ compact = false }: { compact?: boolean }) {
-    const { model, selection, money, content, plan } = useBuilder();
+function PriceBlock({ recurring, compact = false }: { recurring: RecurringChoice | null; compact?: boolean }) {
+    const { model, money, content } = useBuilder();
+    const { selections } = useSelection();
     // The plan's discount is the SDK's to price: the chosen plan rides along, never a sum of ours.
-    const price = useBundlePrice(model.bundle, selection.selections, { recurring: plan.choice });
+    const price = useBundlePrice(model.bundle, selections, { recurring, locale: document.documentElement.lang || undefined });
     if (content.hidePrices || price.discountedPrice === null) return null;
-    const total = Number(price.discountedPrice);
-    const original = price.originalPrice === null ? null : Number(price.originalPrice);
-    const saving = original !== null && original > total ? original - total : 0;
+    // Before the first pick only a flat set price is known: a total, with nothing to compare it to.
+    const total = price.amounts?.discounted ?? Number(price.discountedPrice);
+    const original = price.hasDiscount ? (price.amounts?.original ?? null) : null;
+    const saving = price.hasDiscount ? (price.amounts?.saved ?? 0) : 0;
     return (
         <div className={`ckc-price${compact ? ' ckc-price--compact' : ''}`}>
             {compact ? null : <span className="ckc-price__label">{text(content, 'total')}</span>}
@@ -113,25 +119,26 @@ interface Can {
  * shopper sees where each saving starts. A filled slot is a button that takes that can back out.
  */
 function CaseSlots({ headingRef }: { headingRef: RefObject<HTMLHeadingElement> }) {
-    const { model, selection, content, locked, ladder } = useBuilder();
+    const { model, content, updateQuantity } = useBuilder();
+    const { selections, locked, ladder } = useSelection();
     const cans: Can[] = model.sections.flatMap((section) =>
-        (selection.selections[section.id] ?? []).flatMap((pick) => {
-            const product = section.products.find((candidate) => candidate.variants.some((variant) => variant.id === pick.variantId));
-            if (!product) return [];
+        (selections[section.id] ?? []).flatMap((pick) => {
+            const offered = section.byVariantId.get(pick.variantId);
+            if (!offered) return [];
             return Array.from({ length: pick.quantity }, (_, index) => ({
                 key: `${section.id}-${pick.variantId}-${index}`,
                 sectionId: section.id,
                 variantId: pick.variantId,
-                product,
+                product: offered.product,
                 quantity: pick.quantity,
             }));
         }),
     );
     const required = model.required.flatMap((entry) => Array.from({ length: entry.quantity }, (_, index) => ({ entry, index })));
     const max = model.bundleLimits.max;
-    const reach = Number.isFinite(max) && max <= 48 ? max : Math.max(ladder?.next?.threshold ?? 0, model.bundleLimits.min, cans.length + 1);
+    const reach = max !== null && max <= 48 ? max : Math.max(ladder?.next?.count ?? 0, model.bundleLimits.min, cans.length + 1);
     const total = Math.max(reach, cans.length + required.length);
-    const rungs = new Set(ladder?.rungs.map((rung) => rung.threshold) ?? []);
+    const rungs = new Set(ladder?.rungs.map((rung) => rung.count) ?? []);
     const empty = Math.max(0, total - cans.length - required.length);
     // Rows of 8 for a big case, 6 for a small one, so a 24 is three rows and a 12 is two.
     const columns = total <= 8 ? total : total <= 12 && total % 6 === 0 ? 6 : 8;
@@ -155,7 +162,7 @@ function CaseSlots({ headingRef }: { headingRef: RefObject<HTMLHeadingElement> }
                             aria-disabled={locked || undefined}
                             onClick={() => {
                                 if (locked) return;
-                                selection.builder.updateQuantity(can.sectionId, can.variantId, can.quantity - 1);
+                                updateQuantity(can.sectionId, can.variantId, can.quantity - 1);
                                 // The slot pressed is gone (the cans shift up); focus goes to the case's
                                 // heading rather than falling to the top of the page.
                                 headingRef.current?.focus();
@@ -179,8 +186,9 @@ function CaseSlots({ headingRef }: { headingRef: RefObject<HTMLHeadingElement> }
 }
 
 export function SummaryRail({ buy }: { buy: BuyState }) {
-    const { model, selection, content } = useBuilder();
-    const count = countOf(selection.selections) + model.requiredCount;
+    const { model, content } = useBuilder();
+    const { progress } = useSelection();
+    const count = progress.quantity;
     const max = model.bundleLimits.max;
     const headingRef = useRef<HTMLHeadingElement>(null);
     return (
@@ -190,16 +198,16 @@ export function SummaryRail({ buy }: { buy: BuyState }) {
                     {text(content, 'summaryHeading')}
                 </h3>
                 <span className="ckc-summary__count" data-testid="ckc-case-count">
-                    {Number.isFinite(max) ? text(content, 'caseCountRange', { count, max }) : text(content, 'caseCount', { count })}
+                    {max !== null ? text(content, 'caseCountRange', { count, max }) : text(content, 'caseCount', { count })}
                 </span>
             </div>
             <CaseSlots headingRef={headingRef} />
             {count === 0 ? <p className="ckc-summary__empty">{text(content, 'summaryEmpty')}</p> : null}
             <LadderMeter />
             <SurpriseButton />
-            <PlanPicker touched={buy.planTouched} onTouch={buy.touchPlan} />
+            <PlanPicker plan={buy.plan} touched={buy.planTouched} onTouch={buy.touchPlan} />
             <div className="ckc-summary__checkout">
-                <PriceBlock />
+                <PriceBlock recurring={buy.plan.choice} />
                 <BuyButton buy={buy} />
                 <Status buy={buy} />
             </div>
@@ -208,14 +216,14 @@ export function SummaryRail({ buy }: { buy: BuyState }) {
 }
 
 export function MobileBar({ buy }: { buy: BuyState }) {
-    const { selection, model } = useBuilder();
+    const { progress } = useSelection();
     return (
         <div className="ckc-mobile-bar" data-testid="cc-mobile-bar">
             <LadderMeter compact quiet={buy.status !== ''} />
             <div className="ckc-mobile-bar__row">
                 <div className="ckc-mobile-bar__info">
-                    <span className="ckc-mobile-bar__count">{countOf(selection.selections) + model.requiredCount}</span>
-                    <PriceBlock compact />
+                    <span className="ckc-mobile-bar__count">{progress.quantity}</span>
+                    <PriceBlock recurring={buy.plan.choice} compact />
                 </div>
                 <BuyButton buy={buy} />
             </div>

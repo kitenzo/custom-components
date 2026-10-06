@@ -34,21 +34,9 @@ export const CloseIcon = () => (
     </svg>
 );
 
-export const CheckIcon = () => (
-    <svg {...common}>
-        <path d="M3 8.5l3 3 7-7" />
-    </svg>
-);
-
 export const InfoIcon = () => (
     <svg {...common}>
         <circle cx="8" cy="8" r="6.25" />
         <path d="M8 7.25V11M8 5v.01" />
-    </svg>
-);
-
-export const ChevronIcon = () => (
-    <svg {...common}>
-        <path d="M6 4l4 4-4 4" />
     </svg>
 );

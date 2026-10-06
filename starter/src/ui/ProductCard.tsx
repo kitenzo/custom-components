@@ -6,19 +6,26 @@
  * many of it are in this step). The suites find and drive products through these, never through
  * class names or copy.
  */
+import { memo } from 'react';
+
 import { text } from '../content';
 import type { ViewProduct, ViewSection } from '../model';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
 import { imageAttrs } from './images';
 import { OptionPickers, QuantityControl } from './PickControls';
 import { usePick } from './usePick';
 
-export function ProductCard({ product, section }: { product: ViewProduct; section: ViewSection }) {
-    const { money, content, openDetails, selection } = useBuilder();
+/*
+ * Memoised on the product and its step, both kept by the model between picks. A card is drawn
+ * again by its own state or by a change to either context, never by the Builder alone.
+ */
+export const ProductCard = memo(function ProductCard({ product, section }: { product: ViewProduct; section: ViewSection }) {
+    const { money, content, openDetails } = useBuilder();
+    const { selections } = useSelection();
     const pick = usePick(product, section);
     const photo = product.photos[0];
     const price = content.hidePrices ? null : money.format(money.unitPrice(pick.variant));
-    const inStep = (selection.selections[section.id] ?? [])
+    const inStep = (selections[section.id] ?? [])
         .filter((entry) => product.variants.some((variant) => variant.id === entry.variantId))
         .reduce((total, entry) => total + entry.quantity, 0);
 
@@ -56,4 +63,4 @@ export function ProductCard({ product, section }: { product: ViewProduct; sectio
             </div>
         </article>
     );
-}
+});

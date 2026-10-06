@@ -4,8 +4,8 @@
  *
  * Rendered under the step the product was chosen in, so the matchbox's engraving sits next to the
  * matchbox and the message next to the card, and only once the product is in the box. Every word
- * of a field (label, placeholder, help, limit, required) is the bundle's; the widget adds only the
- * counter and the "required" nudge.
+ * of a field (label, placeholder, help, limit, required, fee) is the bundle's; the widget adds only
+ * the counter and the "required" nudge.
  *
  * Over the limit is shown as the shopper types (they can see it and fix it). Missing is shown only
  * after they try to add, so an empty form is not a wall of red before anyone has typed a letter.
@@ -16,8 +16,8 @@ import type { BundleVariant } from '@kitenzo/react';
 
 import { text } from '../content';
 import type { ViewProduct } from '../model';
-import { characterCount, checkAnswer, type Field } from '../personalisation';
-import { fieldElementId, useBuilder } from './context';
+import { lengthOf, limitOf, type Field } from '../personalisation';
+import { fieldElementId, useAnswers, useBuilder, useSelection } from './context';
 import { PenIcon } from './Icons';
 import { ProductArt } from './ProductArt';
 
@@ -25,14 +25,20 @@ import { ProductArt } from './ProductArt';
 const SHORT_FIELD = 40;
 
 function FieldInput({ product, field }: { product: ViewProduct; field: Field }) {
-    const { answers, setAnswer, content, locked, showMissing, idPrefix } = useBuilder();
+    const { money, content, idPrefix } = useBuilder();
+    const { locked } = useSelection();
+    const { answers, setAnswer, issues, showMissing } = useAnswers();
     const raw = answers[product.id]?.[field.id] ?? '';
     const id = fieldElementId(idPrefix, product.id, field.id);
-    const issue = checkAnswer(field, raw);
+    const issue = issues.find((entry) => entry.productId === product.id && entry.field.id === field.id);
     const shownIssue = issue && (issue.kind === 'too-long' || showMissing) ? issue : null;
-    const limit = field.type === 'text' && field.characterLimit && field.characterLimit > 0 ? field.characterLimit : null;
-    const used = characterCount(raw.trim());
-    const describedBy = [field.helpText ? `${id}-help` : '', limit ? `${id}-count` : '', shownIssue ? `${id}-error` : ''].filter(Boolean).join(' ') || undefined;
+    // Too long is the SDK's finding, and so is by how much; the counter only words it.
+    const tooLong = issue?.kind === 'too-long' ? issue : null;
+    const limit = limitOf(field);
+    const used = lengthOf(raw);
+    // A fee is stored in the shop's currency; the shopper is shown it in theirs, before they type.
+    const fee = field.fee && !content.hidePrices ? money.format(money.fromShopCurrency(field.fee.amount)) : null;
+    const describedBy = [field.helpText ? `${id}-help` : '', limit !== null ? `${id}-count` : '', shownIssue ? `${id}-error` : ''].filter(Boolean).join(' ') || undefined;
     const common = {
         id,
         'aria-describedby': describedBy,
@@ -59,7 +65,7 @@ function FieldInput({ product, field }: { product: ViewProduct; field: Field }) 
                 {...common}
                 type="checkbox"
                 className="gft-field__checkbox"
-                checked={raw === 'Yes'}
+                checked={raw.trim() !== ''}
                 disabled={locked}
                 onChange={(event) => setAnswer(product.id, field.id, event.target.checked ? 'Yes' : '')}
             />
@@ -99,6 +105,11 @@ function FieldInput({ product, field }: { product: ViewProduct; field: Field }) 
                 <span className={`gft-field__badge${field.required ? ' gft-field__badge--required' : ''}`}>
                     {text(content, field.required ? 'fieldRequired' : 'fieldOptional')}
                 </span>
+                {fee ? (
+                    <span className="gft-field__fee" data-fee-value={field.fee!.amount}>
+                        {text(content, 'fieldFee', { amount: fee })}
+                    </span>
+                ) : null}
             </div>
             {field.type === 'checkbox' ? <div className="gft-field__check">{control}</div> : control}
             <div className="gft-field__foot">
@@ -109,9 +120,9 @@ function FieldInput({ product, field }: { product: ViewProduct; field: Field }) 
                 ) : (
                     <span />
                 )}
-                {limit ? (
-                    <p className={`gft-field__count${used > limit ? ' gft-field__count--over' : ''}`} id={`${id}-count`} aria-live="polite">
-                        {used > limit ? text(content, 'charactersOver', { count: used - limit }) : text(content, 'charactersLeft', { count: limit - used })}
+                {limit !== null ? (
+                    <p className={`gft-field__count${tooLong ? ' gft-field__count--over' : ''}`} id={`${id}-count`} aria-live="polite">
+                        {tooLong ? text(content, 'charactersOver', { count: tooLong.over }) : text(content, 'charactersLeft', { count: limit - used })}
                     </p>
                 ) : null}
             </div>
@@ -126,7 +137,7 @@ function FieldInput({ product, field }: { product: ViewProduct; field: Field }) 
 
 /** One product's fields, with the product beside them so the shopper knows what they are writing on. */
 function ProductFields({ product, variant }: { product: ViewProduct; variant: BundleVariant | undefined }) {
-    const { answers } = useBuilder();
+    const { answers } = useAnswers();
     const engraving = product.fields.find((field) => field.type === 'text' && field.characterLimit && field.characterLimit <= SHORT_FIELD);
     const inscription = engraving ? (answers[product.id]?.[engraving.id] ?? '').trim() : '';
     return (

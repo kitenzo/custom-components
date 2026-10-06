@@ -34,6 +34,7 @@ In the theme editor, on the **Kitenzo Cocktail Case** section:
 - **Filters, one per line.** Each line is a tag prefix and the name shoppers see, such as `Flavor_ = Flavour`. A product tagged `Flavor_Fruity` then gets a **Fruity** chip under **Flavour**. Tags without a listed prefix never become chips, so your other tags stay out of the way. Turn **Show filters** off to hide them altogether.
 - **Colours.** **Accent** colours the buttons, the discount ladder and every saving; **Case background** and **Text on the case** colour the panel the case is built in. Fonts are your theme's own.
 - **Words.** Every heading, label and message is a setting, grouped as Filters, Discount ladder, Surprise me, Subscribe and save, Buttons, Steps, Products, The case and Messages. Clear a setting to go back to its default. The ladder's "Next tier" text is used only for a tier that has no custom text of its own in Kitenzo (see MERCHANT-SETUP.md).
+- **Low stock.** Under Products, **Low stock from** is the stock level from which a can says how many are left (5 by default). Set it to 0 to never say it.
 - **Subscribe and save** texts promise a reminder email with a reorder link, because that is what Recurring bundles send. Keep it that way if you edit them: nobody is charged automatically.
 
 ## Previewing a bundle you have not published yet

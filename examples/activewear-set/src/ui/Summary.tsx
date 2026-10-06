@@ -7,19 +7,18 @@
  * Both buy surfaces carry `cc-add-to-cart` and CSS decides which one shows. JavaScript never
  * mirrors a CSS breakpoint to decide where a test id or a button goes.
  *
- * Every amount is the SDK's or converted at the SDK's rate (money.ts). The total is
- * `useBundlePrice`, which for a set price knows the answer before the first pick; the lines above
- * it explain that total, they never compute a different one.
+ * Every amount is the SDK's: the total is `useBundlePrice`, which for a set price knows the
+ * answer before the first pick, the set price is `resolveUpfrontPrice` and each surcharge is
+ * `money.surcharge`. The lines above the total explain it, they never compute a different one.
  */
 import { useRef } from 'react';
 
 import { useBundlePrice, type UseBundleCartFlowResult } from '@kitenzo/react';
 
 import { text } from '../content';
-import type { ViewSection } from '../model';
 import { surchargeCause } from '../options';
-import { countOf, pickOf } from '../selection';
-import { useBuilder } from './context';
+import { pickedCount } from '../selection';
+import { useBuilder, useSelection } from './context';
 import { CloseIcon } from './Icons';
 import { imageAttrs } from './images';
 
@@ -33,12 +32,16 @@ export interface BuyState {
 }
 
 function PriceBlock({ compact = false }: { compact?: boolean }) {
-    const { model, selection, money, content } = useBuilder();
-    const price = useBundlePrice(model.bundle, selection.selections);
+    const { model, money, content } = useBuilder();
+    const { selections } = useSelection();
+    const price = useBundlePrice(model.bundle, selections, { locale: document.documentElement.lang || undefined });
     if (content.hidePrices || price.discountedPrice === null) return null;
-    const total = Number(price.discountedPrice);
-    const original = price.originalPrice === null ? null : Number(price.originalPrice);
-    const saving = original !== null && original > total ? original - total : 0;
+    // Before the first pick only the set price is known: a total, with nothing to compare it to.
+    // `hasDiscount` is true only for a total below the pieces bought apart, so a surcharge that
+    // lifts the set above them never strikes a lower price through beside a higher one.
+    const total = price.amounts?.discounted ?? Number(price.discountedPrice);
+    const original = price.hasDiscount ? (price.amounts?.original ?? null) : null;
+    const saving = price.hasDiscount ? (price.amounts?.saved ?? 0) : 0;
     return (
         <div className={`aws-price${compact ? ' aws-price--compact' : ''}`}>
             <span className="aws-price__label">{text(content, 'total')}</span>
@@ -96,19 +99,19 @@ function Status({ buy }: { buy: BuyState }) {
     );
 }
 
-export function SummaryRail({ buy, sections }: { buy: BuyState; sections: ViewSection[] }) {
-    const { model, selection, content, money, locked } = useBuilder();
-    const applies = model.bundle.applyVariantSurcharges === true;
-    const rows = sections.map((section) => {
-        const product = section.products.find((candidate) => pickOf(selection.selections, section.id, candidate));
-        const pick = product ? pickOf(selection.selections, section.id, product) : null;
-        const variant = pick && product ? product.variants.find((candidate) => candidate.id === pick.variantId) : undefined;
-        return { section, product, variant, quantity: pick?.quantity ?? 0 };
+export function SummaryRail({ buy }: { buy: BuyState }) {
+    const { model, content, money, setPrice, removeItem } = useBuilder();
+    const { selections, locked } = useSelection();
+    // One row per step, filled or not: a set is read as its pieces, in order.
+    const rows = model.sections.map((section) => {
+        const pick = (selections[section.id] ?? []).find((entry) => section.byVariantId.has(entry.variantId));
+        const offered = pick ? section.byVariantId.get(pick.variantId) : undefined;
+        return { section, product: offered?.product, variant: offered?.variant, quantity: pick?.quantity ?? 0 };
     });
     const surcharges = rows.flatMap(({ section, product, variant, quantity }) => {
         if (!product || !variant) return [];
         const amount = money.surcharge(variant) * quantity;
-        return amount > 0 ? [{ section, amount, cause: surchargeCause(product.product, variant, applies) }] : [];
+        return amount > 0 ? [{ section, amount, cause: surchargeCause(product.product, variant, money.surcharge) }] : [];
     });
     const showPrices = !content.hidePrices;
     // Removing a piece removes the button that was pressed; focus goes to the panel's heading
@@ -157,7 +160,7 @@ export function SummaryRail({ buy, sections }: { buy: BuyState; sections: ViewSe
                                     aria-disabled={locked || undefined}
                                     onClick={() => {
                                         if (locked) return;
-                                        selection.builder.removeItem(section.id, variant.id);
+                                        removeItem(section.id, variant.id);
                                         headingRef.current?.focus();
                                     }}
                                 >
@@ -168,12 +171,12 @@ export function SummaryRail({ buy, sections }: { buy: BuyState; sections: ViewSe
                     );
                 })}
             </ul>
-            {showPrices && (money.setPrice !== null || surcharges.length > 0) ? (
+            {showPrices && (setPrice !== null || surcharges.length > 0) ? (
                 <dl className="aws-breakdown">
-                    {money.setPrice !== null ? (
+                    {setPrice !== null ? (
                         <div className="aws-breakdown__row">
                             <dt>{text(content, 'setPrice')}</dt>
-                            <dd data-price-value={money.setPrice.toFixed(2)}>{money.format(money.setPrice)}</dd>
+                            <dd data-price-value={setPrice.toFixed(2)}>{money.format(setPrice)}</dd>
                         </div>
                     ) : null}
                     {surcharges.map((entry) => (
@@ -191,13 +194,14 @@ export function SummaryRail({ buy, sections }: { buy: BuyState; sections: ViewSe
     );
 }
 
-export function MobileBar({ buy, sections }: { buy: BuyState; sections: ViewSection[] }) {
-    const { selection } = useBuilder();
+export function MobileBar({ buy }: { buy: BuyState }) {
+    const { model } = useBuilder();
+    const { progress } = useSelection();
     return (
         <div className="aws-mobile-bar" data-testid="cc-mobile-bar">
             <div className="aws-mobile-bar__info">
                 <span className="aws-mobile-bar__count">
-                    {countOf(selection.selections)}/{sections.length}
+                    {pickedCount(progress)}/{model.sections.length}
                 </span>
                 <PriceBlock compact />
             </div>

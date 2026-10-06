@@ -56,10 +56,10 @@ export async function openWidget(page: Page, options: OpenOptions = {}) {
     const combined = combineScenarios(findScenarios(options.scenarios ?? []));
     const fixtures = loadFixtures().map(combined.transform);
     const backend = options.backend ?? createMockBackend({ fixtures, behaviour: combined.behaviour });
-    const bundleId = fixtures[0]!.bundle.id;
+    const defaultBundleId = fixtures[0]!.bundle.id;
     const rootUrl = options.rootUrl ?? '/';
 
-    const mount = (index: number) => {
+    const mount = (index: number, bundleId: number) => {
         const attributes: Record<string, string> = {
             id: `kitenzo-${index}`,
             [MOUNT_ATTR]: String(bundleId),
@@ -76,16 +76,18 @@ export async function openWidget(page: Page, options: OpenOptions = {}) {
             .join(' ');
         return `<div class="shopify-section" id="shopify-section-${index}"><div ${attrs}></div><script src="/assets/${ASSET}.js" defer></script></div>`;
     };
-    const sections = Array.from({ length: options.sections ?? 1 }, (_, index) => mount(index + 1)).join('\n');
+    const sections = (bundleId: number) => Array.from({ length: options.sections ?? 1 }, (_, index) => mount(index + 1, bundleId)).join('\n');
     const designMode = combined.designMode ? '<script>window.Shopify = { designMode: true };</script>' : '';
     // Every theme sets a body font, and the widget inherits it. Left on the browser default instead,
     // Linux WebKit (CI's mobile browser) can paint some designs at one frame every two seconds, which
     // starves Playwright's "is it stable?" check and times tests out. A real store never hits it.
     const themeFont = '<style>body { font: 16px/1.5 sans-serif; }</style>';
-    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    // Any path is the theme page. `?bundle=<id>` mounts another bundle, as the page of an A/B test's
+    // other variant does on a store; without it the page mounts the demo bundle.
+    const html = (bundleId: number) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="/assets/${ASSET}.css"><style>${HOSTILE}</style>${themeFont}${designMode}${options.head ?? ''}</head>
         <body><header style="position:sticky;top:0;z-index:5;background:#1b407c;color:#fff;padding:12px">Hostile theme</header>
-        <main class="theme-main">${sections}</main><footer style="height:200px"></footer></body></html>`;
+        <main class="theme-main">${sections(bundleId)}</main><footer style="height:200px"></footer></body></html>`;
 
     await page.route('**/*', async (route) => {
         const request = route.request();
@@ -111,7 +113,7 @@ export async function openWidget(page: Page, options: OpenOptions = {}) {
             return route.fulfill({ body: asset(file), contentType: file.endsWith('.css') ? 'text/css' : 'text/javascript' });
         }
         if (/\/cart\/?$/.test(url.pathname)) return route.fulfill({ body: '<!doctype html><h1>Cart</h1>', contentType: 'text/html' });
-        return route.fulfill({ body: html, contentType: 'text/html' });
+        return route.fulfill({ body: html(Number(url.searchParams.get('bundle')) || defaultBundleId), contentType: 'text/html' });
     });
 
     await page.goto(`${ORIGIN}/${options.query ?? ''}`);

@@ -2,96 +2,98 @@ import { createBundleBuilder } from '@kitenzo/core';
 import { describe, expect, it } from 'vitest';
 
 import { toViewModel } from '../src/model';
-import { withRequiredVariantIds } from '../src/sdkFixes';
-import { blockedReason, clampSeed, createSelection, missingPicks } from '../src/selection';
-import { load, withRequired } from './support';
+import { isStepDone, isStepFinished, missingPicks, pickedCount } from '../src/selection';
+import { countRule, load, withRequired, withTwoSteps } from './support';
 
-async function setUp() {
-    const { bundle, settings } = await load();
-    const model = toViewModel(withRequiredVariantIds(bundle), { settings });
-    const wines = model.sections[0]!;
-    const variant = (handle: string) => wines.products.find((product) => product.handle === handle)!.variants[0]!;
-    return { model, wines, variant };
+type Change = NonNullable<Parameters<typeof load>[0]>;
+type Rules = Parameters<typeof withTwoSteps>[1];
+
+async function setUp(change: Change = (fixture) => fixture) {
+    const { bundle, settings } = await load(change);
+    const model = toViewModel(bundle, settings);
+    const [wines, cellar] = model.sections as [(typeof model.sections)[number], (typeof model.sections)[number]];
+    const builder = createBundleBuilder(bundle);
+    const add = (section: typeof wines, quantity: number) => builder.addItem(section.id, section.products[0]!.variants[0]!.id, quantity);
+    return { model, wines, cellar, add, progress: () => builder.getState().progress };
 }
 
-describe('blockedReason', () => {
-    it('explains why one more cannot go in, sold out first', async () => {
-        const { model, wines, variant } = await setUp();
-        expect(blockedReason(model, {}, wines, variant('californian-semillion'))).toBe('sold-out');
-
-        const verdelho = variant('californian-verdelho'); // stock 3 in the catalogue
-        expect(blockedReason(model, { [wines.id]: [{ variantId: verdelho.id, quantity: 2 }] }, wines, verdelho)).toBeNull();
-        expect(blockedReason(model, { [wines.id]: [{ variantId: verdelho.id, quantity: 3 }] }, wines, verdelho)).toBe('stock');
-
-        const full = { [wines.id]: [{ variantId: variant('californian-reisling').id, quantity: 6 }] };
-        expect(blockedReason(model, full, wines, variant('pinot-gris'))).toBe('step-full');
-    });
-});
+/** The case as two steps: 3 to 6 wines, then up to 2 for the cellar, unless `rules` says otherwise. */
+const twoSteps = (rules: Rules = (first, second) => [countRule('gte', 3, first), countRule('lte', 6, first), countRule('lte', 2, second)]) =>
+    setUp((fixture) => withTwoSteps(fixture, rules));
 
 describe('missingPicks', () => {
-    it('counts what the case still needs', async () => {
-        const { model, wines, variant } = await setUp();
-        const four = { [wines.id]: [{ variantId: variant('californian-reisling').id, quantity: 4 }] };
-        expect(missingPicks(model, four)).toEqual([{ section: wines, count: 2 }]);
-        const six = { [wines.id]: [{ variantId: variant('californian-reisling').id, quantity: 6 }] };
-        expect(missingPicks(model, six)).toEqual([]);
+    it('names each step that is short in page order, then the bundle-wide count, and ignores an optional step', async () => {
+        const { model, wines, cellar, add, progress } = await twoSteps((first, second) => [countRule('gte', 2, first), countRule('gte', 1, second), countRule('gte', 5, null)]);
+        expect(missingPicks(model.sections, progress())).toEqual([
+            { section: wines, count: 2 },
+            { section: cellar, count: 1 },
+            { section: null, count: 5 },
+        ]);
+        add(wines, 2);
+        expect(missingPicks(model.sections, progress())).toEqual([
+            { section: cellar, count: 1 },
+            { section: null, count: 3 },
+        ]);
+
+        const plain = await twoSteps();
+        expect(missingPicks(plain.model.sections, plain.progress())).toEqual([{ section: plain.wines, count: 3 }]);
     });
 
-    it('agrees with the SDK: no missing picks means the SDK will accept it', async () => {
-        const { model, wines, variant } = await setUp();
-        const builder = createBundleBuilder(model.bundle);
-        builder.addItem(wines.id, variant('californian-reisling').id, 5);
-        expect(builder.getState().isSatisfied).toBe(false);
-        builder.addItem(wines.id, variant('pinot-gris').id, 1);
-        expect(missingPicks(model, builder.getState().selections)).toEqual([]);
-        expect(builder.getState().isSatisfied).toBe(true);
-    });
-});
-
-describe('a required bottle', () => {
-    it('counts against a bundle-wide case, as the SDK does: "exactly 6" with 1 required needs 5 picks', async () => {
-        const { bundle, settings } = await load((fixture) => {
-            const required = withRequired(fixture, 'pinot-gris');
-            return { ...required, bundle: { ...required.bundle, limitRules: [{ operation: 'eq', sectionId: null, type: 'total-number-of-products', value: '6.00' }] } };
-        });
-        const model = toViewModel(withRequiredVariantIds(bundle), { settings });
-        expect(model.requiredCount).toBe(1);
-        const wines = model.sections[0]!;
-        const riesling = wines.products.find((product) => product.handle === 'californian-reisling')!.variants[0]!;
-        const five = { [wines.id]: [{ variantId: riesling.id, quantity: 5 }] };
-        expect(missingPicks(model, five)).toEqual([]);
-        expect(blockedReason(model, five, wines, wines.products[0]!.variants[0]!)).toBe('bundle-full');
-        const builder = createBundleBuilder(model.bundle);
-        builder.addItem(wines.id, riesling.id, 5);
-        expect(builder.getState().isSatisfied).toBe(true);
+    it('asks for nothing from a step the page does not show', async () => {
+        const { model, progress } = await twoSteps();
+        expect(missingPicks(model.sections.slice(1), progress())).toEqual([]);
     });
 });
 
-describe('clampSeed', () => {
-    it('drops what the shopper could not pick by hand: sold out, over stock, over the case', async () => {
-        const { model, wines, variant } = await setUp();
-        const seed = {
-            [wines.id]: [
-                { variantId: variant('californian-verdelho').id, quantity: 5 }, // stock 3
-                { variantId: variant('californian-semillion').id, quantity: 1 }, // sold out
-                { variantId: variant('californian-reisling').id, quantity: 9 }, // the case holds 6
-                { variantId: 'gid-the-bundle-no-longer-offers', quantity: 1 },
-            ],
-        };
-        expect(clampSeed(model, seed)).toEqual({
-            [wines.id]: [
-                { variantId: variant('californian-verdelho').id, quantity: 3 },
-                { variantId: variant('californian-reisling').id, quantity: 3 },
-            ],
-        });
+describe('pickedCount', () => {
+    it('counts the shopper\'s picks, not the bottle every case includes', async () => {
+        const { wines, add, progress } = await setUp((fixture) => withRequired(fixture, 'pinot-gris'));
+        expect(pickedCount(progress())).toBe(0);
+        add(wines, 2);
+        expect(pickedCount(progress())).toBe(2);
     });
 });
 
-describe('createSelection', () => {
-    it('is seeded at creation: the first snapshot already holds the restored case', async () => {
-        const { model, wines, variant } = await setUp();
-        const builder = createSelection(model, { [wines.id]: [{ variantId: variant('pinot-gris').id, quantity: 6 }] });
-        expect(builder.getState().selections[wines.id]).toEqual([{ variantId: variant('pinot-gris').id, quantity: 6 }]);
-        expect(builder.getState().isSatisfied).toBe(true);
+describe('isStepDone', () => {
+    it('marks a "6, 12 or 24" step done on those counts only: 7 is past the minimum and still short', async () => {
+        const { wines, add, progress } = await setUp((fixture) => ({
+            ...fixture,
+            bundle: { ...fixture.bundle, limitRules: [6, 12, 24].map((size) => countRule('eq', size, fixture.bundle.sections[0]!.id)) },
+        }));
+        add(wines, 6);
+        expect(isStepDone(wines, progress())).toBe(true);
+        add(wines, 1);
+        expect(progress().sections[wines.id]!.quantity).toBe(7);
+        expect(isStepDone(wines, progress())).toBe(false);
+        add(wines, 5);
+        expect(isStepDone(wines, progress())).toBe(true);
+    });
+
+    it('never marks an untouched step done, even an optional one that owes nothing', async () => {
+        const { cellar, add, progress } = await twoSteps();
+        expect(isStepDone(cellar, progress())).toBe(false);
+        add(cellar, 1);
+        expect(isStepDone(cellar, progress())).toBe(true);
+    });
+});
+
+describe('isStepFinished', () => {
+    it('finishes a step with a ceiling only when it is full', async () => {
+        const { wines, add, progress } = await twoSteps();
+        add(wines, 3);
+        expect(isStepDone(wines, progress())).toBe(true);
+        expect(isStepFinished(wines, progress())).toBe(false);
+        add(wines, 3);
+        expect(isStepFinished(wines, progress())).toBe(true);
+    });
+
+    it('finishes a step with no ceiling once its minimum is met, and an optional one never', async () => {
+        const { wines, cellar, add, progress } = await twoSteps((first) => [countRule('gte', 2, first)]);
+        add(wines, 1);
+        expect(isStepFinished(wines, progress())).toBe(false);
+        add(wines, 1);
+        expect(isStepFinished(wines, progress())).toBe(true);
+        add(cellar, 2);
+        expect(isStepFinished(cellar, progress())).toBe(false);
     });
 });

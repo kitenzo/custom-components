@@ -14,7 +14,7 @@
  */
 import { expect, test } from '@playwright/test';
 
-import { createMockBackend } from '../dev/mock/backend';
+import { createMockBackend, variantBundleId, type MockBackend } from '../dev/mock/backend';
 import { loadFixtures } from '../dev/catalog';
 import { buyButton, completeSelection, openStep, openWidget, pick, product, requestsTo, skipQuiz, widget } from './harness';
 
@@ -143,6 +143,22 @@ test.describe('selection', () => {
         await expect(oat).not.toHaveAttribute('data-cc-unavailable', 'true');
     });
 
+    test('a product says how many are left from the merchant\'s threshold down, and never when it is 0', async ({ page }) => {
+        // The oil balm has 2 left in this scenario.
+        const hint = product(page, 'squalane-camellia-cleansing-oil-balm').locator('[role="status"]');
+        await openWidget(page, { scenarios: ['low-stock'] });
+        await skipQuiz(page);
+        await expect(hint).toHaveText('Only 2 left');
+        await openWidget(page, { scenarios: ['low-stock'], content: { lowStockAt: 1 } });
+        await skipQuiz(page);
+        await expect(product(page, 'squalane-camellia-cleansing-oil-balm')).toBeVisible();
+        await expect(hint).toHaveText('');
+        await openWidget(page, { scenarios: ['low-stock'], content: { lowStockAt: 0 } });
+        await skipQuiz(page);
+        await expect(product(page, 'squalane-camellia-cleansing-oil-balm')).toBeVisible();
+        await expect(hint).toHaveText('');
+    });
+
     // Replaces "a full step refuses one more": a step that takes exactly one product is a choice,
     // so choosing another swaps it in. The equivalent guarantee is that the step never holds more
     // than its rule allows, whatever the shopper presses.
@@ -236,6 +252,14 @@ test.describe('cart', () => {
         await page.waitForURL('**/cart');
         expect(backend.state.cart.item_count).toBe(3);
         expect(JSON.parse(backend.state.cart.attributes._bundles!)).toHaveProperty('9001');
+    });
+
+    test('a failed add with no reason from the store shows the merchant\'s own sentence', async ({ page }) => {
+        // A 500 carries only a status phrase, which is not a reason a shopper can read.
+        await openWidget(page, { scenarios: ['cart-500'], content: { cartFailed: 'Our tills are down. Try again shortly.' } });
+        await completeSelection(page);
+        await buyButton(page).click();
+        await expect(page.getByTestId('cc-cart-error').filter({ visible: true }).first()).toHaveText('Our tills are down. Try again shortly.');
     });
 
     test('a rate-limited add asks the shopper to wait', async ({ page }) => {
@@ -405,5 +429,38 @@ test.describe('theme', () => {
         await completeSelection(page);
         await expect(page.getByTestId('cc-price')).toHaveCount(0);
         await expect(widget(page)).not.toContainText('£');
+    });
+});
+
+// A React widget gets all of this from `useBundle` and the cart hook; one that fetched the bundle
+// or built its cart lines some other way would quietly drop out of the merchant's tests.
+test.describe('an A/B test', () => {
+    const impressions = (backend: MockBackend) => requestsTo(backend, /\/ab-tests\/impression$/).map((request) => request.body);
+
+    test('a shopper in the test is counted once, and their cart lines are credited to the variant they saw', async ({ page }) => {
+        const { backend, fixtures } = await openWidget(page, { scenarios: ['ab-stays'] });
+        await completeSelection(page);
+        const visitorId = requestsTo(backend, /\/bundles\/\d+$/)[0]!.query.visitor_id;
+        expect(visitorId).toBeTruthy();
+        await expect.poll(() => impressions(backend)).toEqual([{ bundleId: fixtures[0]!.bundle.id, visitorId }]);
+        await buyButton(page).click();
+        await page.waitForURL('**/cart');
+        expect(backend.state.cart.items.length).toBeGreaterThan(0);
+        expect(backend.state.cart.items.every((item) => item.properties._ab_test_routed === 'true')).toBe(true);
+        expect(impressions(backend)).toHaveLength(1);
+    });
+
+    test('a shopper assigned the other variant is sent to its page with the page\'s query, and counted there, not here', async ({ page }) => {
+        const { backend, fixtures } = await openWidget(page, { scenarios: ['ab-other-variant'], query: '?utm_source=email' });
+        const entry = fixtures[0]!.bundle.id;
+        const variant = variantBundleId(entry);
+        await page.waitForURL((url) => url.pathname === '/pages/variant-b');
+        expect(new URL(page.url()).search).toBe(`?bundle=${variant}&utm_source=email`);
+        // The variant's page is told who the shopper is and which test sent them, and counts them.
+        await expect.poll(() => requestsTo(backend, /\/bundles\/\d+$/).map((request) => request.path.split('/').pop())).toEqual([String(entry), String(variant)]);
+        const [first, second] = requestsTo(backend, /\/bundles\/\d+$/);
+        expect(first!.query.visitor_id).toBeTruthy();
+        expect(second!.query).toMatchObject({ visitor_id: first!.query.visitor_id, ab_routed: '5' });
+        await expect.poll(() => impressions(backend)).toEqual([{ bundleId: variant, visitorId: first!.query.visitor_id }]);
     });
 });

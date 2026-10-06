@@ -19,6 +19,17 @@ describe('parseContent', () => {
         expect(content.afterAdd).toBe('stay');
     });
 
+    it('reads a count as a whole number of zero or more, and anything that is not a number as the default', () => {
+        const lowStockAt = (value: unknown) => parseContent(JSON.stringify({ lowStockAt: value })).lowStockAt;
+        expect(lowStockAt(3)).toBe(3);
+        expect(lowStockAt(0)).toBe(0);
+        expect(lowStockAt(-4)).toBe(0);
+        expect(lowStockAt(2.6)).toBe(3);
+        expect(lowStockAt('3')).toBe(DEFAULT_CONTENT.lowStockAt);
+        expect(lowStockAt(null)).toBe(DEFAULT_CONTENT.lowStockAt);
+        expect(lowStockAt(true)).toBe(DEFAULT_CONTENT.lowStockAt);
+    });
+
     it('treats blank text as "use the default"', () => {
         expect(parseContent(JSON.stringify({ addToCart: '   ' })).addToCart).toBe(DEFAULT_CONTENT.addToCart);
     });

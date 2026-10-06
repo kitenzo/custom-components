@@ -9,9 +9,11 @@ Three layers, each catching what the others cannot.
 - **Data is real.** Products come from a snapshot of a real store's public catalogue (`bun run snapshot`; the Kitenzo demo store by default). You describe only what a catalogue cannot say: the bundle's steps, rules, discount, and any stock overrides, in `dev/catalog.ts`.
 - **The wire format is real.** `defineCatalog` emits exactly what Kitenzo's serializer sends, and `test/wire-shape.test.ts` checks every key path against real serializer output. Never hand-write a payload: a hand-written stub once served a shape the API had never sent, and every test passed against it.
 - **It is strict where the real servers are.** A sold-out variant is refused by `/configure` and by `/cart/add.js`. A draft bundle 404s unless the request previews. Every request is recorded, so a test can assert what was and was not sent.
+- **Personalisation is declared, not built.** A catalogue lists each product's fields by handle (`personalisation` in `dev/catalog.ts`), and `defineCatalog` writes them out as the serializer does, every key present. A field may name a `fee` (`{ id, name, amount }`): the API then sends the fee beside the field, for a native bundle only, and the mock cart knows the fee's hidden product, so the fee line the SDK adds lands at the fee's price under the fee's name. [gift-box](../examples/gift-box/) has a bundle with one (`?bundle=2005`).
+- **A/B tests run end to end.** With a test declared (`behaviour.abTest`, which is what the two A/B scenarios set), `GET /bundles/:id` answers with the API's A/B fields, decided as Kitenzo decides them from `visitor_id`, `ab_routed` and `ab_bypass`, and `POST /ab-tests/impression` counts each shopper once. Kitenzo assigns a shopper by hashing their visitor id; the mock's test names the variant instead, so a scenario is the same on every load. Variant B is a copy of the bundle on a page of its own, `/pages/variant-b?bundle=<id>`, which the dev page and the e2e harness both serve: the redirect really happens, and lands on a page that draws B.
 - **Scenarios** (`dev/mock/scenarios.ts`) put it into the states real stores reach: see [edge-cases.md](edge-cases.md).
 
-The cart lives in `sessionStorage` in the dev server, so add to cart, open `/cart`, follow the Edit link, and the full round trip runs locally. The cart page shows the lines, their properties and the `_bundles` attribute: exactly what reaches the merchant's order.
+The cart lives in `sessionStorage` in the dev server, so add to cart, open `/cart`, follow the Edit link, and the full round trip runs locally. The cart page shows the lines, their properties and the `_bundles` attribute: exactly what reaches the merchant's order. The mock answers inside the page, so its requests never appear in the browser's network panel: `window.__KITENZO_MOCK__.requests` lists them, and the toolbar shows how many shoppers an A/B test has counted.
 
 ### Your own store's data
 
@@ -30,17 +32,16 @@ Copy `.env.example` to `.env`, set `VITE_KITENZO_API_KEY` to a key whose allowed
 Pure logic, fast. In the starter:
 
 - `model.test.ts`: what is offered (archived, drafts, sold out both ways, required products, contradictory rules).
-- `selection.test.ts`: why one more cannot go in, what is missing, how a seed is clamped.
+- `selection.test.ts`: what is missing and in which order it is said, and what the widget relies on the builder for (a required product in the count, an opening selection trimmed to what fits).
 - `content-and-config.test.ts`: reading merchant settings and mount attributes defensively.
 - `theme.test.ts`: the Liquid schema against Shopify's limits and against the widget's defaults.
 - `wire-shape.test.ts`: the mock against the real serializer.
-- `sdkFixes.test.ts`: each SDK workaround, including a test that fails when the SDK no longer needs it.
 
 Tests load bundles through the real SDK client against the mock backend (`test/support.ts`), never by building a `BundleDetail` by hand.
 
 ## 3. The conformance suite (`bun run test:e2e`)
 
-`e2e/conformance.spec.ts`, in Playwright, on the **built** asset (`dist-embed/`), mounted the way the Liquid section mounts it, under the hostile theme (`dev/hostile.css`), at desktop (Chromium, 1440) and on a phone (WebKit, iPhone 14). It checks loading, errors, selection, sold out, stock caps, full steps, the dialog, the full cart sequence, `_bundles` merging, cart errors, locale prefixes, basket Edit, two sections, the theme editor's reload, hostile strings, the button reset, markets and hidden prices.
+`e2e/conformance.spec.ts`, in Playwright, on the **built** asset (`dist-embed/`), mounted the way the Liquid section mounts it, under the hostile theme (`dev/hostile.css`), at desktop (Chromium, 1440) and on a phone (WebKit, iPhone 14). It checks loading, errors, selection, sold out, stock caps, full steps, the dialog, the full cart sequence, `_bundles` merging, cart errors, locale prefixes, basket Edit, two sections, the theme editor's reload, hostile strings, the button reset, markets, hidden prices, and an A/B test (the shopper who stays is counted once and their lines are credited; the shopper assigned the other variant is sent to its page and counted there).
 
 The harness page sets a body font, as every theme does. Without one, Linux WebKit (the mobile browser in CI) painted one design at a frame every two seconds, which starves Playwright's "is it stable?" check: tests passed on a Mac and timed out in CI. If a suite is mysteriously slow only on Linux, count animation frames before blaming the widget.
 

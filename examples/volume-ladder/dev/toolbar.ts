@@ -47,6 +47,7 @@ export function mountToolbar(container: HTMLElement, layout: 'ladder' | 'grid') 
                 <button type="button" data-action="clear">Empty the cart</button>
                 <a href="/cart">Open cart</a>
             </div>
+            <p class="dev-toolbar__hint">A/B test: <span data-ab-visitors>0</span> counted as visitors (one impression each). The cart page shows which lines are credited.</p>
         </div>`;
 
     toolbar.querySelectorAll<HTMLInputElement>('input[value]').forEach((input) =>
@@ -75,6 +76,13 @@ export function mountToolbar(container: HTMLElement, layout: 'ladder' | 'grid') 
     const showCount = () => {
         if (count) count.textContent = String(window.__KITENZO_MOCK__?.state.cart.item_count ?? 0);
     };
+    // The mock answers the impression inside the page, so it never shows in the network panel.
+    const visitors = toolbar.querySelector<HTMLElement>('[data-ab-visitors]')!;
+    const showVisitors = () => {
+        visitors.textContent = String(window.__KITENZO_MOCK__?.state.visitors.length ?? 0);
+    };
+    window.addEventListener('kitenzo-mock:change', showVisitors);
+    showVisitors();
     window.addEventListener('kitenzo-mock:change', showCount);
     showCount();
 }

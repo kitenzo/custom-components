@@ -1,93 +1,113 @@
 /*
  * The box: which sizes the bundle sells, what each costs, and which slot each pick sits in.
  *
- * Every size comes from the bundle's own limit rules. Several `eq` rules on one step are
- * alternatives ("exactly 6, 12 or 24"), and `getSectionLimits` can only report them as a window
- * (6 to 24) because a window is all `PickLimits` can say. So the sizes are read off the rules
- * here, once, and never typed anywhere: a bundle of 4 or 8 draws two boxes, a bundle with no `eq`
- * rule draws none. Whether a selection is a valid box is still the SDK's call (`isSatisfied`).
+ * Every size is the SDK's reading of the bundle's limit rules. A count window carries
+ * `allowedCounts` when the rules name exact counts ("6, 12 or 24"): the valid ones, smallest
+ * first, without any the step's other rules exclude. So no size is typed anywhere: a bundle of 4
+ * or 8 draws two boxes, a bundle whose rules name no exact count draws none. Whether a selection
+ * is a valid box is the SDK's call too (`isSatisfied`).
  *
- * Every price comes from the SDK: a box's price is `calculatePrice` on a box of that size, so
- * tiers, set prices, percentages and markets all price exactly as the cart will.
+ * Every price comes from the SDK: a box's price is `getBundlePrice` on a box of that size, so
+ * tiers, set prices, percentages, surcharges and markets all price exactly as the total and the
+ * cart will.
  */
-import {
-    calculatePrice,
-    getBundleLimits,
-    getSectionLimits,
-    resolvePresentmentPricing,
-    type BundleDetail,
-    type BundleVariant,
-    type SectionSelections,
-} from '@kitenzo/react';
+import { getBundlePrice, isVariantBuyable, type BundleDetail, type BundlePriceOptions, type MoneyFormatter, type SectionSelections } from '@kitenzo/react';
 
 import type { ViewModel, ViewSection } from './model';
 
 /**
- * The box sizes a step sells, smallest first: its `eq` alternatives, or the bundle-wide ones when
- * the bundle has a single step. A size the other rules rule out (an `eq 24` beside an `lte 12`)
- * is not offered, because no box of that size could ever be added to the cart.
+ * The box sizes a step sells, smallest first: the exact counts its own rules allow, or the
+ * bundle-wide ones when the bundle has a single step. A bundle-wide count includes the products
+ * every bundle comes with, so those are taken off: "exactly 7" with one included is a box of 6.
  */
-export function boxSizes(bundle: BundleDetail, sectionId: number): number[] {
-    const eqValues = (matches: (ruleSectionId: number | null) => boolean) =>
-        (bundle.limitRules ?? [])
-            .filter((rule) => rule.type === 'total-number-of-products' && rule.operation === 'eq' && matches(rule.sectionId))
-            .map((rule) => Number.parseFloat(rule.value))
-            .filter((value) => Number.isInteger(value) && value > 0);
-
-    let values = eqValues((ruleSectionId) => ruleSectionId === sectionId);
-    if (values.length === 0 && bundle.sections.length === 1) values = eqValues((ruleSectionId) => ruleSectionId === null);
-
-    const step = getSectionLimits(bundle, sectionId);
-    const whole = getBundleLimits(bundle);
-    const fits = (size: number) => size >= step.min && size <= step.max && size >= whole.min && size <= whole.max;
-    return [...new Set(values)].filter(fits).sort((a, b) => a - b);
+export function boxSizes(model: ViewModel, section: ViewSection): number[] {
+    if (section.limits.allowedCounts) return section.limits.allowedCounts;
+    if (model.bundle.sections.length !== 1) return [];
+    return (model.bundleLimits.allowedCounts ?? []).map((count) => count - model.requiredQuantity).filter((size) => size > 0);
 }
 
 export interface BoxOffer {
     size: number;
-    /** What a box of this size costs, in display currency. */
+    /** The least a box of this size costs, in display currency. */
     price: number;
     /** Before the bundle's discount, when there is one. */
     compareAt: number | null;
     perItem: number;
-    /** False when the price depends on the flavours chosen (a percentage off mixed prices). */
+    /** False when the price depends on the flavours chosen: `price` is then where it starts. */
     exact: boolean;
 }
 
 /**
- * Price each size with the SDK, on a box filled with the cheapest flavour on offer. For a set
- * price (this bundle) that IS the price, whatever goes in; when flavours cost different amounts
- * under a percentage or money-off discount it is the lowest the box can cost, and `exact` says so.
+ * Price each size with the SDK, on sample boxes filled with one flavour each.
+ *
+ * What a box costs can depend on what goes in it: flavours priced apart under a percentage or
+ * money-off discount, or a flavour whose surcharge the SDK adds on top of any discount, a set
+ * price included. Working out which case this is would be the SDK's pricing done twice, so the
+ * samples are priced instead: one flavour for each distinct pair of price and surcharge, since two
+ * flavours alike in both fill a box that costs the same. A size is `exact` when every sample costs
+ * the same, and otherwise quotes the lowest as its "from".
+ *
+ * A discount ladder (`getDiscountLadder`) names each tier's set price, but not the price before
+ * it, and says nothing for a bundle whose sizes are not tiers. Pricing the box itself answers for
+ * every discount there is.
+ *
+ * `pricing` is what the total is priced with (the shop's settings, the page's language), so a
+ * card and the total always agree.
  */
-export function boxOffers(bundle: BundleDetail, section: ViewSection, sizes: number[]): BoxOffer[] {
-    const variants = section.products.flatMap((product) => product.variants).filter((variant) => variant.available);
-    if (variants.length === 0) return [];
-    const unit = (variant: BundleVariant) => Number.parseFloat(variant.presentmentPrice ?? variant.price) || 0;
-    const cheapest = variants.reduce((best, variant) => (unit(variant) < unit(best) ? variant : best));
-    const samePrice = variants.every((variant) => unit(variant) === unit(cheapest));
-    const setPrice = bundle.discount?.type === 'price';
+export function boxOffers(
+    bundle: BundleDetail,
+    section: ViewSection,
+    sizes: number[],
+    money: Pick<MoneyFormatter, 'unitPrice' | 'surcharge'>,
+    pricing: Pick<BundlePriceOptions, 'settings' | 'locale'>,
+): BoxOffer[] {
+    const samples = new Map<string, string>();
+    for (const variant of section.products.flatMap((product) => product.variants).filter(isVariantBuyable)) {
+        const pair = `${money.unitPrice(variant)}+${money.surcharge(variant)}`;
+        if (!samples.has(pair)) samples.set(pair, variant.id);
+    }
 
-    return sizes.map((size) => {
-        const sample: SectionSelections = { [section.id]: [{ variantId: cheapest.id, quantity: size }] };
-        const base = calculatePrice(bundle, sample);
-        // The same localisation `useBundlePrice` applies, so a card and the total always agree.
-        const priced = resolvePresentmentPricing(bundle, sample, base) ?? base;
-        const price = Number.parseFloat(priced.discountedPrice) || 0;
-        const original = Number.parseFloat(priced.originalPrice) || 0;
-        return {
-            size,
-            price,
-            compareAt: original > price ? original : null,
-            perItem: price / size,
-            exact: setPrice || samePrice,
-        };
+    return sizes.flatMap((size) => {
+        const priced = [...samples.values()]
+            .map((variantId) => getBundlePrice(bundle, { [section.id]: [{ variantId, quantity: size }] }, pricing))
+            .flatMap((price) => (price.amounts ? [{ amounts: price.amounts, hasDiscount: price.hasDiscount }] : []));
+        const lowest = priced.reduce<(typeof priced)[number] | null>((best, sample) => (best === null || sample.amounts.discounted < best.amounts.discounted ? sample : best), null);
+        if (lowest === null) return [];
+        const price = lowest.amounts.discounted;
+        return [
+            {
+                size,
+                price,
+                compareAt: lowest.hasDiscount ? lowest.amounts.original : null,
+                perItem: price / size,
+                exact: priced.every((sample) => sample.amounts.discounted === price),
+            },
+        ];
     });
+}
+
+/** What a flavour in the box says about money. */
+export type FlavourPricing = 'price' | 'surcharge' | 'none';
+
+/**
+ * A flavour's own price is shown only where it is what the shopper pays for it.
+ *
+ * In a box whose every size has one price, whatever goes in, the size cards carry the price and a
+ * flavour says nothing (`none`). In a box sold at a set price that some flavours add to, a
+ * flavour's price is still not what anyone pays, so it says only what it adds (`surcharge`).
+ * Anywhere else (no sizes to choose, or a discount taken off each flavour's own price) the
+ * flavour shows its price.
+ */
+export function flavourPricing(bundle: BundleDetail, sizes: number[], offers: BoxOffer[]): FlavourPricing {
+    if (sizes.length === 0) return 'price';
+    if (offers.length > 0 && offers.every((offer) => offer.exact)) return 'none';
+    return bundle.discount?.type === 'price' ? 'surcharge' : 'price';
 }
 
 /** The step the box is built in: the one with sizes to choose, else the first that sells anything. */
 export function boxSection(model: ViewModel): ViewSection | null {
     return (
-        model.sections.find((section) => boxSizes(model.bundle, section.id).length > 0) ??
+        model.sections.find((section) => boxSizes(model, section).length > 0) ??
         model.sections.find((section) => section.products.length > 0) ??
         null
     );
@@ -152,6 +172,18 @@ export function reconcileOrder(order: Placed[], selections: SectionSelections): 
         }
     }
     return kept;
+}
+
+/** The quantities a pick order stands for, as the builder holds them. */
+export function selectionsOf(order: Placed[]): SectionSelections {
+    const selections: SectionSelections = {};
+    for (const { sectionId, variantId } of order) {
+        const picks = (selections[sectionId] ??= []);
+        const pick = picks.find((candidate) => candidate.variantId === variantId);
+        if (pick) pick.quantity += 1;
+        else picks.push({ variantId, quantity: 1 });
+    }
+    return selections;
 }
 
 /**

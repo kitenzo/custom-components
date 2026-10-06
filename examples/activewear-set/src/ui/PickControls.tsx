@@ -10,23 +10,24 @@
  */
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 
+import { isVariantBuyable } from '@kitenzo/react';
+
 import { text } from '../content';
 import type { ViewProduct } from '../model';
-import { parseSwatchColours, swatchFor, valueSurcharge, type OptionState } from '../options';
+import { swatchFor, valueSurcharge, type OptionState } from '../options';
 import { unreachableText } from './copy';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
 import { CheckIcon } from './Icons';
 import type { Piece } from './usePiece';
 
 function Swatches({ state, piece, product }: { state: OptionState; piece: Piece; product: ViewProduct }) {
-    const { content, money, model, locked } = useBuilder();
-    const colours = parseSwatchColours(content.swatchColours);
-    const applies = model.bundle.applyVariantSurcharges === true;
+    const { content, money, swatchColours } = useBuilder();
+    const { locked } = useSelection();
     return (
         <div className="aws-swatches">
             {state.values.map((entry) => {
-                const swatch = swatchFor(product.product, state.option, entry.value, colours);
-                const extra = content.hidePrices ? 0 : valueSurcharge(product.product, state.option, entry.value, applies);
+                const swatch = swatchFor(product.product, state.option, entry.value, swatchColours);
+                const extra = content.hidePrices ? 0 : valueSurcharge(product.product, state.option, entry.value, money.surcharge);
                 const why = entry.why ? unreachableText(content, entry.value, entry.why) : null;
                 const style = { '--aws-swatch': swatch.color ?? undefined, backgroundImage: swatch.image ? `url("${swatch.image.replace(/"/g, '%22')}")` : undefined } as CSSProperties;
                 return (
@@ -47,7 +48,7 @@ function Swatches({ state, piece, product }: { state: OptionState; piece: Piece;
                         </span>
                         {extra > 0 ? (
                             <span className="aws-swatch__extra" aria-hidden="true">
-                                +{money.format(money.fromShop(extra))}
+                                +{money.format(extra)}
                             </span>
                         ) : null}
                     </button>
@@ -58,7 +59,8 @@ function Swatches({ state, piece, product }: { state: OptionState; piece: Piece;
 }
 
 function ValueButtons({ state, piece }: { state: OptionState; piece: Piece }) {
-    const { content, locked } = useBuilder();
+    const { content } = useBuilder();
+    const { locked } = useSelection();
     // Draw the eye to the row the shopper skipped, once per "choose your size first".
     const [flash, setFlash] = useState(false);
     useEffect(() => {
@@ -94,14 +96,15 @@ function ValueButtons({ state, piece }: { state: OptionState; piece: Piece }) {
 
 export function OptionPickers({ piece, product }: { piece: Piece; product: ViewProduct }) {
     const id = useId();
-    const { content, locked } = useBuilder();
+    const { content } = useBuilder();
+    const { locked } = useSelection();
     if (piece.variantChoices) {
         return (
             <label className="aws-option">
                 <span className="aws-option__label">{product.product.options?.[0]?.name ?? 'Option'}</span>
                 <select className="aws-select" value={piece.variant.id} disabled={locked} onChange={(event) => piece.setVariant(event.target.value)}>
                     {piece.variantChoices.map((variant) => (
-                        <option key={variant.id} value={variant.id} disabled={!variant.available}>
+                        <option key={variant.id} value={variant.id} disabled={!isVariantBuyable(variant)}>
                             {variant.title}
                         </option>
                     ))}
@@ -137,7 +140,8 @@ export function OptionPickers({ piece, product }: { piece: Piece; product: ViewP
 }
 
 export function AddControl({ piece, product }: { piece: Piece; product: ViewProduct }) {
-    const { content, locked } = useBuilder();
+    const { content } = useBuilder();
+    const { locked } = useSelection();
     const name = piece.complete && piece.variant.title !== 'Default Title' ? `${product.title}, ${piece.variant.title}` : product.title;
 
     // "Add to set" becomes "In your set" and back. The button under the shopper's finger is
@@ -188,19 +192,22 @@ export function AddControl({ piece, product }: { piece: Piece; product: ViewProd
             </div>
         );
     }
-    const refusing = piece.blocked !== null && piece.blocked !== 'sold-out';
+    // A complete choice that cannot be bought at all: nothing the shopper can do about it here.
+    const unbuyable = piece.blocked === 'sold-out' || piece.blocked === 'not-offered';
+    const soldOut = piece.complete && unbuyable;
+    const refusing = piece.blocked !== null && !unbuyable;
     return (
         <button
             ref={addRef}
             type="button"
             className="aws-button aws-button--secondary aws-add"
             data-testid="cc-pick"
-            disabled={piece.complete && piece.blocked === 'sold-out'}
+            disabled={soldOut}
             aria-disabled={refusing || locked || undefined}
-            aria-label={piece.complete && piece.blocked === 'sold-out' ? `${name}: ${text(content, 'soldOut')}` : `${text(content, 'add')}: ${name}`}
+            aria-label={soldOut ? `${name}: ${text(content, 'soldOut')}` : `${text(content, 'add')}: ${name}`}
             onClick={press(piece.add)}
         >
-            {piece.complete && piece.blocked === 'sold-out' ? text(content, 'soldOut') : text(content, 'add')}
+            {soldOut ? text(content, 'soldOut') : text(content, 'add')}
         </button>
     );
 }

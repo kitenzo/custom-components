@@ -6,7 +6,7 @@ What has to be true in Kitenzo before the section can show a bundle. Do these on
 2. **Create an API key** in **Settings > Headless**. Under **Allowed origins**, list every domain your store is served on, for example `https://yourstore.com, https://yourstore.myshopify.com`. The key is shown once; copy it into the section's **Kitenzo headless API key** setting. The key is public by design (it ships in the page, like every storefront key), which is why the allowed origins matter: they stop anyone else's site using it.
 3. **Build the bundle in Kitenzo** as usual: its steps, products, limits (how many from each step), required products and discount. The section reads all of it; nothing about what to sell is set in the theme.
 4. **Set the bundle's page.** In the bundle's settings, set its page to the product page the section is on. Kitenzo's A/B tests and the cart's "Edit" link both send shoppers there.
-5. **Set up personalisation** for the products shoppers personalise (Kitenzo, personalisation sets): for example a required "Engraving" of up to 12 characters on an engravable product, and an optional "Card message" on each card. Use text, dropdown or checkbox fields. Image uploads and fields with a fee are not supported by this section. Each field's name when you first create it becomes the property name on the order and does not change if you rename the label later, so choose it with your packing team in mind.
+5. **Set up personalisation** for the products shoppers personalise (Kitenzo, personalisation sets): for example a required "Engraving" of up to 12 characters on an engravable product, and an optional "Card message" on each card. Use text, dropdown or checkbox fields; a field may carry a fee, which shoppers see beside it and pay as its own line. Image uploads are not supported by this section. Each field's name when you first create it becomes the property name on the order and does not change if you rename the label later, so choose it with your packing team in mind.
 6. **Check your product descriptions** do not promise personalisation the bundle does not ask for (for example "add a name to the label" on a product with no field).
 7. **Check nothing else discounts these products.** A volume discount or automatic discount on the same products stacks with the bundle's own.
 
@@ -18,4 +18,6 @@ What a shopper writes is a property on the line of the product it is for, named 
 
 Place one test order with two personalised boxes before you go live, and check the order page and your packing slip show the properties the way your team needs them.
 
-If a shopper edits a box from the cart, the box's contents come back but what they typed does not (Kitenzo does not store it with the saved box). The section tells them to type it again, and will not add the box until a required field is filled in.
+If a shopper edits a box from the cart, the box comes back with what they wrote already in its fields, ready to change. Kitenzo keeps a record of each box's answers on the cart for this, which Shopify also shows among the order's additional details; the properties on the lines are the ones to pack from.
+
+A field with a fee adds a line for the fee to the order, at the fee's price, next to the product it is for.

@@ -11,7 +11,7 @@ Check this list before debugging anything. Most "bugs" on a custom component are
 | Sold-out products, shown | default catalogue | Show them, marked, with every control disabled. Clicking one changes nothing. Their variants never reach `/configure` or `/cart/add.js`. |
 | Sold-out products, hidden by the shop | `hide-sold-out` | Drop them, unless a step could no longer reach its minimum: then keep them, visibly unpickable. |
 | Nothing in stock | `all-sold-out` | Say so. The buy button explains. Nothing is sent. |
-| Low stock | `low-stock` | Cap the stepper at `maxOrderableQuantity` and say "Only N left" / why the `+` stopped. |
+| Low stock | `low-stock` | The builder stops at `maxOrderableQuantity` (`blockedReason` is `stock`): say "Only N left" / why the `+` stopped. |
 | Archived or draft products left in a bundle | `archived-and-draft` | Never offer archived. Drafts follow `hideDraftProducts`. |
 | Titles with apostrophes, quotes, markup, right-to-left script, 120 characters | `hostile-strings` | Render as text. Nothing executes. Nothing overflows. An apostrophe in a setting reaches the widget intact. |
 | Limit rules no selection can meet (`gte 5` with `lte 3`) | `contradictory-rules` | Tell the merchant in the theme editor which rules clash; show shoppers a short neutral line. |
@@ -19,7 +19,7 @@ Check this list before debugging anything. Most "bugs" on a custom component are
 | A product option with one value | starter catalogue (Size: 1000ml) | Hide its dropdown. |
 | A combination that does not exist, or is sold out | starter catalogue (vitamin shot sizes), [activewear-set](../examples/activewear-set/) | Disable the value, do not hide it. Option order is significance order: a change repairs only the options after it. |
 | Several `eq` rules on one step ("6, 12 or 24") | [macaron-box](../examples/macaron-box/) | Offer only the valid counts; trust `isSatisfied`. |
-| A required product in no step | starter catalogue | Show it as included and priced. See [known-issues.md](known-issues.md) for the SDK issue it triggers. |
+| A required product in no step | starter catalogue | Show it as included and priced. The SDK counts it towards the bundle-wide count and adds it on submit. |
 | A bundle-wide count with a required product ("exactly 4", 1 required) | unit test `selection.test.ts` | Count the required product, as the engine does: the shopper picks 3, not 4. |
 | A rule that is not a count (one per product, multiples, a price or weight limit) | the "Selection not allowed" setting | The buy button still says why, in the merchant's words; the SDK's own detail goes to the theme editor. |
 | An Edit link whose saved bundle has gone | e2e `an Edit link whose…` | No promise of a replacement; the add creates a new bundle. |
@@ -29,6 +29,7 @@ Check this list before debugging anything. Most "bugs" on a custom component are
 | A variant with its own photograph | [activewear-set](../examples/activewear-set/) | Use `variant.image`, falling back to the product's. |
 | `image` and the gallery's first photo differ only by `?v=` | `model.ts` `photosOf` | Compare without the query string, or the gallery shows the same photo twice. |
 | Personalisation the merchant made required | starter refuses it; [gift-box](../examples/gift-box/) collects it | Never sell an "engraved" item without the engraving. |
+| A personalisation field with a fee | [gift-box](../examples/gift-box/) `?bundle=2005` | Show the fee before it is charged, add it to the total once the field is filled in (`useBundlePrice` with the same `properties`), and leave the fee's cart line to the SDK. |
 | Conditions that hide steps or products | builder `conditions` | Hide them; a hidden step needs nothing. |
 | Conditions the headless SDK cannot run (`conditionsPartial`) | `model.ts` | Warn the merchant in the theme editor. |
 
@@ -62,6 +63,14 @@ Check this list before debugging anything. Most "bugs" on a custom component are
 | Edit of a bundle whose products changed since | `useBundleEdit().missing` | Restore what still exists and say what does not. |
 | A store under a locale path (`/en-gb`) | e2e `keeps a locale prefix…` | Every cart route and the redirect keep the prefix. |
 | A theme with a cart drawer | the "After adding" setting | Stay on the page and fire `kitenzo:bundle-added` for the drawer. |
+
+## A/B tests
+
+| Case | Reproduce | The widget must |
+|---|---|---|
+| A shopper in a running test who stays on this bundle | `ab-stays` | Render as ever. One impression once the bundle is on screen, and `_ab_test_routed` on every cart line. `useBundle` and the cart hook do both. |
+| A shopper assigned the other variant | `ab-other-variant` | Keep the loading state and go to the variant's page with the page's query. Nothing is counted for this bundle. |
+| The merchant previewing from the admin | `ab-stays` with `?ab_bypass=true` | Nothing counted, nothing credited. The SDK reads the parameter itself. |
 
 ## Markets
 

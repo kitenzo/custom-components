@@ -2,7 +2,8 @@
  * What is in the box, what it costs, and the button that buys it: as a rail beside the steps on
  * wide screens and as a bar stuck to the bottom of the widget on narrow ones. The rail opens with
  * the box drawn, filled with what the shopper chose, and lists each item with what was written
- * for it, so an engraving is checked before it is paid for.
+ * for it, so an engraving is checked before it is paid for. The total is the SDK's, and includes
+ * the fee of any personalisation that carries one, shown on a line of its own.
  *
  * Both carry `cc-add-to-cart` and CSS decides which one shows. JavaScript never mirrors a CSS
  * breakpoint to decide where a test id or a button goes.
@@ -13,10 +14,10 @@ import { useBundlePrice, type BundleVariant, type UseBundleCartFlowResult } from
 
 import { text } from '../content';
 import type { ViewProduct, ViewSection } from '../model';
-import { normalise } from '../personalisation';
-import { countOf } from '../selection';
+import { written } from '../personalisation';
+import { pickedCount } from '../selection';
 import { tintFor } from './art';
-import { useBuilder } from './context';
+import { useAnswers, useBuilder, useSelection } from './context';
 import { CloseIcon } from './Icons';
 import { ProductArt } from './ProductArt';
 
@@ -30,14 +31,24 @@ export interface BuyState {
 }
 
 function PriceBlock({ compact = false }: { compact?: boolean }) {
-    const { model, selection, money, content } = useBuilder();
-    const price = useBundlePrice(model.bundle, selection.selections);
+    const { model, money, content } = useBuilder();
+    const { selections } = useSelection();
+    const { properties } = useAnswers();
+    const price = useBundlePrice(model.bundle, selections, { properties, locale: document.documentElement.lang || undefined });
     if (content.hidePrices || price.discountedPrice === null) return null;
-    const total = Number(price.discountedPrice);
-    const original = price.originalPrice === null ? null : Number(price.originalPrice);
-    const saving = original !== null && original > total ? original - total : 0;
+    // Before the first pick only a flat set price is known: a total, with nothing to compare it to.
+    const total = price.amounts?.discounted ?? Number(price.discountedPrice);
+    const original = price.hasDiscount ? (price.amounts?.original ?? null) : null;
+    const saving = price.hasDiscount ? (price.amounts?.saved ?? 0) : 0;
+    const fee = Number(price.personalisationFee ?? 0);
     return (
         <div className={`gft-price${compact ? ' gft-price--compact' : ''}`}>
+            {fee > 0 && !compact ? (
+                <span className="gft-price__fee" data-price-value={fee.toFixed(2)}>
+                    <span>{text(content, 'personalisationFee')}</span>
+                    <span>{price.formattedPersonalisationFee}</span>
+                </span>
+            ) : null}
             <span className="gft-price__label">{text(content, 'total')}</span>
             <span className="gft-price__amounts">
                 {saving > 0 && original !== null ? (
@@ -103,15 +114,16 @@ interface Line {
 
 /** What the shopper wrote for a product, as "label: answer" pairs, blank answers left out. */
 function useWritten(product: ViewProduct): { label: string; value: string }[] {
-    const { answers } = useBuilder();
+    const { answers } = useAnswers();
     return product.fields.flatMap((field) => {
-        const value = normalise(field, answers[product.id]?.[field.id]);
+        const value = written(field, answers[product.id]?.[field.id]);
         return value ? [{ label: field.label, value }] : [];
     });
 }
 
 function SummaryLine({ line, heading }: { line: Line; heading: RefObject<HTMLHeadingElement> }) {
-    const { content, locked, selection } = useBuilder();
+    const { content, removeItem } = useBuilder();
+    const { locked } = useSelection();
     const { section, product, variant, quantity, required } = line;
     const written = useWritten(product);
     return (
@@ -137,7 +149,7 @@ function SummaryLine({ line, heading }: { line: Line; heading: RefObject<HTMLHea
                     aria-disabled={locked || undefined}
                     onClick={() => {
                         if (locked) return;
-                        selection.builder.removeItem(section.id, variant.id);
+                        removeItem(section.id, variant.id);
                         heading.current?.focus();
                     }}
                 >
@@ -154,7 +166,8 @@ function SummaryLine({ line, heading }: { line: Line; heading: RefObject<HTMLHea
  * is what is going in", at a glance, before the list says it in words.
  */
 function BoxPreview({ lines }: { lines: Line[] }) {
-    const { model, content, answers } = useBuilder();
+    const { model, content } = useBuilder();
+    const { answers } = useAnswers();
     const first = model.sections[0];
     const frame = first ? lines.find((line) => line.section?.id === first.id) : undefined;
     const tint = frame ? tintFor(frame.product.product, frame.variant) : null;
@@ -197,16 +210,16 @@ function BoxPreview({ lines }: { lines: Line[] }) {
 }
 
 export function SummaryRail({ buy }: { buy: BuyState }) {
-    const { model, selection, content } = useBuilder();
+    const { model, content } = useBuilder();
+    const { selections } = useSelection();
     // Removing a line removes the button that was pressed; focus goes to the summary's heading
     // rather than to the top of the page.
     const headingRef = useRef<HTMLHeadingElement>(null);
     const lines: Line[] = [
         ...model.sections.flatMap((section) =>
-            (selection.selections[section.id] ?? []).flatMap((pick) => {
-                const product = section.products.find((candidate) => candidate.variants.some((variant) => variant.id === pick.variantId));
-                const variant = product?.variants.find((candidate) => candidate.id === pick.variantId);
-                return product && variant ? [{ section, product, variant, quantity: pick.quantity, required: false }] : [];
+            (selections[section.id] ?? []).flatMap((pick) => {
+                const offered = section.byVariantId.get(pick.variantId);
+                return offered ? [{ section, ...offered, quantity: pick.quantity, required: false }] : [];
             }),
         ),
         ...model.required.map((entry) => ({ section: null, product: entry.product, variant: undefined, quantity: entry.quantity, required: true })),
@@ -233,11 +246,11 @@ export function SummaryRail({ buy }: { buy: BuyState }) {
 }
 
 export function MobileBar({ buy }: { buy: BuyState }) {
-    const { selection } = useBuilder();
+    const { progress } = useSelection();
     return (
         <div className="gft-mobile-bar" data-testid="cc-mobile-bar">
             <div className="gft-mobile-bar__info">
-                <span className="gft-mobile-bar__count">{countOf(selection.selections)}</span>
+                <span className="gft-mobile-bar__count">{pickedCount(progress)}</span>
                 <PriceBlock compact />
             </div>
             <BuyButton buy={buy} />

@@ -34,6 +34,24 @@ test.describe('the set price', () => {
         await expect(page.getByTestId('aws-surcharge-line')).toHaveCount(0);
     });
 
+    test('never strikes a lower price through beside a higher one, and shows the saving once the set costs less than its pieces', async ({ page }) => {
+        await openWidget(page);
+        const compareAt = page.getByTestId('cc-compare-at').filter({ visible: true });
+        const saving = page.getByTestId('cc-saving').filter({ visible: true });
+
+        // One piece in Slate: the set price and its surcharge are above the piece bought alone.
+        await addPiece(page, 'oversized-drop-tee', 'M', 'Slate');
+        await expect(price(page)).toHaveAttribute('data-price-value', '125.00');
+        await expect(compareAt).toHaveCount(0);
+        await expect(saving).toHaveCount(0);
+
+        await addPiece(page, 'form-sports-bra', 'M');
+        await addPiece(page, 'power-leggings', 'L');
+        await expect(price(page)).toHaveAttribute('data-price-value', '125.00');
+        await expect(compareAt.first()).toHaveAttribute('data-price-value', '138.00');
+        await expect(saving.first()).toHaveAttribute('data-price-value', '13.00');
+    });
+
     test('prices the set and the surcharge in the shopper\'s currency, at the same rate', async ({ page }) => {
         await openWidget(page, { scenarios: ['market-eur'] });
         await expect(price(page)).toHaveAttribute('data-price-value', '140.40');

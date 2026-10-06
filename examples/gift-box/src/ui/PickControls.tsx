@@ -12,16 +12,19 @@
  */
 import { useEffect, useId, useRef } from 'react';
 
+import { isVariantBuyable } from '@kitenzo/react';
+
 import { text } from '../content';
 import type { ViewProduct } from '../model';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
 import { isColourOption, swatchFor } from './art';
 import { CheckIcon, MinusIcon, PlusIcon } from './Icons';
 import type { OptionControl, Pick } from './usePick';
 
 function OptionChips({ option, pick, colour }: { option: OptionControl; pick: Pick; colour: boolean }) {
     const id = useId();
-    const { locked, content } = useBuilder();
+    const { content } = useBuilder();
+    const { locked } = useSelection();
     return (
         <div className="gft-option">
             <span className="gft-option__label" id={id}>
@@ -57,14 +60,14 @@ function OptionChips({ option, pick, colour }: { option: OptionControl; pick: Pi
 
 export function OptionPickers({ pick, product, chips = false }: { pick: Pick; product: ViewProduct; chips?: boolean }) {
     const id = useId();
-    const { locked } = useBuilder();
+    const { locked } = useSelection();
     if (pick.variantChoices) {
         return (
             <label className="gft-option">
                 <span className="gft-option__label">{product.product.options?.[0]?.name ?? 'Option'}</span>
                 <select className="gft-select" value={pick.variant.id} disabled={locked} onChange={(event) => pick.setVariant(event.target.value)}>
                     {pick.variantChoices.map((variant) => (
-                        <option key={variant.id} value={variant.id} disabled={!variant.available}>
+                        <option key={variant.id} value={variant.id} disabled={!isVariantBuyable(variant)}>
                             {variant.title}
                         </option>
                     ))}
@@ -102,8 +105,9 @@ export function OptionPickers({ pick, product, chips = false }: { pick: Pick; pr
 }
 
 export function QuantityControl({ pick, product }: { pick: Pick; product: ViewProduct }) {
-    const { content, locked } = useBuilder();
-    const soldOut = pick.blocked === 'sold-out';
+    const { content } = useBuilder();
+    const { locked } = useSelection();
+    const soldOut = pick.blocked === 'sold-out' || pick.blocked === 'not-offered';
     const refusing = pick.blocked !== null && !soldOut;
     const name = pick.variant.title === 'Default Title' ? product.title : `${product.title}, ${pick.variant.title}`;
 
@@ -152,7 +156,7 @@ export function QuantityControl({ pick, product }: { pick: Pick; product: ViewPr
                 className="gft-button gft-button--secondary gft-add"
                 data-testid="cc-pick"
                 disabled={soldOut}
-                aria-disabled={(refusing && !pick.swaps) || locked || undefined}
+                aria-disabled={refusing || locked || undefined}
                 aria-label={soldOut ? `${name}: ${text(content, 'soldOut')}` : `${text(content, pick.swaps ? 'swap' : 'choose')}: ${name}`}
                 onClick={press(pick.add)}
             >

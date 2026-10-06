@@ -1,28 +1,19 @@
 /*
  * The bundle, as this widget renders it.
  *
- * `toViewModel` is the one place that decides what is offered: which products appear, which are
- * pickable, what each step needs, and what a merchant has to fix. Components below it render the
- * result and never re-derive any of it.
+ * What is offered is the SDK's decision (`getBundleOffer`): which steps and products appear, which
+ * are sold out, what the conditions engine hides as the shopper picks, what every bundle includes,
+ * and what a merchant has to fix before anything can be sold, all from the bundle's limit rules
+ * and the shop's own settings. `toViewModel` adds only what a design needs on top: photographs,
+ * plain-text descriptions, each product's personalisation fields, and the one thing the SDK leaves
+ * to the widget, whether it can collect them.
  *
- * The widget invents nothing. Every count comes from the bundle's limit rules (through the SDK's
- * `getSectionLimits` / `getBundleLimits`, which translate all five operators), every product from
- * its sections, every rule about stock and drafts from the shop's own settings. A step with no
- * rule is optional; nothing is preselected; no count is hardcoded.
+ * The widget invents nothing. A step with no rule is optional; nothing is preselected; no count
+ * is hardcoded.
  */
-import {
-    getBundleLimits,
-    getSectionLimits,
-    htmlToPlainText,
-    type BundleDetail,
-    type BundleProduct,
-    type BundleSection,
-    type BundleVariant,
-    type PickLimits,
-    type ShopSettings,
-} from '@kitenzo/react';
+import { getBundleOffer, htmlToPlainText, type BundleDetail, type BundleOfferOptions, type BundleProduct, type BundleVariant, type PickLimits, type ShopSettings } from '@kitenzo/react';
 
-import { definedFields, fieldsFor, unsupportedReason, type Field } from './personalisation';
+import { definedFields, fieldsFor, isCollectable, type Field } from './personalisation';
 
 export interface Photo {
     url: string;
@@ -36,11 +27,9 @@ export interface ViewProduct {
     /** Plain text, never markup: descriptions are merchant HTML and render as text here. */
     description: string;
     photos: Photo[];
-    tags: string[];
     product: BundleProduct;
-    /** Variants that can be picked. */
     variants: BundleVariant[];
-    /** Every variant sold out. Rendered, marked, and impossible to pick. */
+    /** No variant can be bought. Rendered, marked, and impossible to pick. */
     soldOut: boolean;
     /** The personalisation fields this widget collects for it, from the bundle. Often none. */
     fields: Field[];
@@ -50,17 +39,17 @@ export interface ViewSection {
     id: number;
     name: string;
     description: string;
-    imageUrl: string;
     autoNext: boolean;
     limits: PickLimits;
     products: ViewProduct[];
+    /** Every variant the step offers, with its product: what a pick in the selection refers to. */
+    byVariantId: Map<string, { product: ViewProduct; variant: BundleVariant }>;
 }
 
 export interface ViewRequired {
+    /** `soldOut` here means its variants cannot supply `quantity`: the set cannot be sold. */
     product: ViewProduct;
     quantity: number;
-    /** Every variant sold out: the set cannot be sold, and the widget says why. */
-    soldOut: boolean;
 }
 
 /** Something the merchant has to fix. `blocking` problems keep the bundle off sale. */
@@ -74,19 +63,7 @@ export interface ViewModel {
     bundle: BundleDetail;
     sections: ViewSection[];
     required: ViewRequired[];
-    bundleLimits: PickLimits;
-    /**
-     * How many items the required products add to the bundle-wide count. The engine counts them
-     * against a bundle-wide rule ("exactly 6 in the box"), so a widget that counted only the
-     * shopper's picks would ask for one too many.
-     */
-    requiredCount: number;
     problems: Problem[];
-}
-
-export interface ModelOptions {
-    /** `null` while settings load. */
-    settings: ShopSettings | null;
 }
 
 /**
@@ -104,171 +81,78 @@ export function photosOf(product: BundleProduct): Photo[] {
     return [featured ?? { url: product.image, alt: '' }, ...gallery.filter((photo) => bare(photo.url) !== bare(product.image!))];
 }
 
-function toViewProduct(product: BundleProduct, bundle: BundleDetail): ViewProduct {
+function toViewProduct(bundle: BundleDetail, product: BundleProduct, soldOut: boolean): ViewProduct {
     return {
         id: product.id,
         handle: product.handle || product.id,
         title: product.title,
         description: htmlToPlainText(product.descriptionHtml ?? '', { preserveLineBreaks: true }),
         photos: photosOf(product),
-        tags: product.tags ?? [],
         product,
         variants: product.variants,
-        soldOut: !product.variants.some((variant) => variant.available),
+        soldOut,
         fields: fieldsFor(bundle, product.id),
     };
 }
 
 /**
- * Whether the shop allows this product to be offered at all.
- *
- * Archived is never offered: it cannot be bought. A draft follows the shop's own setting. Only an
- * explicit status counts, because an older API sends none, and reading "no status" as "not
- * active" would take every product off sale.
+ * `conditions` is the builder's, so a step or product the conditions engine hides leaves the
+ * model. The builder keeps that object until something in it changes, so a memo on it holds.
+ * `problems` are the merchant's to fix and do not depend on what the shopper picks.
  */
-function isOffered(product: BundleProduct, settings: ShopSettings | null): boolean {
-    if (product.variants.length === 0) return false;
-    if (product.status === 'ARCHIVED') return false;
-    if (product.status === 'DRAFT' && settings?.hideDraftProducts) return false;
-    return true;
-}
+export function toViewModel(bundle: BundleDetail, settings: ShopSettings, conditions?: BundleOfferOptions['conditions']): ViewModel {
+    const offer = getBundleOffer(bundle, { settings, conditions });
 
-function sectionProducts(bundle: BundleDetail, section: BundleSection, needsPicks: boolean, settings: ShopSettings | null): ViewProduct[] {
-    const offered = section.products.filter((product) => isOffered(product, settings)).map((product) => toViewProduct(product, bundle));
-    if (!settings?.hideOutOfStockProducts) return offered;
-    const inStock = offered.filter((product) => !product.soldOut);
-    // Hiding sold-out products is a preference, not a hard block. If honouring it would leave the
-    // step empty when picks are needed from it, keep them visible and unpickable: a greyed-out
-    // product explains itself, an empty step does not.
-    return needsPicks && inStock.length === 0 ? offered : inStock;
-}
-
-function describeLimits(limits: PickLimits): string {
-    return limits.max === Number.POSITIVE_INFINITY ? `at least ${limits.min}` : `${limits.min} to ${limits.max}`;
-}
-
-export function toViewModel(bundle: BundleDetail, options: ModelOptions): ViewModel {
-    const { settings } = options;
-    const problems: Problem[] = [];
-
-    const bundleLimits = getBundleLimits(bundle);
-    // A bundle-wide minimum ("any 6 across the steps") needs picks from somewhere. When no step has
-    // anything in stock, every step counts as needing them, so none of them renders empty.
-    const anyInStock = bundle.sections.some((section) =>
-        section.products.some((product) => isOffered(product, settings) && product.variants.some((variant) => variant.available)),
-    );
-
-    const sections = [...bundle.sections]
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        .map<ViewSection>((section) => {
-            const limits = getSectionLimits(bundle, section.id);
-            const needsPicks = limits.min > 0 || (bundleLimits.min > 0 && !anyInStock);
+    const sections = offer.sections
+        // A step with nothing to show is not drawn.
+        .filter((offered) => offered.products.length > 0)
+        .map<ViewSection>(({ section, limits, products: offered }) => {
+            const products = offered.map((entry) => toViewProduct(bundle, entry.product, entry.soldOut));
             return {
                 id: section.id,
                 name: section.name,
                 description: section.description,
-                imageUrl: section.imageUrl ?? '',
                 autoNext: section.autoNextSection === true,
                 limits,
-                products: sectionProducts(bundle, section, needsPicks, settings),
+                products,
+                byVariantId: new Map(products.flatMap((product) => product.variants.map((variant) => [variant.id, { product, variant }]))),
             };
         });
 
-    const required = (bundle.requiredProducts ?? []).flatMap<ViewRequired>((entry) => {
-        if (!entry.product) {
-            problems.push({
-                blocking: true,
-                detail: `A required product (Shopify id ${entry.shopifyProductId}) did not come back from the API. Check it is still active and in the bundle.`,
-            });
-            return [];
-        }
-        const product = toViewProduct(entry.product, bundle);
-        // Required products stay visible even when sold out and the shop hides sold-out products:
-        // hiding one while still sending it to the cart sells a set the merchant cannot pack.
-        return [{ product, quantity: entry.quantity || 1, soldOut: product.soldOut }];
-    });
+    // A required product the API did not return has nothing to draw; the offer reports it as a
+    // blocking issue. One that is sold out stays visible even when the shop hides sold-out
+    // products: hiding it while still sending it to the cart sells a set the merchant cannot pack.
+    const required = offer.requiredProducts.flatMap<ViewRequired>((entry) =>
+        entry.product ? [{ product: toViewProduct(bundle, entry.product, entry.soldOut), quantity: entry.quantity }] : [],
+    );
 
-    for (const section of sections) {
-        if (section.limits.min > section.limits.max) {
-            problems.push({
-                blocking: true,
-                detail: `The step "${section.name}" has limit rules that contradict each other (at least ${section.limits.min}, at most ${section.limits.max}), so no selection can be added to the cart. Fix the step's limits in Kitenzo.`,
-            });
-        }
-        if (section.limits.min > 0 && !section.products.some((product) => !product.soldOut)) {
-            problems.push({
-                blocking: true,
-                detail: `The step "${section.name}" needs ${describeLimits(section.limits)} picks but has no product that can be bought right now. Add products to the step or restock them.`,
-            });
-        }
-    }
-    if (bundleLimits.min > 0 && !anyInStock) {
-        problems.push({
-            blocking: true,
-            detail: `The bundle needs at least ${bundleLimits.min} picks but none of its products can be bought right now. Restock them or add products.`,
-        });
-    }
-    if (bundleLimits.min > bundleLimits.max) {
-        problems.push({
-            blocking: true,
-            detail: `The bundle's own limit rules contradict each other (at least ${bundleLimits.min}, at most ${bundleLimits.max}), so no selection can be added to the cart. Fix the bundle's limits in Kitenzo.`,
-        });
-    }
-    if (sections.every((section) => section.products.length === 0) && required.length === 0) {
-        problems.push({ blocking: true, detail: 'This bundle has no products. Add products to its steps in Kitenzo.' });
-    }
-    for (const entry of required) {
-        if (entry.soldOut) {
-            problems.push({
-                blocking: true,
-                detail: `"${entry.product.title}" is included in every bundle and is sold out, so the bundle is held off sale. Restock it or remove it from the bundle's required products.`,
-            });
-        }
-    }
+    const problems: Problem[] = offer.issues.map((issue) => ({ blocking: issue.blocking, detail: issue.message }));
 
-    // Personalisation this widget cannot collect. A required one would reach the order empty (sold
-    // as engraved, packed without the engraving), so it holds the bundle off sale; an optional one
-    // is left out, and the merchant is told so.
+    // An image field is the one kind this widget cannot collect. The SDK refuses to add a bundle
+    // while a required field has no answer, so a required one holds the bundle off sale with an
+    // explanation, rather than offering a button that can never work; an optional one is left
+    // out, and the merchant is told so. Asked of everything the bundle can offer, hidden by a
+    // condition or not, so the answer does not change as the shopper picks.
+    const everything = conditions ? getBundleOffer(bundle, { settings }) : offer;
     const titles = new Map(
-        [...sections.flatMap((section) => section.products), ...required.map((entry) => entry.product)].map((product) => [product.id, product.title]),
+        [...everything.sections.flatMap((offered) => offered.products), ...everything.requiredProducts].flatMap((entry) => (entry.product ? [[entry.product.id, entry.product.title] as const] : [])),
     );
     for (const [productId, title] of titles) {
         for (const field of definedFields(bundle, productId)) {
-            const reason = unsupportedReason(field);
-            if (!reason) continue;
-            const why = reason === 'image' ? 'asks for an image upload, which this section cannot host' : 'carries a fee, which this section cannot add to the cart';
+            if (isCollectable(field)) continue;
             problems.push(
                 field.required
                     ? {
                           blocking: true,
-                          detail: `The personalisation field "${field.label}" on "${title}" is required and ${why}, so the bundle is held off sale. Make the field optional or remove it in Kitenzo.`,
+                          detail: `The personalisation field "${field.label}" on "${title}" is required and asks for an image upload, which this section cannot host, so the bundle is held off sale. Make the field optional or remove it in Kitenzo.`,
                       }
                     : {
                           blocking: false,
-                          detail: `The personalisation field "${field.label}" on "${title}" ${why}, so shoppers are not shown it here.`,
+                          detail: `The personalisation field "${field.label}" on "${title}" asks for an image upload, which this section cannot host, so shoppers are not shown it here.`,
                       },
             );
         }
     }
-    if (bundle.conditionsPartial) {
-        problems.push({
-            blocking: false,
-            detail: 'Some of this bundle\'s conditions (variant cascades) cannot run outside Kitenzo\'s own builder, so they are skipped here. Check the bundle behaves as you expect.',
-        });
-    }
 
-    // A required product that is also offered in a step is covered by the shopper's own picks of it;
-    // only the rest are added on top, as the SDK adds them.
-    const inSteps = new Set(bundle.sections.flatMap((section) => section.products.map((product) => product.id)));
-    const requiredCount = required.filter((entry) => !inSteps.has(entry.product.id)).reduce((total, entry) => total + entry.quantity, 0);
-
-    return { bundle, sections, required, bundleLimits, requiredCount, problems };
-}
-
-/** A section's products minus any the conditions engine hides right now. */
-export function visibleProducts(section: ViewSection, hidden: { productId: string; sectionId: number | null }[]): ViewProduct[] {
-    if (hidden.length === 0) return section.products;
-    return section.products.filter(
-        (product) => !hidden.some((entry) => entry.productId === product.id && (entry.sectionId === null || entry.sectionId === section.id)),
-    );
+    return { bundle, sections, required, problems };
 }

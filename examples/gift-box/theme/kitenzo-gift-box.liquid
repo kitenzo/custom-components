@@ -98,11 +98,14 @@
       "soldOut": {{ section.settings.sold_out | default: '' | json }},
       "onlyLeft": {{ section.settings.only_left | default: '' | json }},
       "stockReached": {{ section.settings.stock_reached | default: '' | json }},
+      "variantLimit": {{ section.settings.variant_limit | default: '' | json }},
+      "productLimit": {{ section.settings.product_limit | default: '' | json }},
       "included": {{ section.settings.included | default: '' | json }},
       "summaryHeading": {{ section.settings.summary_heading | default: '' | json }},
       "summaryEmpty": {{ section.settings.summary_empty | default: '' | json }},
       "total": {{ section.settings.total | default: '' | json }},
       "saving": {{ section.settings.saving | default: '' | json }},
+      "personalisationFee": {{ section.settings.personalisation_fee | default: '' | json }},
       "add": {{ section.settings.add | default: '' | json }},
       "choose": {{ section.settings.choose | default: '' | json }},
       "chosen": {{ section.settings.chosen | default: '' | json }},
@@ -113,6 +116,7 @@
       "personaliseHeading": {{ section.settings.personalise_heading | default: '' | json }},
       "fieldRequired": {{ section.settings.field_required | default: '' | json }},
       "fieldOptional": {{ section.settings.field_optional | default: '' | json }},
+      "fieldFee": {{ section.settings.field_fee | default: '' | json }},
       "fieldChoose": {{ section.settings.field_choose | default: '' | json }},
       "fieldNeeded": {{ section.settings.field_needed | default: '' | json }},
       "charactersLeft": {{ section.settings.characters_left | default: '' | json }},
@@ -123,11 +127,12 @@
       "loadFailed": {{ section.settings.load_failed | default: '' | json }},
       "editNotice": {{ section.settings.edit_notice | default: '' | json }},
       "editMissing": {{ section.settings.edit_missing | default: '' | json }},
-      "editPersonalisation": {{ section.settings.edit_personalisation | default: '' | json }},
       "notAllowed": {{ section.settings.not_allowed | default: '' | json }},
+      "cartFailed": {{ section.settings.cart_failed | default: '' | json }},
       "retryAdd": {{ section.settings.retry_add | default: '' | json }},
       "afterAdd": {{ section.settings.after_add | default: 'cart' | json }},
-      "hidePrices": {{ section.settings.hide_prices | json }}
+      "hidePrices": {{ section.settings.hide_prices | json }},
+      "lowStockAt": {{ section.settings.low_stock_at | json }}
     }
   {%- endcapture -%}
 
@@ -174,7 +179,7 @@
     },
     {
       "type": "paragraph",
-      "content": "Works with any Kitenzo bundle: any number of steps, counts per step or across the bundle, required products and product options. Collects text, dropdown and checkbox personalisation and puts each answer on its own product's line in the order. Image uploads and personalisation fees are not supported: a required one holds the bundle off sale, and the theme editor says which."
+      "content": "Works with any Kitenzo bundle: any number of steps, counts per step or across the bundle, required products and product options. Collects text, dropdown and checkbox personalisation, puts each answer on its own product's line in the order, and adds the fee of a field that carries one. Image uploads are not supported: a required one holds the bundle off sale, and the theme editor says which."
     },
     {
       "type": "text",
@@ -232,14 +237,27 @@
     { "type": "text", "id": "choose_more_step", "label": "More needed in a step", "default": "Add {count} more to “{step}”", "info": "{step} is the step's name." },
     { "type": "header", "content": "Products" },
     { "type": "text", "id": "sold_out", "label": "Sold out", "default": "Sold out" },
-    { "type": "text", "id": "only_left", "label": "Low stock", "default": "Only {count} left" },
+    { "type": "text", "id": "only_left", "label": "Low stock", "default": "Only {count} left", "info": "{count} is how many are left." },
+    {
+      "type": "range",
+      "id": "low_stock_at",
+      "label": "Low stock from",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "default": 5,
+      "info": "A product with this many or fewer left says so. Set it to 0 to never say it."
+    },
     { "type": "text", "id": "stock_reached", "label": "No more stock", "default": "That is all we have of this one." },
+    { "type": "text", "id": "variant_limit", "label": "Limit on one variant reached", "default": "That is the most of this one a box can hold." },
+    { "type": "text", "id": "product_limit", "label": "Limit on one product reached", "default": "That is the most of this product a box can hold." },
     { "type": "text", "id": "included", "label": "Included product", "default": "Included" },
     { "type": "header", "content": "Personalisation" },
     { "type": "paragraph", "content": "Each field's own label, placeholder, help text and character limit come from the bundle in Kitenzo. These are the words around them." },
     { "type": "text", "id": "personalise_heading", "label": "Heading", "default": "Make it personal" },
     { "type": "text", "id": "field_required", "label": "Required field", "default": "Required" },
     { "type": "text", "id": "field_optional", "label": "Optional field", "default": "Optional" },
+    { "type": "text", "id": "field_fee", "label": "Field with a fee", "default": "Adds {amount}", "info": "{amount} is the field's fee, in the shopper's currency." },
     { "type": "text", "id": "field_choose", "label": "Dropdown placeholder", "default": "Choose…" },
     { "type": "text", "id": "field_needed", "label": "Required field left empty", "default": "We need this before your box can go in the cart." },
     { "type": "text", "id": "characters_left", "label": "Characters left", "default": "{count} left" },
@@ -251,13 +269,14 @@
     { "type": "text", "id": "summary_empty", "label": "Nothing chosen", "default": "Choose a box, then fill it." },
     { "type": "text", "id": "total", "label": "Total", "default": "Total" },
     { "type": "text", "id": "saving", "label": "Saving", "default": "You save {amount}", "info": "{amount} is the saving, in the shopper's currency." },
+    { "type": "text", "id": "personalisation_fee", "label": "Personalisation fees", "default": "Personalisation", "info": "Names the line above the total that adds up the fees of the personalisation the shopper filled in." },
     { "type": "header", "content": "Messages" },
     { "type": "text", "id": "unavailable", "label": "Bundle not available", "default": "This bundle is not available right now." },
     { "type": "text", "id": "load_failed", "label": "Bundle failed to load", "default": "We could not load this bundle. Please refresh the page to try again." },
     { "type": "textarea", "id": "edit_notice", "label": "Editing from the cart", "default": "You are editing a gift box from your cart. Adding it again replaces the one in your cart." },
     { "type": "textarea", "id": "edit_missing", "label": "Edited items no longer available", "default": "Some items from your saved box are no longer available, so please choose again." },
-    { "type": "textarea", "id": "edit_personalisation", "label": "Editing: personalisation to retype", "default": "Engravings and messages are not saved with a box in your cart, so please type them again before you add it.", "info": "Shown when a box opened from the cart's Edit link has personalised products. The cart keeps what was typed, but the edit link cannot bring it back." },
-    { "type": "text", "id": "not_allowed", "label": "Selection not allowed", "default": "This combination cannot be bought as it is. Please change your selection.", "info": "Shown when a bundle rule other than a count (one per product, a price limit) refuses the selection." },
+    { "type": "text", "id": "not_allowed", "label": "Selection not allowed", "default": "This combination cannot be bought as it is. Please change your selection.", "info": "Shown when a bundle rule other than a count (sold in multiples, a price limit) refuses the selection." },
+    { "type": "text", "id": "cart_failed", "label": "Add to cart failed", "default": "We could not add this to your cart. Please try again.", "info": "Shown when an add fails and the store gives no reason of its own." },
     { "type": "text", "id": "retry_add", "label": "Connection lost while adding", "default": "Press the button again to finish adding it; you will not be charged twice." }
   ],
   "presets": [{ "name": "Kitenzo Gift Box" }]

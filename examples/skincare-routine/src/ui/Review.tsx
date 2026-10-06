@@ -9,7 +9,6 @@
 import { forwardRef } from 'react';
 
 import { text } from '../content';
-import type { ViewSection } from '../model';
 import { useBuilder } from './context';
 import { ArrowIcon } from './Icons';
 import { imageAttrs } from './images';
@@ -17,7 +16,6 @@ import { splitTitle } from './names';
 import { useReason, useRoutineLines, type RoutineLine } from './Summary';
 
 interface ReviewProps {
-    sections: ViewSection[];
     onAdjust: () => void;
     onRetake: (() => void) | null;
 }
@@ -54,9 +52,9 @@ function Row({ line, position }: { line: RoutineLine; position: number }) {
     );
 }
 
-export const Review = forwardRef<HTMLHeadingElement, ReviewProps>(function Review({ sections, onAdjust, onRetake }, headingRef) {
+export const Review = forwardRef<HTMLHeadingElement, ReviewProps>(function Review({ onAdjust, onRetake }, headingRef) {
     const { content, answers, goToStep } = useBuilder();
-    const steps = useRoutineLines(sections);
+    const steps = useRoutineLines();
 
     return (
         <div className="skr-review" data-testid="cc-routine">

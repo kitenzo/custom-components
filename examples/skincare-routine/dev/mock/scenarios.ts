@@ -16,7 +16,7 @@ import type { Fixture, RawProduct } from './wire';
 export interface Scenario {
     id: string;
     label: string;
-    group: 'Catalogue' | 'API' | 'Cart' | 'Market' | 'Theme';
+    group: 'Catalogue' | 'API' | 'Cart' | 'Market' | 'A/B test' | 'Theme';
     /** What a merchant or shopper would have done to get here, and what the widget should do. */
     description: string;
     behaviour?: Behaviour;
@@ -237,6 +237,22 @@ export const SCENARIOS: Scenario[] = [
         description: 'A zero-decimal currency. "¥1,250", never "¥1,250.00".',
         countryCode: 'JP',
         behaviour: { market: { countryCode: 'JP', currency: 'JPY', rate: 190, decimals: 0 } },
+    },
+    {
+        id: 'ab-stays',
+        label: 'In the test, stays here',
+        group: 'A/B test',
+        description:
+            'The bundle is variant A of a running A/B test, and this shopper is assigned A. The widget renders as ever, counts the shopper once (an impression, when the bundle is on screen), and every cart line carries _ab_test_routed so the order is credited to the variant they saw. Open the page with ?ab_bypass=true to look as the merchant does: nothing is counted or credited.',
+        behaviour: { abTest: { id: 5, assigned: 'a' } },
+    },
+    {
+        id: 'ab-other-variant',
+        label: 'Assigned the other variant',
+        group: 'A/B test',
+        description:
+            'The bundle is variant A of a running A/B test, and this shopper is assigned B. The widget draws nothing here and sends them to B\'s page, keeping the page\'s query. In dev that is this page at /pages/variant-b, showing a copy of the bundle: there the shopper is counted once and their cart lines are credited to B.',
+        behaviour: { abTest: { id: 5, assigned: 'b' } },
     },
     {
         id: 'theme-editor',

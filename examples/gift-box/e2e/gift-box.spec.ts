@@ -8,7 +8,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 
-import { loadFixtures } from '../dev/catalog';
+import { loadFixtures, PAID_ENGRAVING_BUNDLE } from '../dev/catalog';
 import { createMockBackend, type CartItem, type MockBackend } from '../dev/mock/backend';
 import { buyButton, openWidget, pick, product, requestsTo, widget, write } from './harness';
 
@@ -119,6 +119,10 @@ test.describe('personalisation reaches the order', () => {
 
         expect(backend.state.cart.items).toHaveLength(4);
         expect(answers(backend.state.cart.items)).toEqual([]);
+        // Nor does it reach the cart's own record of the box, which Shopify copies to the order.
+        // The widget hands over everything typed; the SDK keeps only what landed on a line.
+        expect(backend.state.cart.attributes._kitenzo_properties).toBeUndefined();
+        expect(JSON.stringify(backend.state.cart.attributes)).not.toContain('GONE');
     });
 
     test('every word and limit of a field comes from the bundle', async ({ page }) => {
@@ -165,44 +169,92 @@ test.describe('two sections on one page', () => {
 });
 
 test.describe('basket Edit', () => {
-    test('restores the box, says plainly that the engraving must be typed again, and replaces the original', async ({ page }) => {
+    test('restores the box with what was written for it, and replaces the original', async ({ page }) => {
         const backend = createMockBackend({ fixtures: loadFixtures() });
         await openWidget(page, { backend });
         await pick(page, 'keepsake-gift-box');
         await pick(page, 'hand-poured-soy-candle');
         await pick(page, 'engravable-brass-matchbox');
+        await pick(page, 'with-love-letterpress-card');
         await write(page, 'engravable-brass-matchbox', 'Lid engraving', 'OLD');
+        await write(page, 'with-love-letterpress-card', 'Your message', 'Keep this one');
         await addAndGoToCart(page);
         const [configured, , uid] = backend.state.cart.items[0]!.properties._bundle_data!.split('#');
 
         await openWidget(page, { backend, query: `?edit=${configured}&edit_uid=${uid}` });
-        await expect(widget(page)).toHaveAttribute('data-qa-count', '3');
-        await expect(product(page, 'engravable-brass-matchbox')).toHaveAttribute('data-cc-quantity', '1');
-        await expect(page.getByRole('status').filter({ hasText: 'type them again' })).toBeVisible();
+        await expect(widget(page)).toHaveAttribute('data-qa-count', '4');
+        await expect(page.getByRole('status').filter({ hasText: 'editing a gift box' })).toBeVisible();
         const field = page.locator('[data-cc-personalise="engravable-brass-matchbox"]').getByLabel('Lid engraving', { exact: true });
-        await expect(field).toHaveValue('');
-        await expect(buyButton(page)).toHaveAttribute('aria-disabled', 'true');
+        await expect(field).toHaveValue('OLD');
+        await expect(page.locator('[data-cc-personalise="with-love-letterpress-card"]').getByLabel('Your message', { exact: true })).toHaveValue('Keep this one');
+        // Nothing has to be typed again: the box can go straight back as it is.
+        await expect(buyButton(page)).not.toHaveAttribute('aria-disabled', 'true');
 
         await field.fill('NEW');
         await addAndGoToCart(page);
         expect(boxes(backend)).toHaveLength(1);
-        expect(answers(backend.state.cart.items)).toEqual(['Engravable Brass Matchbox: Engraving=NEW']);
+        expect(answers(backend.state.cart.items)).toEqual(['Engravable Brass Matchbox: Engraving=NEW', 'With Love Letterpress Card: Card message=Keep this one']);
+        // The cart's record, which Shopify copies to the order, holds the box as it is and
+        // nothing of the one it replaced.
+        const instance = backend.state.cart.items[0]!.properties._bundle_data!.split('#')[2]!;
+        expect(instance).not.toBe(uid);
+        expect(Object.keys(JSON.parse(backend.state.cart.attributes._kitenzo_properties!))).toEqual([instance]);
+        expect(backend.state.cart.attributes._kitenzo_properties).not.toContain('OLD');
     });
 
-    test('says nothing about retyping when nothing in the box was personalised', async ({ page }) => {
+    test('a second box\'s Edit brings back its own engraving, not the first box\'s', async ({ page }) => {
         const backend = createMockBackend({ fixtures: loadFixtures() });
-        await openWidget(page, { backend });
-        await pick(page, 'keepsake-gift-box');
-        await pick(page, 'hand-poured-soy-candle', 2);
-        await addAndGoToCart(page);
-        const [configured, , uid] = backend.state.cart.items[0]!.properties._bundle_data!.split('#');
+        for (const engraving of ['FIRST', 'SECOND']) {
+            await openWidget(page, { backend });
+            await pick(page, 'keepsake-gift-box');
+            await pick(page, 'hand-poured-soy-candle');
+            await pick(page, 'engravable-brass-matchbox');
+            await write(page, 'engravable-brass-matchbox', 'Lid engraving', engraving);
+            await addAndGoToCart(page);
+        }
+        const [, second] = boxes(backend);
+        const [configured, , uid] = second![0]!.properties._bundle_data!.split('#');
         await openWidget(page, { backend, query: `?edit=${configured}&edit_uid=${uid}` });
-        await expect(page.getByRole('status').filter({ hasText: 'editing a gift box' })).toBeVisible();
-        await expect(page.getByText('type them again')).toHaveCount(0);
+        await expect(page.locator('[data-cc-personalise="engravable-brass-matchbox"]').getByLabel('Lid engraving', { exact: true })).toHaveValue('SECOND');
+    });
+});
+
+test.describe('a field with a fee', () => {
+    test('is shown before it is charged, joins the total once the field is filled, and reaches the cart as its own line', async ({ page }) => {
+        const { backend } = await openWidget(page, { query: `?bundle=${PAID_ENGRAVING_BUNDLE}` });
+        await pick(page, 'keepsake-gift-box');
+        await pick(page, 'hand-poured-soy-candle');
+        await pick(page, 'engravable-brass-matchbox');
+        const price = page.getByTestId('cc-price').filter({ visible: true }).first();
+        const before = Number(await price.getAttribute('data-price-value'));
+        await expect(page.locator('[data-cc-personalise="engravable-brass-matchbox"] .gft-field__fee')).toHaveText('Adds £4.00');
+        await expect(page.locator('.gft-price__fee')).toHaveCount(0);
+
+        await write(page, 'engravable-brass-matchbox', 'Lid engraving', 'R & J');
+        await expect(page.locator('.gft-price__fee')).toHaveAttribute('data-price-value', '4.00');
+        await expect(page.locator('.gft-price__fee')).toContainText('£4.00');
+        await expect(price).toHaveAttribute('data-price-value', (before + 4).toFixed(2));
+
+        await addAndGoToCart(page);
+        const fee = backend.state.cart.items.filter((item) => item.properties._personalisation_fee);
+        expect(fee.map((item) => [item.title, item.quantity, item.price])).toEqual([['Engraving', 1, 400]]);
+        expect(answers(backend.state.cart.items.filter((item) => item.product_title === 'Engravable Brass Matchbox'))).toEqual(['Engravable Brass Matchbox: Engraving=R & J']);
     });
 });
 
 test.describe('choosing', () => {
+    test('a limit on one product refuses the next one in the merchant\'s words', async ({ page }) => {
+        const fixtures = loadFixtures();
+        fixtures[0]!.bundle.limitRules.push({ operation: 'lte', sectionId: null, type: 'amount-of-one-product', value: '1.00' });
+        await openWidget(page, { backend: createMockBackend({ fixtures }), content: { productLimit: 'One of each, please.' } });
+        const candle = product(page, 'hand-poured-soy-candle');
+        await pick(page, 'hand-poured-soy-candle');
+        await expect(candle.getByTestId('cc-pick')).toHaveAttribute('aria-disabled', 'true');
+        await candle.getByTestId('cc-pick').click({ force: true });
+        await expect(candle.locator('.gft-card__message')).toHaveText('One of each, please.');
+        await expect(candle).toHaveAttribute('data-cc-quantity', '1');
+    });
+
     test('a step that holds one swaps its choice instead of refusing', async ({ page }) => {
         await openWidget(page);
         await pick(page, 'with-love-letterpress-card');
@@ -211,6 +263,29 @@ test.describe('choosing', () => {
         await expect(product(page, 'with-love-letterpress-card')).toHaveAttribute('data-cc-quantity', '0');
         await expect(product(page, 'new-home-letterpress-card')).toHaveAttribute('data-cc-quantity', '1');
         await expect(widget(page)).toHaveAttribute('data-qa-count', '1');
+    });
+
+    test('under "one of each product" the chosen box still swaps to another size of itself', async ({ page }) => {
+        const fixtures = loadFixtures();
+        fixtures[0]!.bundle.limitRules.push({ operation: 'lte', sectionId: null, type: 'amount-of-one-product', value: '1.00' });
+        const { backend } = await openWidget(page, { backend: createMockBackend({ fixtures }) });
+        const box = product(page, 'keepsake-gift-box');
+        await pick(page, 'keepsake-gift-box');
+        await box.locator('[data-option-value="Classic"]').click();
+        const swap = box.getByTestId('cc-pick');
+        await expect(swap).toHaveText('Swap to this');
+        await expect(swap).not.toHaveAttribute('aria-disabled', 'true');
+        await swap.click();
+        await expect(box.locator('.gft-card__message')).toHaveText('');
+        await expect(box).toHaveAttribute('data-cc-quantity', '1');
+        await expect(box.getByRole('button', { name: /Classic \/ Oat/ })).toBeVisible();
+
+        // And the box that goes to the cart is the one swapped to.
+        await pick(page, 'hand-poured-soy-candle');
+        await pick(page, 'loose-leaf-tea-tin');
+        await buyButton(page).click();
+        await page.waitForURL('**/cart');
+        expect(backend.state.cart.items.filter((item) => item.product_title === 'The Keepsake Gift Box').map((item) => item.variant_title)).toEqual(['Classic / Oat']);
     });
 
     test('the box\'s option grid knows which combinations exist, and a sold-out one says so', async ({ page }) => {

@@ -1,19 +1,15 @@
 /*
- * The shopper's selection: the SDK's builder, plus the answers a UI needs on every render.
+ * What the shopper's selection means for the page: which counts are still owed, and when a step
+ * is done.
  *
- * Selection, validation and pricing are the SDK's (`createBundleBuilder`). This file adds only
- * what the SDK leaves to the UI: how many of a variant are already picked across the bundle, why
- * one more cannot go in, and what is still missing, phrased per step.
- *
- * The builder is created WITH its opening selection (a basket Edit), never filled after the first
- * paint: that paints an empty case for one frame, and a shopper who taps in that frame adds to the
- * wrong state.
+ * Selection, validation and pricing are the SDK's (`createBundleBuilder`). It takes only what fits
+ * (a step's and the bundle's maximums, per-product caps, stock), says why one more will not go in
+ * (`blockedReason`), and counts what is still owed (`progress`), required products included. This
+ * file only reads those answers; it never counts picks against a rule itself.
  */
-import { createBundleBuilder, type BundleBuilder, type BundleVariant, type SectionSelections } from '@kitenzo/core';
+import type { SelectionProgress } from '@kitenzo/core';
 
-import type { ViewModel, ViewSection } from './model';
-
-export type Blocked = 'sold-out' | 'stock' | 'step-full' | 'bundle-full';
+import type { ViewSection } from './model';
 
 export interface Missing {
     /** `null` for the bundle-wide count. */
@@ -21,92 +17,40 @@ export interface Missing {
     count: number;
 }
 
-/** Variant id → quantity, summed over every step (stock is per variant, not per step). */
-export function quantitiesOf(selections: SectionSelections): Map<string, number> {
-    const totals = new Map<string, number>();
-    for (const picks of Object.values(selections)) {
-        for (const pick of picks) totals.set(pick.variantId, (totals.get(pick.variantId) ?? 0) + pick.quantity);
-    }
-    return totals;
+/** How many the shopper has picked, without the required products the SDK adds on submit. */
+export function pickedCount(progress: SelectionProgress): number {
+    return progress.quantity - progress.requiredQuantity;
 }
 
-export function countOf(selections: SectionSelections, sectionId?: number): number {
-    const entries = sectionId === undefined ? Object.values(selections) : [selections[sectionId] ?? []];
-    return entries.flat().reduce((total, pick) => total + pick.quantity, 0);
-}
-
-/**
- * Why one more of `variant` cannot go into `section`, or null when it can.
- *
- * The order matters: the reason a shopper can act on comes first. "Sold out" beats "step full",
- * because removing something else will not make a sold-out product addable.
- */
-export function blockedReason(model: ViewModel, selections: SectionSelections, section: ViewSection, variant: BundleVariant): Blocked | null {
-    if (!variant.available) return 'sold-out';
-    const stock = variant.maxOrderableQuantity;
-    if (stock !== null && stock !== undefined && (quantitiesOf(selections).get(variant.id) ?? 0) >= stock) return 'stock';
-    if (countOf(selections, section.id) >= section.limits.max) return 'step-full';
-    if (countOf(selections) + model.requiredCount >= model.bundleLimits.max) return 'bundle-full';
-    return null;
-}
-
-/** What still has to be picked, step by step, then bundle-wide. Hidden steps need nothing. */
-export function missingPicks(model: ViewModel, selections: SectionSelections, hiddenSectionIds: number[] = []): Missing[] {
+/** What still has to be picked, step by step, then bundle-wide, in the order the page shows them. */
+export function missingPicks(sections: ViewSection[], progress: SelectionProgress): Missing[] {
     const missing: Missing[] = [];
-    for (const section of model.sections) {
-        if (hiddenSectionIds.includes(section.id)) continue;
-        const short = section.limits.min - countOf(selections, section.id);
-        if (short > 0) missing.push({ section, count: short });
+    for (const section of sections) {
+        const count = progress.sections[section.id]?.missing ?? 0;
+        if (count > 0) missing.push({ section, count });
     }
-    const bundleShort = model.bundleLimits.min - countOf(selections) - model.requiredCount;
-    if (bundleShort > 0) missing.push({ section: null, count: bundleShort });
+    if (progress.missing > 0) missing.push({ section: null, count: progress.missing });
     return missing;
 }
 
 /**
- * The seed, trimmed to what the shopper could have picked by hand: variants this bundle still
- * offers in that step and that are in stock, capped at stock and at each step's maximum. A seed
- * comes from a saved cart line or a quiz, written against some earlier copy of the bundle.
+ * The step holds picks and its own count is acceptable: what the page marks as done.
+ *
+ * Acceptable is the SDK's word (`missing === 0`), not `count >= min`: with "6, 12 or 24" a step
+ * holding 7 is inside its window and still owes 5.
  */
-export function clampSeed(model: ViewModel, seed: SectionSelections | null): SectionSelections {
-    const clamped: SectionSelections = {};
-    if (!seed) return clamped;
-    let bundleRoom = model.bundleLimits.max - model.requiredCount;
-    for (const section of model.sections) {
-        let room = section.limits.max;
-        for (const pick of seed[section.id] ?? []) {
-            const variant = section.products
-                .filter((product) => !product.soldOut)
-                .flatMap((product) => product.variants)
-                .find((candidate) => candidate.id === pick.variantId);
-            if (!variant?.available) continue;
-            const already = quantitiesOf(clamped).get(variant.id) ?? 0;
-            const stock = variant.maxOrderableQuantity ?? Number.POSITIVE_INFINITY;
-            const quantity = Math.min(Math.trunc(pick.quantity), room, bundleRoom, stock - already);
-            if (!(quantity > 0)) continue;
-            (clamped[section.id] ??= []).push({ variantId: variant.id, quantity });
-            room -= quantity;
-            bundleRoom -= quantity;
-        }
-    }
-    return clamped;
+export function isStepDone(section: ViewSection, progress: SelectionProgress): boolean {
+    const step = progress.sections[section.id];
+    return step !== undefined && step.quantity > 0 && step.missing === 0;
 }
 
 /**
- * The builder for this bundle, seeded at creation.
- *
- * `createBundleBuilder` is the engine: it owns the selection, validates it on every change and
- * says whether it can be sold (`isSatisfied`). The seed (a basket Edit) goes in here, before the
- * first paint, so the shopper never sees an empty case that fills itself a frame later.
- *
- * What React's `useSyncExternalStore` did for the starter, `builder.subscribe` does here: the
- * widget re-renders on every change the engine reports, and on nothing else.
+ * Nothing more to do in the step, so a step the merchant set to advance can move the shopper on.
+ * A step with a ceiling is finished when it is full; one without, when its minimum is met.
  */
-export function createSelection(model: ViewModel, seed: SectionSelections | null): BundleBuilder {
-    const builder = createBundleBuilder(model.bundle);
-    const start = clampSeed(model, seed);
-    for (const [sectionId, picks] of Object.entries(start)) {
-        for (const pick of picks) builder.addItem(Number(sectionId), pick.variantId, pick.quantity);
-    }
-    return builder;
+export function isStepFinished(section: ViewSection, progress: SelectionProgress): boolean {
+    const step = progress.sections[section.id];
+    if (step === undefined) return false;
+    if (section.limits.max !== null) return step.quantity >= section.limits.max;
+    return section.limits.isRequired && step.missing === 0;
 }

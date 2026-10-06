@@ -9,7 +9,7 @@ You are working in a Kitenzo custom component: a widget on the published `@kiten
 
 ## Order of work
 
-1. **Read.** `AGENTS.md`, then `src/` top to bottom (embed, config, content, model, selection, money, App, ui), then `dev/catalog.ts`, then `theme/*.liquid`. The comments are the rules.
+1. **Read.** `AGENTS.md`, then `src/` top to bottom (embed, registry, config, content, widget, load, model, selection, ui), then `dev/catalog.ts`, then `theme/*.liquid`. The comments are the rules.
 2. **Recon.** The merchant's real catalogue: `bun run snapshot -- --store <store>.myshopify.com` with their handles in `dev/catalog.ts`. Real option names, prices and photos; never invent one.
 3. **Gate: present before you code, then wait for approval.** In one message:
    - the design extracted: every element and state, desktop and mobile;

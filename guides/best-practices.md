@@ -6,31 +6,31 @@ Every rule here was paid for by a real build on a real merchant's store. Each co
 
 **1. Never reimplement the engine.** Selection, validation, pricing, discounts and cart choreography come from the SDK. A widget that computes its own total disagrees with checkout the first time the merchant uses a tier, a surcharge or a market. A widget that builds its own cart lines silently drops Kitenzo's A/B test attribution, and the merchant's test never concludes.
 
-**2. Gate the buy button on `isSatisfied`, never on `isComplete`.** `isComplete` assumes every step needs at least one pick, so it stays false forever on a "pick any 6 across steps" bundle and on a step whose only rule is a maximum. `isSatisfied` reads the bundle's real rules and is exactly what `/configure` will accept.
+**2. Gate the buy button on `isSatisfied`.** It reads the bundle's real rules, required products included, and is exactly what `/configure` will accept. Never gate on "every step has a pick": that stays false forever on a "pick any 6 across steps" bundle and on a step whose only rule is a maximum. Say why it is false from the builder's `progress` (how many are still missing, per step and bundle-wide) and `problems` (every other rule), and gate a wizard's "Next" on `isSectionValid`.
 
-**3. Read counts from the SDK.** `getSectionLimits(bundle, stepId)` and `getBundleLimits(bundle)` translate all five operators (`gt 3` is a minimum of 4). There is no `min`/`max` field on a step: the limit rules are the min and max. A widget that read "no field" as "no limit" rendered a required step as optional.
+**3. Read counts from the SDK.** The offer carries each step's window and the bundle's (`getBundleOffer(...).sections[].limits` and `.bundleLimits`; `getSectionLimits` and `getBundleLimits` are the same windows without an offer), translated from all five operators (`gt 3` is a minimum of 4). There is no `min`/`max` field on a step: the limit rules are the min and max. A widget that read "no field" as "no limit" rendered a required step as optional. A window with no ceiling has `max: null`: compare through `ceilingOf(limits)`, and ask the builder's `blockedReason` whether one more fits.
 
-**4. Several `eq` rules are alternatives.** "6, 12 or 24" is three `eq` rules. `getSectionLimits` reports a window of 6 to 24, but 7 is not valid. Draw choices from the rules, and let `isSatisfied` decide.
+**4. Several `eq` rules are alternatives.** "6, 12 or 24" is three `eq` rules. The window reads 6 to 24, but 7 is not valid. Draw the choices from the window's `allowedCounts` (`[6, 12, 24]`), and let `isSatisfied` decide.
 
 **5. Invent nothing.** Every constraint comes from the bundle, the approved design, or a merchant's explicit request. No step is compulsory because it has no rule. Nothing is preselected. Merchants have asked "the bags are optional, right? Why do I have to pick one?" and "which of these rules did we actually ask for?" about widgets that guessed.
 
 **6. Be as generic as the design allows.** Render any number of steps and required products, zero included. When a feature's prerequisite is missing (no tiers for a ladder, no second step for a card), leave out that feature and render the rest. If the design genuinely cannot draw a shape (it needs exactly two steps), refuse that bundle, but say so twice: in the section settings ("What this needs: …") and as a clear explanation in the theme editor.
 
-**7. Archived products are never offered. Drafts follow the shop's setting.** Drop `status === 'ARCHIVED'` always. Drop `DRAFT` only when `hideDraftProducts` is on. Only an explicit status counts: an older API sends none, and reading that as "not active" would take everything off sale.
+**7. Archived products are never offered. Drafts follow the shop's setting.** `getBundleOffer` (`useBundleOffer`) decides which products each step shows: render what it returns, and never filter `bundle.sections` yourself. Its `issues` say what the merchant has to fix, for the theme editor, and `isSellable` whether anything can be bought.
 
-**8. Sold out follows the shop's setting, with one exception.** With "hide out of stock" on, drop sold-out products, unless that leaves a step unable to reach its minimum: then keep them, visibly unpickable. Every button on a sold-out card is disabled, including the one in its details dialog. (Three separate widgets let shoppers add a sold-out product from a drawer or quick view the card had correctly disabled.)
+**8. Sold out follows the shop's setting, with one exception.** With "hide out of stock" on, the offer leaves sold-out products out, unless the picks that are owed could not be made without them: then it keeps them, and the widget shows them visibly unpickable. "Sold out" is `isVariantBuyable(variant)`, never `available` alone. Every button on a sold-out card is disabled, including the one in its details dialog. (Three separate widgets let shoppers add a sold-out product from a drawer or quick view the card had correctly disabled.)
 
-**9. Cap steppers at `maxOrderableQuantity`, never `inventoryQuantity`.** The inventory count can be zero or negative on a variant that sells freely. The SDK resolves whether anyone is counting.
+**9. The builder decides whether one more fits.** It takes only what fits: a step's and the bundle's maximums, a cap on one product or variant, and orderable stock (`maxOrderableQuantity`, never `inventoryQuantity`, which can be zero or negative on a variant that sells freely). Disable a control on `blockedReason(stepId, variantId)`, replace a pick in a full step with `swapItem`, and never count room yourself: a widget that counted from a subset of the rules built selections the cart then refused whole.
 
 **10. Required products are part of the set.** Show them, price them in, carry them at the merchant's quantity. A sold-out required product stays visible even when sold-out products are hidden, and the bundle is held off sale with a sentence saying why. Hiding it while still sending it to the cart sold sets the merchant could not pack.
 
-**11. Seed the builder when you create it, never from an effect.** A basket Edit, a quiz result or a product page that opens with four of a flavour creates the builder with those picks. Seeding from `useEffect` paints an empty bundle for one frame, and a fast tap lands in the wrong state.
+**11. Seed the builder when you create it, never from an effect.** A basket Edit, a quiz result or a product page that opens with four of a flavour creates the builder with those picks (`initialSelections`), and the builder keeps only what still fits. Seeding from `useEffect` paints an empty bundle for one frame, and a fast tap lands in the wrong state.
 
 **12. Data needed at first paint gates the builder's existence.** Wait for the shop's settings before deciding what to offer. Mounting first and patching later locked one widget's option dropdowns into the wrong values.
 
 ## Money and markets
 
-**13. Every amount is in the shopper's currency, formatted one way.** Pass the theme's country to the provider, format with the same rules the SDK uses (the starter's `money.ts`), and read `data-price-value` from numbers, not from formatted text. JPY has no decimals.
+**13. Every amount is in the shopper's currency, formatted one way.** Pass the theme's country to the provider, format every amount besides the total with `useMoney` (the same currency and format as `useBundlePrice`), and read `data-price-value` from numbers (`useBundlePrice().amounts`), not from formatted text. JPY has no decimals.
 
 **14. Never hardcode a currency, a market or a route.** A section shipped with `data-country-code="GB"` showed pounds to every shopper in Europe. A cart redirect to `/cart` dropped shoppers out of `/de/`.
 
@@ -40,7 +40,7 @@ Every rule here was paid for by a real build on a real merchant's store. Each co
 
 ## What the shopper sees
 
-**17. Every disabled control says why.** Step full, stock reached, sold out, something still missing. A `+` that just goes grey ("I have no idea why") is a bug. A control that must explain itself on tap uses `aria-disabled="true"` and refuses in its handler; `disabled` swallows the tap.
+**17. Every disabled control says why.** Step full, bundle full, stock reached, a cap on one product or variant, sold out, something still missing: every reason `blockedReason` can give has a sentence of the merchant's. A `+` that just goes grey ("I have no idea why") is a bug. A control that must explain itself on tap uses `aria-disabled="true"` and refuses in its handler; `disabled` swallows the tap.
 
 **18. Cart errors are sentences.** Render the cart hook's `shopperMessage`. Never `error.message`: it carries the route and the status, and shoppers have been shown "/en-gb/cart/add.js responded 422" and, on another store, the literal text "422".
 
@@ -90,9 +90,9 @@ Every rule here was paid for by a real build on a real merchant's store. Each co
 
 **38. Use `useBundleAjaxCart`.** It merges `_bundles` instead of replacing it (replacing drops the discount on every bundle already in the cart), writes attributes only after the lines land, throws on a non-2xx response (a bare `fetch` resolves on a 422), and reports success only once `_bundles` is confirmed.
 
-**39. Answer the cart's "Edit".** The cart links Edit to the bundle's page with `?edit=…`. Read it with `useBundleEdit`, seed the builder from its selections, and pass `replace` to the cart hook so the edited bundle replaces the original. A widget that ignores it shows an empty builder, and adding again leaves two bundles in the cart.
+**39. Answer the cart's "Edit".** The cart links Edit to the bundle's page with `?edit=…`. Read it with `useBundleEdit`, seed the builder from its `selections` (and a personalisation form from its `properties`), and pass `replace` to the cart hook so the edited bundle replaces the original. A widget that ignores it shows an empty builder, and adding again leaves two bundles in the cart.
 
-**40. Be ready for A/B testing.** From the next SDK release, `useBundle` redirects shoppers in a Kitenzo A/B test and records the view (0.9.0 does not yet: see [known-issues.md](known-issues.md)). Load bundles only through `useBundle`, keep rendering the loading state while it is loading (a redirect will look like loading), render one bundle per page, and set the bundle's page in Kitenzo to the page the section is on.
+**40. Be ready for A/B testing.** `useBundle` redirects shoppers in a Kitenzo A/B test to their variant's page and records the view. Load bundles only through `useBundle`, keep rendering the loading state while it is loading (a redirect will look like loading), render one bundle per page, and set the bundle's page in Kitenzo to the page the section is on.
 
 ## Accessibility
 
@@ -116,7 +116,7 @@ Every rule here was paid for by a real build on a real merchant's store. Each co
 
 **48. Recon before code.** Read the merchant's real catalogue (`/products.json` is public on every Shopify store): their real option names, prices and handles. One design assumed options called Loft/Hand/Flex/Length; the catalogue said Hand/Loft/Shaft.
 
-**49. SDK gaps become issues, not workarounds.** If the SDK cannot do something, leave the feature out and raise it. Every build that patched around the SDK turned into a chain of version bumps found late on a live store. The one exception is handing the SDK data it should have had, isolated in `src/sdkFixes.ts` with a test that fails the day it is no longer needed.
+**49. SDK gaps become issues, not workarounds.** If the SDK cannot do something, leave the feature out and raise it. Every build that patched around the SDK turned into a chain of version bumps found late on a live store. The one exception is handing the SDK data it should have had, isolated in a `src/sdkFixes.ts` with a test that fails the day it is not needed.
 
 **50. Never ship `.env`.** Vite writes any `import.meta.env.VITE_*` it can see into the build as plain text. Read env values only behind `import.meta.env.DEV`, or a developer's own API key and base URL ship inside every merchant's theme.
 

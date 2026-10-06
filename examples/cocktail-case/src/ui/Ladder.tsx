@@ -2,17 +2,18 @@
  * The discount ladder and "Surprise me", side by side in the case rail because they answer the
  * same question: how do I get to the next tier?
  *
- * The ladder's rungs, fill and message all come from `tierLadder` (src/tiers.ts), which reads the
- * bundle's tiers. The message is the merchant's tier `customText` when there is one, the theme's
- * copy when there is not.
+ * The ladder's rungs and where the case stands on them are the SDK's (`readLadder` in
+ * src/tiers.ts). The message is the merchant's tier `customText` when there is one, the theme's
+ * copy when there is not. "Surprise me" plans on a builder of its own, so the SDK says what fits.
  */
 import { useState } from 'react';
 
+import { ceilingOf } from '@kitenzo/react';
+
 import { text } from '../content';
-import { countOf } from '../selection';
-import { exactSizes, nextCaseSize, planSurprise, sectionRoom, surpriseCandidates } from '../surprise';
+import { nextCaseSize, planSurprise, surpriseCandidates } from '../surprise';
 import { discountLabel, ladderMessage } from '../tiers';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
 import { CheckIcon, SparkleIcon } from './Icons';
 
 /** Where a marker's label sits, so the first and last never hang off the track. */
@@ -27,18 +28,20 @@ function anchor(position: number): string {
  * the bar has something more urgent to say (why the button will not add yet).
  */
 export function LadderMeter({ compact = false, quiet = false }: { compact?: boolean; quiet?: boolean }) {
-    const { ladder, content, money } = useBuilder();
+    const { model, content, money } = useBuilder();
+    const { ladder, selections } = useSelection();
     if (!ladder) return null;
     // A money tier with prices hidden would show the amounts the merchant asked to hide.
     if (content.hidePrices && ladder.type !== 'percentage') return null;
-    const message = ladderMessage(ladder, content, money.format);
-    const top = ladder.rungs[ladder.rungs.length - 1]!.threshold;
+    const message = ladderMessage(ladder, model.bundle, selections, content, money);
+    const top = ladder.rungs[ladder.rungs.length - 1]!.count;
+    const fill = Math.min(1, ladder.count / top);
 
     if (compact) {
         return (
             <div className="ckc-meter ckc-meter--compact">
                 <div className="ckc-meter__track" aria-hidden="true">
-                    <span className="ckc-meter__fill" style={{ width: `${ladder.progress * 100}%` }} />
+                    <span className="ckc-meter__fill" style={{ width: `${fill * 100}%` }} />
                 </div>
                 {quiet ? null : <p className="ckc-meter__message">{message.text}</p>}
             </div>
@@ -48,30 +51,30 @@ export function LadderMeter({ compact = false, quiet = false }: { compact?: bool
     return (
         <div className="ckc-meter" data-testid="ckc-ladder" data-ckc-at-top={ladder.next ? undefined : 'true'}>
             <div className="ckc-meter__head">
-                {ladder.inForce > 0 ? (
+                {ladder.discount ? (
                     <span className="ckc-meter__now">
                         <CheckIcon />
-                        {text(content, 'tierNow', { discount: discountLabel(content, ladder.type, ladder.inForce, money.format) })}
+                        {text(content, 'tierNow', { discount: discountLabel(content, ladder.type, ladder.discount, money) })}
                     </span>
                 ) : null}
             </div>
             <div className="ckc-meter__rail">
                 <div className="ckc-meter__track" aria-hidden="true">
-                    <span className="ckc-meter__fill" style={{ width: `${ladder.progress * 100}%` }} />
+                    <span className="ckc-meter__fill" style={{ width: `${fill * 100}%` }} />
                 </div>
                 <ol className="ckc-meter__rungs">
                     {ladder.rungs.map((rung) => {
-                        const position = rung.threshold / top;
+                        const position = rung.count / top;
                         return (
                             <li
-                                key={rung.threshold}
-                                className={`ckc-rung${rung.reached ? ' ckc-rung--reached' : ''}${rung === ladder.next ? ' ckc-rung--next' : ''}`}
+                                key={rung.count}
+                                className={`ckc-rung${ladder.count >= rung.count ? ' ckc-rung--reached' : ''}${rung.count === ladder.next?.count ? ' ckc-rung--next' : ''}`}
                                 data-anchor={anchor(position)}
                                 style={{ left: `${position * 100}%` }}
                             >
                                 <span className="ckc-rung__dot" aria-hidden="true" />
-                                <span className="ckc-rung__discount">{discountLabel(content, ladder.type, rung.effective, money.format)}</span>
-                                <span className="ckc-rung__count">{text(content, 'tierRung', { count: rung.threshold })}</span>
+                                <span className="ckc-rung__discount">{discountLabel(content, ladder.type, rung.discount, money)}</span>
+                                <span className="ckc-rung__count">{text(content, 'tierRung', { count: rung.count })}</span>
                             </li>
                         );
                     })}
@@ -85,37 +88,32 @@ export function LadderMeter({ compact = false, quiet = false }: { compact?: bool
 }
 
 export function SurpriseButton() {
-    const { model, selection, content, locked, ladder, facetDefs, activeFacets } = useBuilder();
+    const { model, content, facets, activeFacets, addItem } = useBuilder();
+    const { selections, progress, locked, ladder } = useSelection();
     // Required products count toward the case's size, as the engine counts them.
-    const count = countOf(selection.selections) + model.requiredCount;
-    const target = nextCaseSize(count, model.bundleLimits, ladder, exactSizes(model.bundle));
+    const count = progress.quantity;
+    const target = nextCaseSize(progress, model.bundleLimits, ladder?.rungs.map((rung) => rung.count) ?? []);
     // The note belongs to the case it describes: once the shopper changes the case by hand, it goes.
     const [note, setNote] = useState<{ text: string; at: number } | null>(null);
 
     const press = () => {
         if (locked) return;
         if (target === null) {
-            setNote({ text: text(content, count >= model.bundleLimits.max ? 'surpriseFull' : 'surpriseEmpty'), at: count });
+            setNote({ text: text(content, count >= ceilingOf(model.bundleLimits) ? 'surpriseFull' : 'surpriseEmpty'), at: count });
             return;
         }
-        const candidates = surpriseCandidates({
-            model,
-            selections: selection.selections,
-            hiddenSectionIds: selection.conditions.hiddenSectionIds,
-            hiddenProducts: selection.conditions.hiddenProducts,
-            facetDefs,
-            activeFacets,
-        });
         // A new seed per press: "again" is a different mix. The plan itself is deterministic per
         // seed, which is what the unit tests pin down.
         const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
-        const plan = planSurprise(candidates, target - count, sectionRoom(model, selection.selections), seed);
-        if (plan.added === 0) {
+        const need = target - count;
+        const plan = planSurprise(model.bundle, selections, surpriseCandidates(model, facets, activeFacets), need, seed);
+        // The builder reports how many of each it took, so the note counts what went in.
+        const added = plan.reduce((sum, pick) => sum + addItem(pick.sectionId, pick.variantId, pick.quantity), 0);
+        if (added === 0) {
             setNote({ text: text(content, 'surpriseEmpty'), at: count });
             return;
         }
-        for (const pick of plan.picks) selection.builder.addItem(pick.sectionId, pick.variantId, pick.quantity);
-        setNote({ text: text(content, plan.short > 0 ? 'surpriseShort' : 'surpriseDone', { count: plan.added }), at: count + plan.added });
+        setNote({ text: text(content, added < need ? 'surpriseShort' : 'surpriseDone', { count: added }), at: count + added });
     };
 
     const refusing = target === null || locked;

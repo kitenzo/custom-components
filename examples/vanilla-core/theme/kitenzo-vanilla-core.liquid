@@ -96,6 +96,8 @@
       "soldOut": {{ section.settings.sold_out | default: '' | json }},
       "onlyLeft": {{ section.settings.only_left | default: '' | json }},
       "stockReached": {{ section.settings.stock_reached | default: '' | json }},
+      "variantLimit": {{ section.settings.variant_limit | default: '' | json }},
+      "productLimit": {{ section.settings.product_limit | default: '' | json }},
       "included": {{ section.settings.included | default: '' | json }},
       "summaryHeading": {{ section.settings.summary_heading | default: '' | json }},
       "summaryEmpty": {{ section.settings.summary_empty | default: '' | json }},
@@ -111,9 +113,11 @@
       "editNotice": {{ section.settings.edit_notice | default: '' | json }},
       "editMissing": {{ section.settings.edit_missing | default: '' | json }},
       "notAllowed": {{ section.settings.not_allowed | default: '' | json }},
+      "cartFailed": {{ section.settings.cart_failed | default: '' | json }},
       "retryAdd": {{ section.settings.retry_add | default: '' | json }},
       "afterAdd": {{ section.settings.after_add | default: 'cart' | json }},
-      "hidePrices": {{ section.settings.hide_prices | json }}
+      "hidePrices": {{ section.settings.hide_prices | json }},
+      "lowStockAt": {{ section.settings.low_stock_at | json }}
     }
   {%- endcapture -%}
 
@@ -204,8 +208,20 @@
     { "type": "text", "id": "choose_more_step", "label": "More needed in a step", "default": "Choose {count} more for “{step}”", "info": "For bundles with several steps. {step} is the step's name." },
     { "type": "header", "content": "Products" },
     { "type": "text", "id": "sold_out", "label": "Sold out", "default": "Sold out" },
-    { "type": "text", "id": "only_left", "label": "Low stock", "default": "Only {count} left" },
+    { "type": "text", "id": "only_left", "label": "Low stock", "default": "Only {count} left", "info": "{count} is how many are left." },
+    {
+      "type": "range",
+      "id": "low_stock_at",
+      "label": "Low stock from",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "default": 5,
+      "info": "A wine with this many or fewer left says so. Set it to 0 to never say it."
+    },
     { "type": "text", "id": "stock_reached", "label": "No more stock", "default": "That is all we have of this one." },
+    { "type": "text", "id": "variant_limit", "label": "Limit on one variant reached", "default": "That is the most of this one a case can hold." },
+    { "type": "text", "id": "product_limit", "label": "Limit on one product reached", "default": "That is the most of this wine a case can hold." },
     { "type": "text", "id": "included", "label": "Included product", "default": "Included" },
     { "type": "header", "content": "Summary" },
     { "type": "text", "id": "summary_heading", "label": "Heading", "default": "Your case" },
@@ -219,6 +235,7 @@
     { "type": "textarea", "id": "edit_notice", "label": "Editing from the cart", "default": "You are changing a case from your cart. Adding it again replaces the one in your cart." },
     { "type": "textarea", "id": "edit_missing", "label": "Edited items no longer available", "default": "Some bottles from your saved case are no longer available, so please choose again." },
     { "type": "text", "id": "not_allowed", "label": "Selection not allowed", "default": "This combination cannot be bought as it is. Please change your selection.", "info": "Shown when a bundle rule other than a count (one per product, a price limit) refuses the selection." },
+    { "type": "text", "id": "cart_failed", "label": "Add to cart failed", "default": "We could not add this to your cart. Please try again.", "info": "Shown when an add fails and the store gives no reason of its own." },
     { "type": "text", "id": "retry_add", "label": "Connection lost while adding", "default": "Press the button again to finish adding it; you will not be charged twice." }
   ],
   "presets": [{ "name": "Kitenzo Vanilla Core" }]

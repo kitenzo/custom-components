@@ -7,6 +7,8 @@
  * many of it are in this step). The suites find and drive pieces through these, never through
  * class names or copy.
  */
+import { memo } from 'react';
+
 import { text } from '../content';
 import type { ViewProduct, ViewSection } from '../model';
 import { useBuilder } from './context';
@@ -15,7 +17,11 @@ import { imageAttrs } from './images';
 import { AddControl, OptionPickers } from './PickControls';
 import { usePiece } from './usePiece';
 
-export function PieceCard({ product, section, index }: { product: ViewProduct; section: ViewSection; index: number }) {
+/*
+ * Memoised on the product and its step, both kept by the model between picks. A piece is drawn
+ * again by its own state or by a change to either context, never by the Builder alone.
+ */
+export const PieceCard = memo(function PieceCard({ product, section, index }: { product: ViewProduct; section: ViewSection; index: number }) {
     const { money, content, openDetails } = useBuilder();
     const piece = usePiece(product, section);
     const price = content.hidePrices ? null : money.format(money.unitPrice(piece.variant));
@@ -69,4 +75,4 @@ export function PieceCard({ product, section, index }: { product: ViewProduct; s
             </div>
         </article>
     );
-}
+});

@@ -5,11 +5,12 @@
  * Both carry `cc-add-to-cart` and CSS decides which one shows. JavaScript never mirrors a CSS
  * breakpoint to decide where a test id or a button goes.
  */
+import { getBundlePrice } from '@kitenzo/core';
+
 import { text } from '../content';
 import { h, setAttr, setText, show } from '../dom';
-import { caseSize } from '../model';
-import { casePrice } from '../money';
-import { countOf } from '../selection';
+import { caseSize, type CaseSize } from '../model';
+import { pickedCount } from '../selection';
 import type { Ctx } from './context';
 import { bottle, closeIcon } from './icons';
 import { image } from './images';
@@ -28,42 +29,52 @@ export interface Region {
 }
 
 /**
- * Every bottle in the case, one entry per bottle: what its slots are filled with. Required products
- * that no step offers go in first (they are in every case, and the engine counts them), then the
- * shopper's picks in shelf order.
+ * Every bottle in the case, one entry per bottle: what its slots are filled with. The bottles the
+ * SDK adds to every case go in first (`progress.requiredQuantity` of them: fewer once the shopper
+ * has picked a required wine themselves), then the shopper's picks in shelf order.
  */
 function bottlesInCase(ctx: Ctx): string[] {
-    const selections = ctx.state().selections;
-    const inSteps = new Set(ctx.model.sections.flatMap((section) => section.products.map((product) => product.id)));
-    const required = ctx.model.required
-        .filter((entry) => !inSteps.has(entry.product.id))
-        .flatMap((entry) => Array.from({ length: entry.quantity }, () => entry.product.id));
-    return required.concat(ctx.model.sections.flatMap((section) =>
-        (selections[section.id] ?? []).flatMap((pick) => {
-            const product = section.products.find((candidate) => candidate.variants.some((variant) => variant.id === pick.variantId));
-            return product ? Array.from({ length: pick.quantity }, () => product.id) : [];
-        }),
-    ));
+    const { selections, progress } = ctx.state();
+    const model = ctx.model();
+    const required = model.required.flatMap((entry) => Array.from({ length: entry.quantity }, () => entry.product.id)).slice(0, progress.requiredQuantity);
+    return required.concat(
+        model.sections.flatMap((section) =>
+            (selections[section.id] ?? []).flatMap((pick) => {
+                const picked = section.byVariantId.get(pick.variantId);
+                return picked ? Array.from({ length: pick.quantity }, () => picked.product.id) : [];
+            }),
+        ),
+    );
 }
 
 /**
  * The case itself: one slot per bottle it holds, filling as the shopper chooses. Decorative
  * (`aria-hidden`); the caption under it says the same thing in words.
+ *
+ * Hidden while the bundle has no case to draw. Its size is read on every update, because it can
+ * change under the shopper: a condition can hide a step, and a required wine the shopper picks
+ * themselves is one the SDK stops adding.
  */
-function createCaseGraphic(ctx: Ctx, compact: boolean): Region | null {
-    const size = caseSize(ctx.model);
-    // The bar's case stands in one row: past a dozen it is a count, not a picture.
-    if (!size || (compact && size.slots > 12)) return null;
-    const slots = Array.from({ length: size.slots }, (_, index) =>
-        h('span', { class: `vnc-slot${index >= size.required ? ' vnc-slot--optional' : ''}` }, bottle()),
-    );
-    const grid = h('div', { class: 'vnc-case__grid', 'aria-hidden': 'true' }, ...slots);
-    // Two rows, the way a case is packed: 6 is 3 by 2, 12 is 6 by 2. Small cases stand in one row.
-    grid.style.setProperty('--vnc-case-columns', String(size.slots <= 4 || compact ? size.slots : Math.ceil(size.slots / 2)));
+function createCaseGraphic(ctx: Ctx, compact: boolean): Region {
+    const grid = h('div', { class: 'vnc-case__grid', 'aria-hidden': 'true' });
     const caption = h('p', { class: 'vnc-case__caption' });
     const el = h('div', { class: `vnc-case${compact ? ' vnc-case--compact' : ''}` }, grid, caption);
+    let drawn: CaseSize | null = null;
+    let slots: HTMLElement[] = [];
 
     const update = () => {
+        const measured = caseSize(ctx.model(), ctx.state().progress.requiredQuantity);
+        // The bar's case stands in one row: past a dozen it is a count, not a picture.
+        const size = measured && !(compact && measured.slots > 12) ? measured : null;
+        show(el, size !== null);
+        if (size === null) return;
+        if (size.slots !== drawn?.slots || size.required !== drawn.required) {
+            drawn = size;
+            slots = Array.from({ length: size.slots }, (_, index) => h('span', { class: `vnc-slot${index >= size.required ? ' vnc-slot--optional' : ''}` }, bottle()));
+            grid.replaceChildren(...slots);
+            // Two rows, the way a case is packed: 6 is 3 by 2, 12 is 6 by 2. Small cases stand in one row.
+            grid.style.setProperty('--vnc-case-columns', String(size.slots <= 4 || compact ? size.slots : Math.ceil(size.slots / 2)));
+        }
         const filled = bottlesInCase(ctx);
         slots.forEach((slot, index) => {
             const productId = filled[index];
@@ -78,10 +89,17 @@ function createCaseGraphic(ctx: Ctx, compact: boolean): Region | null {
     return { el, update };
 }
 
+/**
+ * The case's price. Every figure and every formatted amount is the SDK's (`getBundlePrice`, which
+ * is what `useBundlePrice` returns in a React widget): the set price known before the first pick,
+ * the conditions engine's discount, the shopper's market. Nothing is added up here.
+ */
 function createPrice(ctx: Ctx, compact: boolean): Region | null {
-    const { content, money, model, settings } = ctx;
+    const { content, bundle, settings } = ctx;
     // Hidden prices are not rendered at all: a hidden element still carries a price in the DOM.
     if (content.hidePrices) return null;
+    // The page's language, as for every other amount in the widget.
+    const locale = document.documentElement.lang || undefined;
     const compare = h('s', { class: 'vnc-price__compare', 'data-testid': 'cc-compare-at' });
     const total = h('strong', { class: 'vnc-price__total', 'data-testid': 'cc-price' });
     const saving = compact ? null : h('span', { class: 'vnc-price__saving', 'data-testid': 'cc-saving' });
@@ -94,19 +112,23 @@ function createPrice(ctx: Ctx, compact: boolean): Region | null {
     );
 
     const update = () => {
-        const price = casePrice(model.bundle, ctx.state().selections, settings);
-        show(el, price !== null);
-        if (!price) return;
-        setText(total, money.format(price.total));
-        setAttr(total, 'data-price-value', price.total.toFixed(2));
-        const saved = price.original === null ? 0 : price.original - price.total;
-        show(compare, saved > 0);
-        setText(compare, price.original === null ? '' : money.format(price.original));
-        setAttr(compare, 'data-price-value', price.original?.toFixed(2));
+        const price = getBundlePrice(bundle, ctx.state().selections, { settings, locale });
+        // Nothing to price yet: an empty case whose price depends on what goes in.
+        show(el, price.discountedPrice !== null);
+        if (price.discountedPrice === null) return;
+        setText(total, price.formattedDiscountedPrice ?? '');
+        // The number that is shown, in the shopper's currency, when there is one: the raw price is
+        // not rounded to it. `amounts` is absent for a set price shown before the first pick: there
+        // is no original yet, and the raw price is all there is.
+        setAttr(total, 'data-price-value', (price.amounts?.discounted ?? Number(price.discountedPrice)).toFixed(2));
+        const amounts = price.hasDiscount ? price.amounts : null;
+        show(compare, amounts !== null);
+        setText(compare, amounts ? (price.formattedOriginalPrice ?? '') : '');
+        setAttr(compare, 'data-price-value', amounts?.original.toFixed(2));
         if (saving) {
-            show(saving, saved > 0);
-            setText(saving, saved > 0 ? text(content, 'saving', { amount: money.format(saved) }) : '');
-            setAttr(saving, 'data-price-value', saved > 0 ? saved.toFixed(2) : null);
+            show(saving, amounts !== null);
+            setText(saving, amounts && price.formattedSavedAmount ? text(content, 'saving', { amount: price.formattedSavedAmount }) : '');
+            setAttr(saving, 'data-price-value', amounts ? amounts.saved.toFixed(2) : null);
         }
     };
     update();
@@ -127,9 +149,9 @@ function createBuy(ctx: Ctx, buy: () => BuyState): Region & { status: HTMLElemen
     const update = () => {
         const state = buy();
         const cart = ctx.cart();
-        setText(button, cart.busy ? text(content, 'adding') : cart.added ? text(content, 'added') : text(content, 'addToCart'));
-        setAttr(button, 'aria-disabled', !state.canAdd || cart.busy);
-        setAttr(button, 'aria-busy', cart.busy);
+        setText(button, cart.isAdding ? text(content, 'adding') : cart.isAdded ? text(content, 'added') : text(content, 'addToCart'));
+        setAttr(button, 'aria-disabled', !state.canAdd || cart.isAdding);
+        setAttr(button, 'aria-busy', cart.isAdding);
         setText(polite, state.statusIsError ? '' : state.status);
         setText(alert, state.statusIsError ? state.status : '');
     };
@@ -138,7 +160,7 @@ function createBuy(ctx: Ctx, buy: () => BuyState): Region & { status: HTMLElemen
 }
 
 export function createRail(ctx: Ctx, buy: () => BuyState): Region {
-    const { content, model } = ctx;
+    const { content } = ctx;
     const graphic = createCaseGraphic(ctx, false);
     const price = createPrice(ctx, false);
     const action = createBuy(ctx, buy);
@@ -147,7 +169,8 @@ export function createRail(ctx: Ctx, buy: () => BuyState): Region {
     // Removing a line removes the button that was pressed; focus goes to the heading, not the page.
     const heading = h('h3', { class: 'vnc-summary__heading', tabindex: '-1' }, text(content, 'summaryHeading'));
 
-    const required = model.required.map((entry) =>
+    // What every case includes is the bundle's, whatever the shopper picks.
+    const required = ctx.model().required.map((entry) =>
         h(
             'li',
             { class: 'vnc-line' },
@@ -161,7 +184,7 @@ export function createRail(ctx: Ctx, buy: () => BuyState): Region {
         'aside',
         { class: 'vnc-summary', 'aria-label': text(content, 'summaryHeading') },
         heading,
-        graphic?.el,
+        graphic.el,
         empty,
         list,
         price?.el,
@@ -171,15 +194,14 @@ export function createRail(ctx: Ctx, buy: () => BuyState): Region {
 
     let signature = '';
     const update = () => {
-        graphic?.update();
+        graphic.update();
         price?.update();
         action.update();
         const selections = ctx.state().selections;
-        const lines = model.sections.flatMap((section) =>
+        const lines = ctx.model().sections.flatMap((section) =>
             (selections[section.id] ?? []).flatMap((pick) => {
-                const product = section.products.find((candidate) => candidate.variants.some((variant) => variant.id === pick.variantId));
-                const variant = product?.variants.find((candidate) => candidate.id === pick.variantId);
-                return product && variant ? [{ section, product, variant, quantity: pick.quantity }] : [];
+                const picked = section.byVariantId.get(pick.variantId);
+                return picked ? [{ section, ...picked, quantity: pick.quantity }] : [];
             }),
         );
         show(empty, lines.length === 0 && required.length === 0);
@@ -233,19 +255,21 @@ export function createRail(ctx: Ctx, buy: () => BuyState): Region {
 
 export function createMobileBar(ctx: Ctx, buy: () => BuyState): Region {
     const graphic = createCaseGraphic(ctx, true);
-    const count = graphic ? null : h('span', { class: 'vnc-mobile-bar__count' });
+    // What the bar shows in place of a case it cannot draw: how many are in it.
+    const count = h('span', { class: 'vnc-mobile-bar__count' });
     const price = createPrice(ctx, true);
     const action = createBuy(ctx, buy);
     const el = h(
         'div',
         { class: 'vnc-mobile-bar', 'data-testid': 'cc-mobile-bar' },
-        h('div', { class: 'vnc-mobile-bar__info' }, graphic?.el, count, price?.el),
+        h('div', { class: 'vnc-mobile-bar__info' }, graphic.el, count, price?.el),
         action.el,
         action.status,
     );
     const update = () => {
-        graphic?.update();
-        if (count) setText(count, String(countOf(ctx.state().selections)));
+        graphic.update();
+        show(count, graphic.el.hidden);
+        setText(count, String(pickedCount(ctx.state().progress)));
         price?.update();
         action.update();
     };

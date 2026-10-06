@@ -7,8 +7,7 @@
  */
 import { keyProblem, type MountConfig } from './config';
 import { text } from './content';
-import { createClient, loadBundle } from './load';
-import { toViewModel } from './model';
+import { createClient, loadBundle, recordImpression } from './load';
 import { isThemeEditor } from './themeEditor';
 import { createBuilder } from './ui/builder';
 import { errorState, loading } from './ui/notice';
@@ -54,10 +53,14 @@ export function mountWidget(el: HTMLElement, config: MountConfig): Mounted {
 
     const bundleId = config.bundleId;
     el.replaceChildren(loading());
-    void loadBundle(createClient(config), bundleId, window.location.search).then((loaded) => {
-        // The theme editor may have unloaded the section while the API was answering.
-        if (destroyed) return;
-        if (!loaded.ok) {
+    // The theme editor may have unloaded the section while the API was answering, and a theme's own
+    // AJAX navigation can drop it from the page without telling anyone.
+    const gone = () => destroyed || !el.isConnected;
+    void loadBundle(createClient(config), bundleId, window.location.search, gone).then((loaded) => {
+        if (destroyed || loaded.state === 'cancelled') return;
+        // On its way to the other variant of an A/B test: the loading state stays until the page goes.
+        if (loaded.state === 'redirecting') return;
+        if (loaded.state === 'failed') {
             // A 404 is a bundle the merchant unpublished or deleted: an absence, not a fault, so it
             // never tells the shopper to refresh. Anything else is ours to apologise for.
             const { status } = loaded;
@@ -75,7 +78,7 @@ export function mountWidget(el: HTMLElement, config: MountConfig): Mounted {
             return;
         }
         const built = createBuilder({
-            model: toViewModel(loaded.bundle, { settings: loaded.settings }),
+            bundle: loaded.bundle,
             settings: loaded.settings,
             client: loaded.client,
             config,
@@ -84,6 +87,8 @@ export function mountWidget(el: HTMLElement, config: MountConfig): Mounted {
         });
         teardown = built.destroy;
         el.replaceChildren(built.el);
+        // A case drawn into an element that left the page while the settings loaded was seen by nobody.
+        if (el.isConnected) recordImpression(loaded.client, loaded.bundle);
     });
     return { destroy };
 }

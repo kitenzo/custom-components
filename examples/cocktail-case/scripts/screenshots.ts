@@ -1,8 +1,8 @@
 /*
  * Regenerate docs/screenshots from the dev server.
  *
- *   bunx vite --port 5183 --strictPort     # in one terminal
- *   bun run screenshots                    # in another
+ *   bun run dev             # in one terminal (the port is in vite.config.ts)
+ *   bun run screenshots     # in another
  *
  * Desktop is Chromium at 1440 wide; mobile is WebKit as an iPhone 14, the same pair the e2e suite
  * runs. Every state is reached by pressing the widget's own controls, never by injecting state.

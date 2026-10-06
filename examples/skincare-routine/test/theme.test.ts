@@ -51,13 +51,12 @@ describe('theme section', () => {
         expect(written.sort()).toEqual(Object.keys(DEFAULT_CONTENT).sort());
     });
 
-    it('defaults every string to the same words as the widget', () => {
+    it('defaults every string and every number to the same value as the widget', () => {
         for (const [key, id] of contentMap) {
             const fallback = DEFAULT_CONTENT[key as keyof typeof DEFAULT_CONTENT];
             const setting = settings.find((candidate) => candidate.id === id)!;
-            if (typeof fallback === 'string' && fallback !== '' && key !== 'afterAdd') {
-                expect(setting.default, `${id} vs DEFAULT_CONTENT.${key}`).toBe(fallback);
-            }
+            const compared = typeof fallback === 'number' || (typeof fallback === 'string' && fallback !== '' && key !== 'afterAdd');
+            if (compared) expect(setting.default, `${id} vs DEFAULT_CONTENT.${key}`).toBe(fallback);
         }
     });
 

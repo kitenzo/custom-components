@@ -9,23 +9,30 @@
  * `outsideFilter` is a can the active filters would hide but that is in the case: it stays, marked
  * "In your case", so the shopper can still see it and take it out.
  */
+import { memo } from 'react';
+
 import { text } from '../content';
 import { facetLabelsOf } from '../facets';
 import type { ViewProduct, ViewSection } from '../model';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
 import { imageAttrs } from './images';
 import { OptionPickers, QuantityControl } from './PickControls';
 import { usePick } from './usePick';
 
-export function ProductCard({ product, section, outsideFilter = false }: { product: ViewProduct; section: ViewSection; outsideFilter?: boolean }) {
-    const { money, content, openDetails, selection, facetDefs } = useBuilder();
+/*
+ * Memoised on the product and its step, both kept by the model between picks. A card is drawn
+ * again by its own state or by a change to either context, never by the Builder alone.
+ */
+export const ProductCard = memo(function ProductCard({ product, section, outsideFilter = false }: { product: ViewProduct; section: ViewSection; outsideFilter?: boolean }) {
+    const { money, content, openDetails, facets } = useBuilder();
+    const { selections } = useSelection();
     const pick = usePick(product, section);
     const photo = product.photos[0];
     const price = content.hidePrices ? null : money.format(money.unitPrice(pick.variant));
-    const inStep = (selection.selections[section.id] ?? [])
+    const inStep = (selections[section.id] ?? [])
         .filter((entry) => product.variants.some((variant) => variant.id === entry.variantId))
         .reduce((total, entry) => total + entry.quantity, 0);
-    const labels = facetLabelsOf(product.tags, facetDefs);
+    const labels = facetLabelsOf(product.id, facets);
 
     return (
         <article
@@ -77,4 +84,4 @@ export function ProductCard({ product, section, outsideFilter = false }: { produ
             </div>
         </article>
     );
-}
+});

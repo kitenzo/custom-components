@@ -37,6 +37,10 @@ To use the ladder on its own, without photos (for example on a page that already
 
 Every word is a setting. Under **Ladder**, change "pouches" to whatever you sell: tubs, bars, bottles. `{count}`, `{discount}` and `{amount}` are filled in for you; `{discount}` is the tier's saving and `{amount}` a price, both in the shopper's currency. Never type a price or a currency symbol into a setting: it would be wrong in every other currency.
 
+A discount tier can carry its own "reach the next tier" sentence, written on the tier in Kitenzo. When the shopper's next tier has one, the section shows it in place of the **Ladder** progress settings.
+
+Under **Products**, every reason a product cannot be added has its own sentence: sold out, no more stock, a limit on one variant or one product, a full step, a full bundle. **Low stock from** is the stock level from which a product says how many are left: 5 to start with, 0 to never say it.
+
 ## Adding another bundle later
 
 Assign the new bundle's product to the same `kitenzo-bundle` template. Nothing else: no new template, no code. "This product (automatic)" reads which bundle to show from the product the page is for.

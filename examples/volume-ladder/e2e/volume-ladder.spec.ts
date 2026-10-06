@@ -42,6 +42,8 @@ test.describe('the ladder', () => {
                 { atLeast: 5, discount: 30 },
             ]),
         });
+        // The rows are read in one go, so wait for them to be drawn first.
+        await expect(rungs(page)).toHaveCount(2);
         expect(await rungs(page).evaluateAll((rows) => rows.map((row) => row.textContent))).toEqual([
             expect.stringContaining('3 pouches'),
             expect.stringContaining('5 pouches'),
@@ -69,6 +71,111 @@ test.describe('the ladder', () => {
         await expect(progress(page)).toHaveText('Best price unlocked: you save 25%');
     });
 
+    test('the merchant\'s own sentence for a tier, written in Kitenzo, is the progress line', async ({ page }) => {
+        await openWidget(page, {
+            transform: (fixture) => ({
+                ...fixture,
+                bundle: {
+                    ...fixture.bundle,
+                    discount: {
+                        ...fixture.bundle.discount!,
+                        tiers: fixture.bundle.discount!.tiers.map((tier) => (tier.value === '3.00' ? { ...tier, customText: 'Just {{ amount }} more pouch for {{ discount }}% off' } : tier)),
+                    },
+                },
+            }),
+        });
+        // The first tier has no sentence of its own: the section's copy.
+        await expect(progress(page)).toHaveText('Choose 2 to save 10%');
+        await pick(page, 'chocolate-whey-protein', 2);
+        await expect(progress(page)).toHaveText('Just 1 more pouch for 15% off');
+        await pick(page, 'vanilla-whey-protein', 1);
+        await expect(progress(page)).toHaveText('Add 1 more to save 20%');
+    });
+
+    test('counts a product every bundle includes: one pick and the included pouch reach the first tier', async ({ page }) => {
+        await openWidget(page, {
+            transform: (fixture) => {
+                const unflavoured = fixture.products.find((entry) => entry.handle === 'unflavoured-whey-protein')!;
+                return {
+                    ...fixture,
+                    bundle: {
+                        ...fixture.bundle,
+                        sections: fixture.bundle.sections.map((section) => ({ ...section, products: section.products.filter((ref) => ref.shopifyProductId !== unflavoured.shopifyProductId) })),
+                        requiredProducts: [{ quantity: 1, shopifyProductId: unflavoured.shopifyProductId, variantIds: [] }],
+                    },
+                };
+            },
+        });
+        await expect(progress(page)).toHaveText('Choose 1 to save 10%');
+        await pick(page, 'chocolate-whey-protein', 1);
+        await expect(widget(page).locator('[aria-current="step"]')).toHaveAttribute('data-vol-rung', '2');
+        await expect(progress(page)).toHaveText('Add 1 more to save 15%');
+        // Two pouches at 10% off, as the ladder's first row says.
+        const total = Number(await page.getByTestId('cc-price').getAttribute('data-price-value'));
+        expect(total).toBeCloseTo(2 * 9.99 * 0.9, 2);
+        await expect(buyButton(page)).not.toHaveAttribute('aria-disabled', 'true');
+    });
+
+    test('past an "exactly 6" tier, the row whose discount applies again is the one highlighted', async ({ page }) => {
+        await openWidget(page, {
+            transform: (fixture) => ({
+                ...fixture,
+                bundle: {
+                    ...fixture.bundle,
+                    discount: {
+                        ...fixture.bundle.discount!,
+                        tiers: [
+                            { type: 'total_products', operation: 'gte', value: '2.00', discount: '10.00', customText: null },
+                            { type: 'total_products', operation: 'eq', value: '6.00', discount: '25.00', customText: null },
+                        ],
+                    },
+                },
+            }),
+        });
+        // Two rows: where the 25% ends is not a tier, so it is not a row.
+        expect(await rungs(page).evaluateAll((rows) => rows.map((row) => row.getAttribute('data-vol-rung')))).toEqual(['2', '6']);
+        await pick(page, 'chocolate-whey-protein', 6);
+        await expect(widget(page).locator('[aria-current="step"]')).toHaveAttribute('data-vol-rung', '6');
+        await expect(progress(page)).toHaveText('Best price unlocked: you save 25%');
+        await pick(page, 'vanilla-whey-protein', 1);
+        await expect(widget(page).locator('[aria-current="step"]')).toHaveAttribute('data-vol-rung', '2');
+        await expect(progress(page)).toHaveText('Best price unlocked: you save 10%');
+    });
+
+    test('says "each" only when it is the price of each: not with a surcharge on one flavour, not with a tier on one product\'s quantity', async ({ page }) => {
+        const each = rungs(page).locator('.vol-rung__each');
+        await openWidget(page);
+        await expect(each).toHaveCount(4);
+
+        // Chocolate costs £2 more in a bundle. The SDK adds that on top of the discount, so no row has one price for every pouch.
+        await openWidget(page, {
+            transform: (fixture) => ({
+                ...fixture,
+                bundle: { ...fixture.bundle, applyVariantSurcharges: true },
+                products: fixture.products.map((entry) =>
+                    entry.handle === 'chocolate-whey-protein' ? { ...entry, variants: entry.variants.map((variant) => ({ ...variant, surcharge: '2.00' })) } : entry,
+                ),
+            }),
+        });
+        await expect(rungs(page)).toHaveCount(4);
+        await expect(rungs(page).nth(0)).toContainText('Save 10%');
+        await expect(each).toHaveCount(0);
+
+        // Two of one flavour reach the 30% tier; a row is priced for two of one flavour, and two flavours pay 10% off.
+        await openWidget(page, {
+            transform: (fixture) => ({
+                ...fixture,
+                bundle: {
+                    ...fixture.bundle,
+                    discount: { ...fixture.bundle.discount!, tiers: [...fixture.bundle.discount!.tiers, { type: 'bulk_buy', operation: 'gte', value: '2.00', discount: '30.00', customText: null }] },
+                },
+            }),
+        });
+        await expect(rungs(page)).toHaveCount(4);
+        await expect(each).toHaveCount(0);
+        await expect(widget(page)).not.toContainText('each');
+    });
+
     test('the total agrees with the tier in force', async ({ page }) => {
         await openWidget(page);
         await pick(page, 'chocolate-whey-protein', 2);
@@ -92,8 +199,8 @@ test.describe('the ladder', () => {
     });
 
     test('the root-scoped reset does not outrank a component\'s own spacing', async ({ page }) => {
-        // The reset zeroes paragraph margins under the root. Written as `.vol-root p` it outranked
-        // `.vol-header__intro { margin-top }`; inside `:where()` it no longer does.
+        // The reset zeroes paragraph margins under the root. Written as `.vol-root p` it would outrank
+        // `.vol-header__intro { margin-top }`; inside `:where()` it does not.
         await openWidget(page);
         await expect(widget(page).locator('.vol-header__intro')).toHaveCSS('margin-top', '8px');
     });
@@ -168,6 +275,7 @@ test.describe('fits the column it is given', () => {
 
         // In the column: rungs stacked, one per row.
         await openWidget(page, { layout: 'ladder' });
+        await expect(rungs(page)).toHaveCount(4);
         const column = await rungTops();
         expect(new Set(column).size).toBe(4);
 
@@ -184,6 +292,7 @@ test.describe('fits the column it is given', () => {
 
         // The grid layout in a full-width section: the rungs side by side.
         await openWidget(page, { layout: 'grid' });
+        await expect(rungs(page)).toHaveCount(4);
         expect(new Set(await rungTops()).size).toBe(1);
     });
 });

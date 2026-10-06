@@ -7,14 +7,14 @@
  * email with a reorder link (`?subscription=<id>`), and each reorder is a normal checkout. Every
  * word the widget says about a plan has to promise that, and only that.
  *
- * What this file adds is translation: the SDK's validation errors and its cadence wording are
- * English sentences, and every visible string here is a theme setting. The errors are matched on
- * their `type` (stable), never on their message (copy that can change in any SDK release).
+ * What this file adds is the shop's wording, because every visible string here is a theme
+ * setting: a sentence for each reason the SDK can refuse a plan (keyed by its stable `code`, handed
+ * to the SDK's `messages` option), and how a cadence reads (the SDK's `formatFrequency` seam).
  */
-import type { BundleDetail, DiscountType, RecurringChoice, RecurringLineLabels, RecurringUnit, ValidationError } from '@kitenzo/react';
+import type { DiscountType, RecurringErrorCode, RecurringLineLabels, RecurringUnit } from '@kitenzo/react';
 
 import { text, type Content, type TextKey } from './content';
-import { discountLabel } from './tiers';
+import { discountLabel, type TierMoney } from './tiers';
 
 const FREQUENCY_KEYS: Record<RecurringUnit, [TextKey, TextKey]> = {
     days: ['frequencyDay', 'frequencyDays'],
@@ -37,36 +37,23 @@ export function lineLabels(content: Content): RecurringLineLabels {
     };
 }
 
-/** The first reason the plan cannot be added yet, as a theme sentence. Null when it can. */
-export function planProblem(content: Content, errors: ValidationError[], choice: RecurringChoice | null): string | null {
-    const first = errors[0];
-    if (!first) return null;
-    switch (first.type) {
-        case 'recurring-email':
-            return choice?.type === 'new' && choice.email.trim() === '' ? text(content, 'emailMissing') : text(content, 'emailInvalid');
-        case 'recurring-frequency':
-            return text(content, 'frequencyMissing');
-        default:
-            return text(content, 'planGone');
-    }
+/**
+ * The theme's sentence for every reason a plan cannot be added yet. Passed to `useRecurringPlan`
+ * (whose `errors[0].message` the picker shows) and to the cart hook (whose `shopperMessage` says
+ * the same if an add is refused for it).
+ */
+export function planMessages(content: Content): Record<RecurringErrorCode, string> {
+    return {
+        'recurring-email-required': content.emailMissing,
+        'recurring-email-invalid': content.emailInvalid,
+        'recurring-frequency-required': content.frequencyMissing,
+        'recurring-plan-unavailable': content.planGone,
+        'recurring-reorder-unavailable': content.planGone,
+    };
 }
 
 /** "an extra 10% off", or the plan's money equivalent. Null when the plan carries no discount. */
-export function planDiscount(
-    content: Content,
-    type: DiscountType | '',
-    value: number | null,
-    formatMoney: (amount: number) => string | null,
-): string | null {
+export function planDiscount(content: Content, type: DiscountType | '', value: number | null, money: TierMoney): string | null {
     if (!type || !value) return null;
-    return discountLabel(content, type, value, formatMoney);
-}
-
-/**
- * The page was opened from a reminder's reorder link, but the bundle came back without the
- * subscription it named (expired, cancelled, another shop's). The shopper gets a one-time case
- * and a sentence saying so, never a silent change of price.
- */
-export function reorderExpired(subscriptionId: string | null, bundle: BundleDetail): boolean {
-    return subscriptionId !== null && !bundle.recurringSubscription;
+    return discountLabel(content, type, value, money);
 }

@@ -10,21 +10,28 @@
  * you" on the product the quiz chose for this step, and "Matches: dry skin" on any product whose
  * tags agree with an answer, so swapping to another good fit is as easy as keeping the first.
  */
+import { memo } from 'react';
+
 import { text } from '../content';
 import type { ViewProduct, ViewSection } from '../model';
 import { matchProduct, tagAsWords } from '../quiz';
-import { useBuilder } from './context';
+import { useBuilder, useSelection } from './context';
 import { imageAttrs } from './images';
 import { splitTitle } from './names';
 import { OptionPickers, PickControl } from './PickControls';
 import { usePick } from './usePick';
 
-export function ProductCard({ product, section }: { product: ViewProduct; section: ViewSection }) {
-    const { money, content, openDetails, selection, answers, recommended } = useBuilder();
+/*
+ * Memoised on the product and its step, both kept by the model between picks. A card is drawn
+ * again by its own state or by a change to either context, never by the Routine alone.
+ */
+export const ProductCard = memo(function ProductCard({ product, section }: { product: ViewProduct; section: ViewSection }) {
+    const { money, content, openDetails, answers, recommended } = useBuilder();
+    const { selections } = useSelection();
     const pick = usePick(product, section);
     const photo = product.photos[0];
     const price = content.hidePrices ? null : money.format(money.unitPrice(pick.variant));
-    const inStep = (selection.selections[section.id] ?? [])
+    const inStep = (selections[section.id] ?? [])
         .filter((entry) => product.variants.some((variant) => variant.id === entry.variantId))
         .reduce((total, entry) => total + entry.quantity, 0);
     const { name, kind } = splitTitle(product.title);
@@ -79,4 +86,4 @@ export function ProductCard({ product, section }: { product: ViewProduct; sectio
             </div>
         </article>
     );
-}
+});

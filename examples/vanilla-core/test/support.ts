@@ -50,9 +50,9 @@ export function soldOut(product: Fixture['products'][number]): Fixture['products
 
 /**
  * Make one of the fixture's products required: in every case, priced into it, never the
- * shopper's choice. The wine case has no required product, but the widget (and the SDK fix in
- * src/sdkFixes.ts) must still handle one, so the tests that need it add one at the wire level,
- * exactly as the API would serialise it (`variantIds: []` means "any variant").
+ * shopper's choice. The wine case has no required product, but the widget must still handle one,
+ * so the tests that need it add one at the wire level, exactly as the API would serialise it
+ * (`variantIds: []` means "any variant").
  */
 export function withRequired(fixture: Fixture, handle: string, quantity = 1): Fixture {
     const product = fixture.products.find((entry) => entry.handle === handle)!;
@@ -63,5 +63,43 @@ export function withRequired(fixture: Fixture, handle: string, quantity = 1): Fi
             sections: fixture.bundle.sections.map((section) => ({ ...section, products: section.products.filter((ref) => ref.shopifyProductId !== product.shopifyProductId) })),
             requiredProducts: [{ quantity, shopifyProductId: product.shopifyProductId, variantIds: [] }],
         },
+    };
+}
+
+type Rule = Fixture['bundle']['limitRules'][number];
+
+/** A count rule as the API serialises it; `sectionId` null for the whole bundle. */
+export function countRule(operation: Rule['operation'], value: number, sectionId: number | null): Rule {
+    return { operation, sectionId, type: 'total-number-of-products', value: value.toFixed(2) };
+}
+
+/**
+ * Split the case into two steps: the last two wines move to a second step of their own. The wine
+ * case has one step, but the widget draws any number, so the tests that need two make them at the
+ * wire level. `rules` is given the two steps' ids and replaces the bundle's limit rules.
+ */
+export function withTwoSteps(fixture: Fixture, rules: (first: number, second: number) => Rule[]): Fixture {
+    const step = fixture.bundle.sections[0]!;
+    const second = { ...step, id: step.id + 1, name: 'And for the cellar', order: step.order + 1, products: step.products.slice(-2) };
+    return {
+        ...fixture,
+        bundle: { ...fixture.bundle, sections: [{ ...step, products: step.products.slice(0, -2) }, second], limitRules: rules(step.id, second.id) },
+    };
+}
+
+/** As much of a browser window as the SDK's A/B helpers read: where the page is, and its storage. */
+export function fakeWindow(href: string) {
+    const url = new URL(href);
+    const storage = () => {
+        const held = new Map<string, string>();
+        return { getItem: (key: string) => held.get(key) ?? null, setItem: (key: string, value: string) => void held.set(key, value), removeItem: (key: string) => void held.delete(key) };
+    };
+    const replaced: string[] = [];
+    return {
+        location: { pathname: url.pathname, search: url.search, hash: url.hash, replace: (to: string) => void replaced.push(to) },
+        localStorage: storage(),
+        sessionStorage: storage(),
+        /** Where the page was sent, in order. */
+        replaced,
     };
 }

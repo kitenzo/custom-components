@@ -23,7 +23,7 @@ import {
     type ProductOption,
 } from '@kitenzo/react';
 
-export function orderedOptions(product: BundleProduct): ProductOption[] {
+function orderedOptions(product: BundleProduct): ProductOption[] {
     return [...(product.options ?? [])].sort((a, b) => a.position - b.position);
 }
 
@@ -34,7 +34,7 @@ export function hasOptionGrid(product: BundleProduct): boolean {
 }
 
 /** Options the shopper chooses between. A single-value option ("Size: One size") is not a choice. */
-export function choosableOptions(product: BundleProduct): ProductOption[] {
+function choosableOptions(product: BundleProduct): ProductOption[] {
     return orderedOptions(product).filter((option) => option.values.length > 1);
 }
 
@@ -69,7 +69,7 @@ export function parseSwatchColours(raw: string): Map<string, string> {
 }
 
 /** Drawn as swatches: named so in the merchant's setting, or carrying Shopify's own swatches. */
-export function isSwatchOption(option: ProductOption, swatchNames: string[]): boolean {
+function isSwatchOption(option: ProductOption, swatchNames: string[]): boolean {
     return swatchNames.includes(option.name.trim().toLowerCase()) || Object.keys(option.swatches ?? {}).length > 0;
 }
 
@@ -238,33 +238,32 @@ export function imageFor(product: BundleProduct, values: OptionSelection, fallba
 
 // ----- Surcharges -------------------------------------------------------------------------------
 
-/** A variant's surcharge in shop currency, or 0. Only a bundle that applies them has any. */
-export function surchargeOf(variant: BundleVariant, applies: boolean): number {
-    if (!applies) return 0;
-    const amount = Number.parseFloat(variant.surcharge ?? '');
-    return Number.isFinite(amount) && amount > 0 ? amount : 0;
-}
+/**
+ * What picking a variant adds to the set, in display currency: the SDK's `money.surcharge`. The
+ * amount is never worked out here, only which option value to name beside it.
+ */
+export type SurchargeOf = (variant: BundleVariant) => number;
 
 /**
  * The one option value a variant's surcharge belongs to, so the widget can say "Slate adds £5"
  * rather than "XS / Slate adds £5": the value whose every variant carries the same surcharge.
  * Falls back to the variant's title when no single value explains it.
  */
-export function surchargeCause(product: BundleProduct, variant: BundleVariant, applies: boolean): string {
-    const amount = surchargeOf(variant, applies);
+export function surchargeCause(product: BundleProduct, variant: BundleVariant, surchargeOf: SurchargeOf): string {
+    const amount = surchargeOf(variant);
     for (const [index, option] of orderedOptions(product).entries()) {
         if (option.values.length < 2) continue;
         const value = variant.optionValues?.[index];
         const same = product.variants.filter((candidate) => candidate.optionValues?.[index] === value);
-        if (value && same.every((candidate) => surchargeOf(candidate, applies) === amount)) return value;
+        if (value && same.every((candidate) => surchargeOf(candidate) === amount)) return value;
     }
     return variant.title;
 }
 
 /** The surcharge every variant in `value` carries, for a "+£5" on its swatch; 0 when they differ. */
-export function valueSurcharge(product: BundleProduct, option: ProductOption, value: string, applies: boolean): number {
+export function valueSurcharge(product: BundleProduct, option: ProductOption, value: string, surchargeOf: SurchargeOf): number {
     const index = orderedOptions(product).findIndex((candidate) => candidate.name === option.name);
-    const amounts = product.variants.filter((variant) => variant.optionValues?.[index] === value).map((variant) => surchargeOf(variant, applies));
+    const amounts = product.variants.filter((variant) => variant.optionValues?.[index] === value).map(surchargeOf);
     return amounts.length > 0 && amounts.every((amount) => amount === amounts[0]) ? amounts[0]! : 0;
 }
 

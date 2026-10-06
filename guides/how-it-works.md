@@ -33,12 +33,13 @@ sequenceDiagram
 
 | Concern | Owner | Where you see it |
 |---|---|---|
-| What can be picked, how many, from which step | the bundle, in Kitenzo | `limitRules`, read with `getSectionLimits` / `getBundleLimits` |
-| Whether a selection can be bought | the SDK | `isSatisfied` on the builder's state |
-| What it costs, in which currency | the SDK | `useBundlePrice` |
+| What can be picked, how many, from which step | the bundle, in Kitenzo | `limitRules`, read as each step's `limits` on the offer (`getBundleOffer`) |
+| Which products each step shows, what the merchant must fix | the SDK | `getBundleOffer` / `useBundleOffer` |
+| Whether one more fits, and whether a selection can be bought | the SDK | `blockedReason`, `progress`, `problems` and `isSatisfied` on the builder |
+| What it costs, in which currency | the SDK | `useBundlePrice`, `useMoney` |
 | Cart lines and the `_bundles` attribute | the SDK | `useBundleAjaxCart` |
 | The discount at checkout | Kitenzo's Cart Transform | nothing to do |
-| Sold-out and draft products, how options read | the shop's settings in Kitenzo | `useSettings()` |
+| Sold-out and draft products, how options read | the shop's settings in Kitenzo | `useSettingsState()` |
 | Every word on screen, colours | the merchant, in the theme editor | the section's settings, `data-content` |
 | Fonts | the merchant's theme | loaded by the section, `--x-font-*` |
 | Layout, interaction, design | you | the widget |

@@ -14,8 +14,8 @@ import { useBundlePrice, type BundleVariant, type UseBundleCartFlowResult } from
 import { text } from '../content';
 import type { ViewProduct, ViewSection } from '../model';
 import { matchProduct, tagAsWords } from '../quiz';
-import { countOf } from '../selection';
-import { useBuilder } from './context';
+import { pickedCount } from '../selection';
+import { useBuilder, useSelection } from './context';
 import { imageAttrs } from './images';
 import { splitTitle } from './names';
 
@@ -36,14 +36,14 @@ export interface RoutineLine {
 }
 
 /** The picks, step by step, in step order. */
-export function useRoutineLines(sections: ViewSection[]): { section: ViewSection; lines: RoutineLine[] }[] {
-    const { selection } = useBuilder();
-    return sections.map((section) => ({
+export function useRoutineLines(): { section: ViewSection; lines: RoutineLine[] }[] {
+    const { model } = useBuilder();
+    const { selections } = useSelection();
+    return model.sections.map((section) => ({
         section,
-        lines: (selection.selections[section.id] ?? []).flatMap((pick) => {
-            const product = section.products.find((candidate) => candidate.variants.some((variant) => variant.id === pick.variantId));
-            const variant = product?.variants.find((candidate) => candidate.id === pick.variantId);
-            return product && variant ? [{ section, product, variant, quantity: pick.quantity }] : [];
+        lines: (selections[section.id] ?? []).flatMap((pick) => {
+            const offered = section.byVariantId.get(pick.variantId);
+            return offered ? [{ section, ...offered, quantity: pick.quantity }] : [];
         }),
     }));
 }
@@ -62,13 +62,15 @@ export function useReason(section: ViewSection, product: ViewProduct): string | 
     return fallback ? text(content, 'routineFallback') : null;
 }
 
-export function PriceBlock({ compact = false }: { compact?: boolean }) {
-    const { model, selection, money, content } = useBuilder();
-    const price = useBundlePrice(model.bundle, selection.selections);
+function PriceBlock({ compact = false }: { compact?: boolean }) {
+    const { model, money, content } = useBuilder();
+    const { selections } = useSelection();
+    const price = useBundlePrice(model.bundle, selections, { locale: document.documentElement.lang || undefined });
     if (content.hidePrices || price.discountedPrice === null) return null;
-    const total = Number(price.discountedPrice);
-    const original = price.originalPrice === null ? null : Number(price.originalPrice);
-    const saving = original !== null && original > total ? original - total : 0;
+    // Before the first pick only a flat set price is known: a total, with nothing to compare it to.
+    const total = price.amounts?.discounted ?? Number(price.discountedPrice);
+    const original = price.hasDiscount ? (price.amounts?.original ?? null) : null;
+    const saving = price.hasDiscount ? (price.amounts?.saved ?? 0) : 0;
     return (
         <div className={`skr-price${compact ? ' skr-price--compact' : ''}`}>
             <span className="skr-price__label">{text(content, 'total')}</span>
@@ -154,9 +156,9 @@ function Line({ line }: { line: RoutineLine }) {
     );
 }
 
-export function SummaryRail({ buy, sections, showLines }: { buy: BuyState; sections: ViewSection[]; showLines: boolean }) {
+export function SummaryRail({ buy, showLines }: { buy: BuyState; showLines: boolean }) {
     const { model, content, goToStep } = useBuilder();
-    const steps = useRoutineLines(sections);
+    const steps = useRoutineLines();
 
     return (
         <aside className={`skr-summary${showLines ? '' : ' skr-summary--totals'}`} aria-label={text(content, 'summaryHeading')}>
@@ -207,11 +209,11 @@ export function SummaryRail({ buy, sections, showLines }: { buy: BuyState; secti
 }
 
 export function MobileBar({ buy }: { buy: BuyState }) {
-    const { selection } = useBuilder();
+    const { progress } = useSelection();
     return (
         <div className="skr-mobile-bar" data-testid="cc-mobile-bar">
             <div className="skr-mobile-bar__info">
-                <span className="skr-mobile-bar__count">{countOf(selection.selections)}</span>
+                <span className="skr-mobile-bar__count">{pickedCount(progress)}</span>
                 <PriceBlock compact />
             </div>
             <BuyButton buy={buy} />
